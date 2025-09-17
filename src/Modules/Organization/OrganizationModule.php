@@ -45,9 +45,9 @@ class OrganizationModule implements ModuleInterface
     private ?ApiKeyService $apiKeyService = null;
     private ?DomainService $domainService = null;
 
-    private Client $httpClient;
-    private CacheManagerInterface $cache;
-    private EventDispatcherInterface $eventDispatcher;
+    private ?Client $httpClient = null;
+    private ?CacheManagerInterface $cache = null;
+    private ?EventDispatcherInterface $eventDispatcher = null;
 
     /**
      * Inicializa o módulo com configurações
@@ -261,52 +261,20 @@ class OrganizationModule implements ModuleInterface
     }
 
     /**
-     * Garante que as dependências estão inicializadas (para demonstração)
+     * Garante que as dependências estão inicializadas usando classes reais
      */
     private function ensureDependenciesInitialized(): void
     {
         if (!isset($this->httpClient)) {
-            // Cria um mock do Client para demonstração
-            $this->httpClient = new class($this->config, $this->logger) {
-                private $config;
-                private $logger;
-
-                public function __construct($config, $logger) {
-                    $this->config = $config;
-                    $this->logger = $logger;
-                }
-
-                public function get(string $url, array $headers = []): object {
-                    return new class(['status_code' => 200, 'data' => ['demo' => true]]) {
-                        private $data;
-                        public function __construct($data) { $this->data = $data; }
-                        public function getStatusCode(): int { return $this->data['status_code']; }
-                        public function getData(): array { return $this->data['data']; }
-                    };
-                }
-
-                public function post(string $url, array $data = [], array $headers = []): object {
-                    return $this->get($url, $headers);
-                }
-            };
+            $this->httpClient = new \Clubify\Checkout\Core\Http\Client($this->config);
         }
 
         if (!isset($this->cache)) {
-            // Cria um mock do Cache para demonstração
-            $this->cache = new class {
-                public function get(string $key, $default = null) { return $default; }
-                public function put(string $key, $value, int $ttl = 3600): bool { return true; }
-                public function forget(string $key): bool { return true; }
-                public function flush(): bool { return true; }
-            };
+            $this->cache = new \Clubify\Checkout\Core\Cache\CacheManager($this->config);
         }
 
         if (!isset($this->eventDispatcher)) {
-            // Cria um mock do EventDispatcher para demonstração
-            $this->eventDispatcher = new class {
-                public function dispatch(string $event, array $data = []): void {}
-                public function listen(string $event, callable $listener): void {}
-            };
+            $this->eventDispatcher = new \Clubify\Checkout\Core\Events\EventDispatcher();
         }
     }
 

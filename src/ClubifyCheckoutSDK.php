@@ -62,8 +62,8 @@ class ClubifyCheckoutSDK
         // Criar configuração centralizada
         $this->config = new Configuration($config);
 
-        // Inicializar core components
-        $this->initializeCoreComponents();
+        // Core components serão inicializados sob demanda (Lazy Loading)
+        // Isso evita travamentos durante a criação da instância
     }
 
     /**
@@ -90,11 +90,11 @@ class ClubifyCheckoutSDK
         $this->initializing = true;
 
         try {
-            // Autenticação automática
-            $authResult = $this->authManager->authenticate();
+            // Autenticação automática (Lazy Loading)
+            $authResult = $this->getAuthManager()->authenticate();
 
-            // Validação de conectividade
-            $connectivityCheck = $this->httpClient->healthCheck();
+            // Validação de conectividade (Lazy Loading)
+            $connectivityCheck = $this->getHttpClient()->healthCheck();
 
             if (!$connectivityCheck) {
                 throw new SDKException('API connectivity check failed');
@@ -137,7 +137,11 @@ class ClubifyCheckoutSDK
      */
     public function isAuthenticated(): bool
     {
-        return $this->authManager?->isAuthenticated() ?? false;
+        // Usar lazy loading apenas se necessário
+        if ($this->authManager === null) {
+            return false; // Não há auth manager ainda, não está autenticado
+        }
+        return $this->authManager->isAuthenticated();
     }
 
     /**
@@ -145,8 +149,13 @@ class ClubifyCheckoutSDK
      */
     public function logout(): void
     {
-        $this->authManager?->logout();
-        $this->cache?->clear();
+        // Usar lazy loading apenas se necessário
+        if ($this->authManager !== null) {
+            $this->authManager->logout();
+        }
+        if ($this->cache !== null) {
+            $this->cache->clear();
+        }
         $this->initialized = false;
     }
 
@@ -335,13 +344,85 @@ class ClubifyCheckoutSDK
     /**
      * Inicializar componentes core
      */
+    /**
+     * Inicializar core components sob demanda (Lazy Loading)
+     */
     private function initializeCoreComponents(): void
     {
-        $this->httpClient = new Client($this->config);
-        $this->authManager = new AuthManager($this->httpClient, $this->config);
-        $this->eventDispatcher = new EventDispatcher();
-        $this->logger = new Logger($this->config);
-        $this->cache = new CacheManager($this->config);
+        if ($this->httpClient === null) {
+            $this->httpClient = new Client($this->config);
+        }
+
+        if ($this->authManager === null) {
+            $this->authManager = new AuthManager($this->getHttpClient(), $this->config);
+        }
+
+        if ($this->eventDispatcher === null) {
+            $this->eventDispatcher = new EventDispatcher();
+        }
+
+        if ($this->logger === null) {
+            $this->logger = new Logger($this->config);
+        }
+
+        if ($this->cache === null) {
+            $this->cache = new CacheManager($this->config);
+        }
+    }
+
+    /**
+     * Obter HTTP Client (Lazy Loading)
+     */
+    private function getHttpClient(): Client
+    {
+        if ($this->httpClient === null) {
+            $this->httpClient = new Client($this->config);
+        }
+        return $this->httpClient;
+    }
+
+    /**
+     * Obter Auth Manager (Lazy Loading)
+     */
+    private function getAuthManager(): AuthManager
+    {
+        if ($this->authManager === null) {
+            $this->authManager = new AuthManager($this->getHttpClient(), $this->config);
+        }
+        return $this->authManager;
+    }
+
+    /**
+     * Obter Event Dispatcher (Lazy Loading)
+     */
+    private function getEventDispatcher(): EventDispatcher
+    {
+        if ($this->eventDispatcher === null) {
+            $this->eventDispatcher = new EventDispatcher();
+        }
+        return $this->eventDispatcher;
+    }
+
+    /**
+     * Obter Logger (Lazy Loading)
+     */
+    private function getLogger(): Logger
+    {
+        if ($this->logger === null) {
+            $this->logger = new Logger($this->config);
+        }
+        return $this->logger;
+    }
+
+    /**
+     * Obter Cache Manager (Lazy Loading)
+     */
+    private function getCache(): CacheManager
+    {
+        if ($this->cache === null) {
+            $this->cache = new CacheManager($this->config);
+        }
+        return $this->cache;
     }
 
     /**

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-// use App\Helpers\ClubifySDKHelper;
-// use App\Helpers\ResponseHelper;
-// use App\Helpers\ModuleTestHelper;
+use App\Helpers\ClubifySDKHelper;
+use App\Helpers\ResponseHelper;
+use App\Helpers\ModuleTestHelper;
 use Exception;
 
 class ClubifyDemoController extends Controller
@@ -16,11 +16,147 @@ class ClubifyDemoController extends Controller
      */
     public function index()
     {
-        // Evitar chamadas ao SDK no index para debug
-        return view('clubify.demo', [
-            'sdkStatus' => 'Debug mode - SDK calls disabled',
-            'config' => ['status' => 'debug_mode']
-        ]);
+        try {
+            // Página principal simplificada - sem inicialização do SDK
+            $sdkStatus = 'SDK disponível (não inicializado) ⚪';
+            $credentials = [
+                'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID', 'NOT_SET'),
+                'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'NOT_SET'),
+                'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'NOT_SET'),
+            ];
+            $initializationDetails = [
+                'status' => 'not_initialized',
+                'message' => 'Use o botão "Inicializar SDK" para conectar à API'
+            ];
+
+            return view('clubify.demo', [
+                'sdkStatus' => $sdkStatus,
+                'config' => $credentials,
+                'initializationDetails' => $initializationDetails
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => 'Erro na página principal',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
+        }
+    }
+
+    /**
+     * Inicializar SDK manualmente
+     */
+    public function initialize()
+    {
+        try {
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', [], 500);
+            }
+
+            $sdk = ClubifySDKHelper::getInstance();
+
+            if ($sdk->isInitialized()) {
+                return ResponseHelper::success([
+                    'message' => 'SDK já estava inicializado',
+                    'status' => 'already_initialized'
+                ]);
+            }
+
+            // Tentar inicializar
+            $initResult = ClubifySDKHelper::initializeForTesting();
+
+            if ($initResult) {
+                return ResponseHelper::success([
+                    'message' => 'SDK inicializado com sucesso!',
+                    'status' => 'initialized',
+                    'sdk_status' => $sdk->isInitialized()
+                ]);
+            } else {
+                return ResponseHelper::error('Falha na inicialização do SDK', [
+                    'suggestion' => 'Verifique suas credenciais no arquivo .env'
+                ], 400);
+            }
+
+        } catch (\Throwable $e) {
+            return ResponseHelper::exception($e, 'Erro durante inicialização do SDK');
+        }
+    }
+
+    /**
+     * Testar criação da instância do SDK isoladamente
+     */
+    public function testConnectivity()
+    {
+        try {
+            // Teste 1: API externa respondendo
+            $apiTest = $this->testExternalAPI();
+
+            // Teste 2: Criação da instância do SDK
+            $sdkTest = $this->testSDKCreation();
+
+            return ResponseHelper::success([
+                'api_connectivity' => $apiTest,
+                'sdk_creation' => $sdkTest,
+                'conclusion' => 'Teste de conectividade completo'
+            ]);
+
+        } catch (\Throwable $e) {
+            return ResponseHelper::exception($e, 'Erro no teste de conectividade');
+        }
+    }
+
+    private function testExternalAPI(): array
+    {
+        $apiUrl = env('CLUBIFY_CHECKOUT_API_URL', 'https://checkout.svelve.com/api/v1');
+        $context = stream_context_create(['http' => ['timeout' => 3]]);
+
+        $startTime = microtime(true);
+        $result = @file_get_contents($apiUrl . '/health', false, $context);
+        $duration = round((microtime(true) - $startTime) * 1000, 2);
+
+        return [
+            'status' => $result !== false ? 'ok' : 'failed',
+            'duration_ms' => $duration,
+            'api_url' => $apiUrl
+        ];
+    }
+
+    private function testSDKCreation(): array
+    {
+        try {
+            $startTime = microtime(true);
+
+            // Tentar criar SDK diretamente sem helper
+            $config = [
+                'credentials' => [
+                    'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID'),
+                    'api_key' => env('CLUBIFY_CHECKOUT_API_KEY'),
+                ],
+                'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'sandbox'),
+                'http' => ['timeout' => 3, 'retries' => 1]
+            ];
+
+            $sdk = new \Clubify\Checkout\ClubifyCheckoutSDK($config);
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
+
+            return [
+                'status' => 'success',
+                'duration_ms' => $duration,
+                'sdk_class' => get_class($sdk),
+                'is_initialized' => $sdk->isInitialized()
+            ];
+
+        } catch (\Throwable $e) {
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
+            return [
+                'status' => 'failed',
+                'duration_ms' => $duration,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ];
+        }
     }
 
     /**
@@ -28,11 +164,39 @@ class ClubifyDemoController extends Controller
      */
     public function debug()
     {
-        return response()->json([
-            'status' => 'working',
-            'timestamp' => date('Y-m-d H:i:s'),
-            'message' => 'Debug endpoint is working correctly'
-        ]);
+        try {
+            $debugInfo = [
+                'status' => 'working',
+                'timestamp' => date('Y-m-d H:i:s'),
+                'message' => 'Debug endpoint is working correctly',
+                'php_version' => PHP_VERSION,
+                'laravel_version' => app()->version()
+            ];
+
+            // Tentar verificar SDK
+            try {
+                $debugInfo['sdk_available'] = ClubifySDKHelper::isAvailable();
+                $debugInfo['credentials'] = ClubifySDKHelper::getCredentialsInfo();
+
+                if ($debugInfo['sdk_available']) {
+                    $sdk = ClubifySDKHelper::getInstance();
+                    $debugInfo['sdk_class'] = get_class($sdk);
+                    $debugInfo['sdk_initialized'] = $sdk->isInitialized();
+                }
+            } catch (Exception $e) {
+                $debugInfo['sdk_error'] = $e->getMessage();
+            }
+
+            return ResponseHelper::debug($debugInfo);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
+        }
     }
 
     /**

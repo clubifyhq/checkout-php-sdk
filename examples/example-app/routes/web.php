@@ -21,6 +21,8 @@ Route::prefix('clubify')->group(function () {
     Route::get('/', [ClubifyDemoController::class, 'index'])->name('clubify.demo');
     Route::get('/status', [ClubifyDemoController::class, 'status'])->name('clubify.status');
     Route::get('/debug', [ClubifyDemoController::class, 'debug'])->name('clubify.debug');
+    Route::get('/test-connectivity', [ClubifyDemoController::class, 'testConnectivity'])->name('clubify.test.connectivity');
+    Route::post('/initialize', [ClubifyDemoController::class, 'initialize'])->name('clubify.initialize');
     Route::get('/test-products', [ClubifyDemoController::class, 'testProducts'])->name('clubify.test.products');
     Route::get('/test-checkout', [ClubifyDemoController::class, 'testCheckout'])->name('clubify.test.checkout');
     Route::get('/test-organization', [ClubifyDemoController::class, 'testOrganization'])->name('clubify.test.organization');

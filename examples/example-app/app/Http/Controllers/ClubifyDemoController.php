@@ -39,13 +39,20 @@ class ClubifyDemoController extends Controller
 
         try {
             $this->sdk = new ClubifyCheckoutSDK($config);
-            logger()->info('Clubify SDK inicializado com sucesso', ['config' => array_keys($config)]);
+
+            // Log only if Laravel is fully booted and logger is available
+            if (function_exists('logger') && app()->bound('config')) {
+                logger()->info('Clubify SDK inicializado com sucesso', ['config' => array_keys($config)]);
+            }
         } catch (Exception $e) {
-            logger()->error('Erro ao inicializar Clubify SDK', [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
+            // Log only if Laravel is fully booted and logger is available
+            if (function_exists('logger') && app()->bound('config')) {
+                logger()->error('Erro ao inicializar Clubify SDK', [
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]);
+            }
         }
     }
 

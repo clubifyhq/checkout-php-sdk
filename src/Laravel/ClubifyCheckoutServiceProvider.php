@@ -86,7 +86,11 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
     {
         // Configuration
         $this->app->singleton(ConfigurationInterface::class, function (Container $app): Configuration {
-            $config = $app['config']['clubify-checkout'] ?? [];
+            // Verificar se a configuração está disponível antes de tentar acessá-la
+            $config = [];
+            if ($app->bound('config')) {
+                $config = $app['config']['clubify-checkout'] ?? [];
+            }
             return new Configuration($config);
         });
 

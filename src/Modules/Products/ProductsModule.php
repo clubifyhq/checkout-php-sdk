@@ -6,7 +6,7 @@ namespace Clubify\Checkout\Modules\Products;
 
 use Clubify\Checkout\Contracts\ModuleInterface;
 use Clubify\Checkout\Core\Config\Configuration;
-use Clubify\Checkout\Core\Logger\LoggerInterface;
+use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 
 /**
@@ -30,7 +30,7 @@ use Clubify\Checkout\ClubifyCheckoutSDK;
 class ProductsModule implements ModuleInterface
 {
     private Configuration $config;
-    private LoggerInterface $logger;
+    private Logger $logger;
     private bool $initialized = false;
 
     public function __construct(
@@ -40,7 +40,7 @@ class ProductsModule implements ModuleInterface
     /**
      * Inicializa o módulo com configurações
      */
-    public function initialize(Configuration $config, LoggerInterface $logger): void
+    public function initialize(Configuration $config, Logger $logger): void
     {
         $this->config = $config;
         $this->logger = $logger;

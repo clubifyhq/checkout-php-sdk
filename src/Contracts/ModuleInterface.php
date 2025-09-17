@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Contracts;
 
 use Clubify\Checkout\Core\Config\Configuration;
-use Clubify\Checkout\Core\Logger\LoggerInterface;
+use Clubify\Checkout\Core\Logger\Logger;
 
 /**
  * Interface base para Module Pattern
@@ -21,7 +21,7 @@ interface ModuleInterface
     /**
      * Inicializa o módulo com configurações
      */
-    public function initialize(Configuration $config, LoggerInterface $logger): void;
+    public function initialize(Configuration $config, Logger $logger): void;
 
     /**
      * Verifica se o módulo está inicializado

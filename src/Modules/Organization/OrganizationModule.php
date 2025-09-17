@@ -6,7 +6,7 @@ namespace Clubify\Checkout\Modules\Organization;
 
 use Clubify\Checkout\Contracts\ModuleInterface;
 use Clubify\Checkout\Core\Config\Configuration;
-use Clubify\Checkout\Core\Logger\LoggerInterface;
+use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
@@ -36,7 +36,7 @@ use Clubify\Checkout\Modules\Organization\Repositories\OrganizationRepository;
 class OrganizationModule implements ModuleInterface
 {
     private Configuration $config;
-    private LoggerInterface $logger;
+    private Logger $logger;
     private bool $initialized = false;
 
     private ?OrganizationRepository $repository = null;
@@ -52,7 +52,7 @@ class OrganizationModule implements ModuleInterface
     /**
      * Inicializa o módulo com configurações
      */
-    public function initialize(Configuration $config, LoggerInterface $logger): void
+    public function initialize(Configuration $config, Logger $logger): void
     {
         $this->config = $config;
         $this->logger = $logger;

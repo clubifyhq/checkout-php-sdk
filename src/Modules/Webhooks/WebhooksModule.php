@@ -6,14 +6,14 @@ namespace Clubify\Checkout\Modules\Webhooks;
 
 use Clubify\Checkout\Contracts\ModuleInterface;
 use Clubify\Checkout\Core\Config\Configuration;
-use Clubify\Checkout\Core\Logger\LoggerInterface;
+use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 
 class WebhooksModule implements ModuleInterface
 {
     private bool $initialized = false;
     private ?Configuration $config = null;
-    private ?LoggerInterface $logger = null;
+    private ?Logger $logger = null;
 
     public function __construct(
         private ClubifyCheckoutSDK $sdk
@@ -23,7 +23,7 @@ class WebhooksModule implements ModuleInterface
     /**
      * Inicializa o módulo com configurações
      */
-    public function initialize(Configuration $config, LoggerInterface $logger): void
+    public function initialize(Configuration $config, Logger $logger): void
     {
         $this->config = $config;
         $this->logger = $logger;

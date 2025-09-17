@@ -8,12 +8,12 @@ namespace Clubify\Checkout\Enums;
  * Enum para ambientes de execução do SDK
  *
  * Define os ambientes disponíveis e suas configurações correspondentes.
- * SANDBOX é um alias para DEVELOPMENT para compatibilidade.
+ * SANDBOX usa as mesmas configurações que DEVELOPMENT para compatibilidade.
  */
 enum Environment: string
 {
     case DEVELOPMENT = 'development';
-    case SANDBOX = 'development'; // Alias para DEVELOPMENT
+    case SANDBOX = 'sandbox';
     case STAGING = 'staging';
     case PRODUCTION = 'production';
 

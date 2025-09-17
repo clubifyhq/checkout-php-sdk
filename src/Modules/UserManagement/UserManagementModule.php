@@ -156,6 +156,35 @@ class UserManagementModule implements ModuleInterface
     }
 
     /**
+     * Verifica se o módulo está saudável
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            return $this->initialized;
+        } catch (\Exception $e) {
+            $this->logger?->error('UserManagementModule health check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Obtém estatísticas do módulo
+     */
+    public function getStats(): array
+    {
+        return [
+            'module' => $this->getName(),
+            'version' => $this->getVersion(),
+            'initialized' => $this->initialized,
+            'healthy' => $this->isHealthy(),
+            'timestamp' => time()
+        ];
+    }
+
+    /**
      * CRUD de usuários
      */
     public function createUser(array $userData): array
@@ -186,6 +215,33 @@ class UserManagementModule implements ModuleInterface
     {
         $this->requireInitialized();
         return $this->getUserService()->listUsers($filters);
+    }
+
+    /**
+     * Autenticar usuário
+     */
+    public function authenticateUser(string $email, string $password): array
+    {
+        $this->requireInitialized();
+        return $this->getAuthService()->authenticateUser($email, $password);
+    }
+
+    /**
+     * Obter roles do usuário
+     */
+    public function getUserRoles(string $userId): array
+    {
+        $this->requireInitialized();
+        return $this->getRoleService()->getUserRoles($userId);
+    }
+
+    /**
+     * Atualizar perfil do usuário
+     */
+    public function updateUserProfile(string $userId, array $profileData): array
+    {
+        $this->requireInitialized();
+        return $this->getUserService()->updateUserProfile($userId, $profileData);
     }
 
     /**

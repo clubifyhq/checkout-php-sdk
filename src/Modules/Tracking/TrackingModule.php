@@ -221,6 +221,15 @@ class TrackingModule implements ModuleInterface
     }
 
     /**
+     * Rastrear conversão
+     */
+    public function trackConversion(array $conversionData): array
+    {
+        $this->requireInitialized();
+        return $this->getEventTrackingService()->trackConversion($conversionData);
+    }
+
+    /**
      * Obter Event Tracking Service (lazy loading)
      */
     private function getEventTrackingService(): EventTrackingService

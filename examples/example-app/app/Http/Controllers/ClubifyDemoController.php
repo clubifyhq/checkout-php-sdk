@@ -350,6 +350,75 @@ class ClubifyDemoController extends Controller
     }
 
     /**
+     * Teste de tracking
+     */
+    public function testTracking()
+    {
+        try {
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', 500);
+            }
+
+            $sdk = ClubifySDKHelper::getInstance();
+            $tracking = $sdk->tracking();
+
+            return ResponseHelper::success([
+                'module' => 'tracking',
+                'loaded' => true
+            ], 'Módulo de tracking carregado com sucesso');
+
+        } catch (Exception $e) {
+            return ResponseHelper::exception($e, 'Erro ao testar módulo de tracking');
+        }
+    }
+
+    /**
+     * Teste de user management
+     */
+    public function testUserManagement()
+    {
+        try {
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', 500);
+            }
+
+            $sdk = ClubifySDKHelper::getInstance();
+            $userManagement = $sdk->userManagement();
+
+            return ResponseHelper::success([
+                'module' => 'userManagement',
+                'loaded' => true
+            ], 'Módulo de user management carregado com sucesso');
+
+        } catch (Exception $e) {
+            return ResponseHelper::exception($e, 'Erro ao testar módulo de user management');
+        }
+    }
+
+    /**
+     * Teste de subscriptions
+     */
+    public function testSubscriptions()
+    {
+        try {
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', 500);
+            }
+
+            $sdk = ClubifySDKHelper::getInstance();
+            $subscriptions = $sdk->subscriptions();
+
+            return ResponseHelper::success([
+                'module' => 'subscriptions',
+                'loaded' => true
+            ], 'Módulo de subscriptions carregado com sucesso');
+
+        } catch (Exception $e) {
+            return ResponseHelper::exception($e, 'Erro ao testar módulo de subscriptions');
+        }
+    }
+
+    /**
      * Status geral do SDK
      */
     public function status()
@@ -365,7 +434,10 @@ class ClubifyDemoController extends Controller
                     'checkout',
                     'payments',
                     'customers',
-                    'webhooks'
+                    'webhooks',
+                    'tracking',
+                    'userManagement',
+                    'subscriptions'
                 ]
             ];
 
@@ -404,8 +476,18 @@ class ClubifyDemoController extends Controller
             $workingMethods = 0;
             $errorMethods = 0;
 
-            // Testar todos os módulos
-            $modules = ['organization', 'products', 'checkout', 'payments', 'customers', 'webhooks'];
+            // Testar todos os módulos (incluindo novos módulos)
+            $modules = [
+                'organization',
+                'products',
+                'checkout',
+                'payments',
+                'customers',
+                'webhooks',
+                'tracking',
+                'userManagement',
+                'subscriptions'
+            ];
 
             foreach ($modules as $moduleName) {
                 $moduleResults = $this->testModuleInternal($moduleName);
@@ -489,6 +571,21 @@ class ClubifyDemoController extends Controller
             case 'webhooks':
                 $module = $sdk->webhooks();
                 $results = $this->testWebhooksModule($module);
+                break;
+
+            case 'tracking':
+                $module = $sdk->tracking();
+                $results = $this->testTrackingModule($module);
+                break;
+
+            case 'userManagement':
+                $module = $sdk->userManagement();
+                $results = $this->testUserManagementModule($module);
+                break;
+
+            case 'subscriptions':
+                $module = $sdk->subscriptions();
+                $results = $this->testSubscriptionsModule($module);
                 break;
 
             default:
@@ -725,6 +822,124 @@ class ClubifyDemoController extends Controller
             ['payment_id' => 'pay_123', 'amount' => 100.00]
         ], 'array');
         $results[] = ModuleTestHelper::testMethod($module, 'listWebhooks', [], 'array');
+
+        return $results;
+    }
+
+    /**
+     * Testa o módulo Tracking
+     */
+    private function testTrackingModule($module)
+    {
+        $results = [];
+
+        // Métodos da Interface ModuleInterface
+        $results[] = ModuleTestHelper::testMethod($module, 'getName', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getVersion', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getDependencies', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
+
+        // Métodos específicos do TrackingModule
+        $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStats', [], 'array');
+
+        // Métodos de negócio do Tracking
+        $results[] = ModuleTestHelper::testMethod($module, 'trackEvent', [[
+            'event' => 'checkout.started',
+            'session_id' => 'sess_123',
+            'product_id' => 'prod_456'
+        ]], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'trackConversion', [[
+            'order_id' => 'order_123',
+            'value' => 99.99,
+            'currency' => 'BRL'
+        ]], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'getAnalytics', [
+            ['start_date' => '2024-01-01', 'end_date' => '2024-12-31']
+        ], 'array');
+
+        return $results;
+    }
+
+    /**
+     * Testa o módulo UserManagement
+     */
+    private function testUserManagementModule($module)
+    {
+        $results = [];
+
+        // Métodos da Interface ModuleInterface
+        $results[] = ModuleTestHelper::testMethod($module, 'getName', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getVersion', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getDependencies', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
+
+        // Métodos específicos do UserManagementModule
+        $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStats', [], 'array');
+
+        // Métodos de negócio do User Management
+        $results[] = ModuleTestHelper::testMethod($module, 'createUser', [[
+            'name' => 'Test User',
+            'email' => 'user@test.com',
+            'role' => 'user'
+        ]], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'authenticateUser', [
+            'user@test.com',
+            'password123'
+        ], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'getUserRoles', ['user_123'], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'updateUserProfile', [
+            'user_123',
+            ['name' => 'Updated User']
+        ], 'array');
+
+        return $results;
+    }
+
+    /**
+     * Testa o módulo Subscriptions
+     */
+    private function testSubscriptionsModule($module)
+    {
+        $results = [];
+
+        // Métodos da Interface ModuleInterface
+        $results[] = ModuleTestHelper::testMethod($module, 'getName', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getVersion', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getDependencies', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
+
+        // Métodos específicos do SubscriptionsModule
+        $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStats', [], 'array');
+
+        // Métodos de negócio do Subscriptions
+        $results[] = ModuleTestHelper::testMethod($module, 'createSubscription', [[
+            'plan_id' => 'plan_123',
+            'customer_id' => 'cust_456',
+            'billing_cycle' => 'monthly'
+        ]], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'cancelSubscription', [
+            'sub_123',
+            ['reason' => 'customer_request']
+        ], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'getSubscriptionMetrics', [
+            ['start_date' => '2024-01-01', 'end_date' => '2024-12-31']
+        ], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'updateBilling', [
+            'sub_123',
+            ['payment_method' => 'credit_card']
+        ], 'array');
 
         return $results;
     }

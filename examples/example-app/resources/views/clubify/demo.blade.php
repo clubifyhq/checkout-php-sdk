@@ -191,6 +191,54 @@
                         </div>
                         <p class="text-sm text-gray-600">Testa o carregamento do módulo de webhooks</p>
                     </div>
+
+                    <!-- Tracking Test -->
+                    <div class="border rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-medium text-gray-700">Módulo de Tracking</h3>
+                            <button
+                                @click="testTracking()"
+                                :disabled="loading"
+                                class="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50"
+                            >
+                                <span x-show="!loading">Testar</span>
+                                <span x-show="loading">🔄 Testando...</span>
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600">Testa o carregamento do módulo de tracking</p>
+                    </div>
+
+                    <!-- User Management Test -->
+                    <div class="border rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-medium text-gray-700">Módulo de User Management</h3>
+                            <button
+                                @click="testUserManagement()"
+                                :disabled="loading"
+                                class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                            >
+                                <span x-show="!loading">Testar</span>
+                                <span x-show="loading">🔄 Testando...</span>
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600">Testa o carregamento do módulo de user management</p>
+                    </div>
+
+                    <!-- Subscriptions Test -->
+                    <div class="border rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-medium text-gray-700">Módulo de Subscriptions</h3>
+                            <button
+                                @click="testSubscriptions()"
+                                :disabled="loading"
+                                class="px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700 disabled:opacity-50"
+                            >
+                                <span x-show="!loading">Testar</span>
+                                <span x-show="loading">🔄 Testando...</span>
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600">Testa o carregamento do módulo de subscriptions</p>
+                    </div>
                 </div>
             </div>
 
@@ -269,11 +317,11 @@
                     <div class="space-y-2">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Módulos:</span>
-                            <span class="font-medium">6 módulos</span>
+                            <span class="font-medium">9 módulos</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Métodos:</span>
-                            <span class="font-medium">94+ métodos</span>
+                            <span class="font-medium">150+ métodos</span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Cobertura:</span>
@@ -477,6 +525,72 @@
                         }
                     } catch (error) {
                         this.addResult('Módulo de Webhooks', false, 'Erro de conexão', error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async testTracking() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/clubify/test-tracking', {
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.addResult('Módulo de Tracking', true, data.message);
+                        } else {
+                            this.addResult('Módulo de Tracking', false, 'Falha no teste', data.error, data.file, data.line);
+                        }
+                    } catch (error) {
+                        this.addResult('Módulo de Tracking', false, 'Erro de conexão', error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async testUserManagement() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/clubify/test-user-management', {
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.addResult('Módulo de User Management', true, data.message);
+                        } else {
+                            this.addResult('Módulo de User Management', false, 'Falha no teste', data.error, data.file, data.line);
+                        }
+                    } catch (error) {
+                        this.addResult('Módulo de User Management', false, 'Erro de conexão', error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async testSubscriptions() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/clubify/test-subscriptions', {
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.addResult('Módulo de Subscriptions', true, data.message);
+                        } else {
+                            this.addResult('Módulo de Subscriptions', false, 'Falha no teste', data.error, data.file, data.line);
+                        }
+                    } catch (error) {
+                        this.addResult('Módulo de Subscriptions', false, 'Erro de conexão', error.message);
                     } finally {
                         this.loading = false;
                     }

@@ -142,6 +142,35 @@ class SubscriptionsModule implements ModuleInterface
     }
 
     /**
+     * Verifica se o módulo está saudável
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            return $this->initialized;
+        } catch (\Exception $e) {
+            $this->logger?->error('SubscriptionsModule health check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Obtém estatísticas do módulo
+     */
+    public function getStats(): array
+    {
+        return [
+            'module' => $this->getName(),
+            'version' => $this->getVersion(),
+            'initialized' => $this->initialized,
+            'healthy' => $this->isHealthy(),
+            'timestamp' => time()
+        ];
+    }
+
+    /**
      * CRUD de assinaturas
      */
     public function createSubscription(array $subscriptionData): array
@@ -253,6 +282,15 @@ class SubscriptionsModule implements ModuleInterface
     {
         $this->requireInitialized();
         return $this->getBillingService()->updatePaymentMethod($subscriptionId, $paymentMethodData);
+    }
+
+    /**
+     * Atualizar billing da assinatura
+     */
+    public function updateBilling(string $subscriptionId, array $billingData): array
+    {
+        $this->requireInitialized();
+        return $this->getBillingService()->updateBilling($subscriptionId, $billingData);
     }
 
     /**

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Organization\Services;
 
-use ClubifyCheckout\Services\BaseService;
-use ClubifyCheckout\Exceptions\ValidationException;
-use ClubifyCheckout\Exceptions\HttpException;
-use ClubifyCheckout\Exceptions\AuthenticationException;
+use Clubify\Checkout\Services\BaseService;
+use Clubify\Checkout\Exceptions\ValidationException;
+use Clubify\Checkout\Exceptions\HttpException;
+use Clubify\Checkout\Exceptions\AuthenticationException;
 
 /**
  * Serviço de gestão de API Keys

@@ -6,7 +6,7 @@ namespace Clubify\Checkout\Repositories;
 
 use Clubify\Checkout\Contracts\RepositoryInterface;
 use Clubify\Checkout\Core\Config\Configuration;
-use Clubify\Checkout\Core\Logger\LoggerInterface;
+use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Exceptions\HttpException;
 
@@ -23,12 +23,12 @@ use Clubify\Checkout\Exceptions\HttpException;
 abstract class BaseRepository implements RepositoryInterface
 {
     protected Configuration $config;
-    protected LoggerInterface $logger;
+    protected Logger $logger;
     protected Client $httpClient;
 
     public function __construct(
         Configuration $config,
-        LoggerInterface $logger,
+        Logger $logger,
         Client $httpClient
     ) {
         $this->config = $config;

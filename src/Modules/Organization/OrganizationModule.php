@@ -160,9 +160,9 @@ class OrganizationModule implements ModuleInterface
     /**
      * Obtém o repository de organizações (lazy loading)
      */
-    public function getRepository(): OrganizationRepository
+    public function getRepository(): ?OrganizationRepository
     {
-        if ($this->repository === null) {
+        if ($this->repository === null && isset($this->httpClient)) {
             $this->repository = new OrganizationRepository(
                 $this->config,
                 $this->logger,
@@ -176,9 +176,9 @@ class OrganizationModule implements ModuleInterface
     /**
      * Obtém o serviço de tenant (lazy loading)
      */
-    public function tenant(): TenantService
+    public function tenant(): ?TenantService
     {
-        if ($this->tenantService === null) {
+        if ($this->tenantService === null && isset($this->httpClient, $this->cache, $this->eventDispatcher)) {
             $this->tenantService = new TenantService(
                 $this->config,
                 $this->logger,
@@ -194,9 +194,9 @@ class OrganizationModule implements ModuleInterface
     /**
      * Obtém o serviço de admin (lazy loading)
      */
-    public function admin(): AdminService
+    public function admin(): ?AdminService
     {
-        if ($this->adminService === null) {
+        if ($this->adminService === null && isset($this->httpClient, $this->cache, $this->eventDispatcher)) {
             $this->adminService = new AdminService(
                 $this->config,
                 $this->logger,
@@ -212,9 +212,9 @@ class OrganizationModule implements ModuleInterface
     /**
      * Obtém o serviço de API keys (lazy loading)
      */
-    public function apiKey(): ApiKeyService
+    public function apiKey(): ?ApiKeyService
     {
-        if ($this->apiKeyService === null) {
+        if ($this->apiKeyService === null && isset($this->httpClient, $this->cache, $this->eventDispatcher)) {
             $this->apiKeyService = new ApiKeyService(
                 $this->config,
                 $this->logger,
@@ -230,9 +230,9 @@ class OrganizationModule implements ModuleInterface
     /**
      * Obtém o serviço de domínios (lazy loading)
      */
-    public function domain(): DomainService
+    public function domain(): ?DomainService
     {
-        if ($this->domainService === null) {
+        if ($this->domainService === null && isset($this->httpClient, $this->cache, $this->eventDispatcher)) {
             $this->domainService = new DomainService(
                 $this->config,
                 $this->logger,

@@ -34,8 +34,15 @@ class AuthManager implements AuthManagerInterface
         $this->jwtHandler = $jwtHandler ?? new JWTHandler();
     }
 
-    public function authenticate(string $tenantId, string $apiKey): bool
+    public function authenticate(?string $tenantId = null, ?string $apiKey = null): bool
     {
+        $tenantId = $tenantId ?? $this->config->getTenantId();
+        $apiKey = $apiKey ?? $this->config->getApiKey();
+
+        if (!$tenantId || !$apiKey) {
+            throw new AuthenticationException('Tenant ID and API key are required for authentication');
+        }
+
         try {
             $response = $this->httpClient->post('/auth/token', [
                 'json' => [

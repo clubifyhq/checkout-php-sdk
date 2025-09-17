@@ -66,6 +66,20 @@ class Client
     }
 
     /**
+     * Realiza teste de conectividade com a API
+     */
+    public function healthCheck(): bool
+    {
+        try {
+            $response = $this->get('/health');
+            $data = json_decode($response->getBody()->getContents(), true);
+            return isset($data['status']) && $data['status'] === 'healthy';
+        } catch (\Exception) {
+            return false;
+        }
+    }
+
+    /**
      * POST request
      */
     public function post(string $uri, array $options = []): ResponseInterface

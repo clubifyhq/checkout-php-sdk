@@ -6,6 +6,17 @@ namespace Clubify\Checkout;
 
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Config\ConfigurationInterface;
+use Clubify\Checkout\Core\Http\Client;
+use Clubify\Checkout\Core\Auth\AuthManager;
+use Clubify\Checkout\Core\Events\EventDispatcher;
+use Clubify\Checkout\Core\Logger\Logger;
+use Clubify\Checkout\Core\Cache\CacheManager;
+use Clubify\Checkout\Modules\Organization\OrganizationModule;
+use Clubify\Checkout\Modules\Products\ProductsModule;
+use Clubify\Checkout\Modules\Checkout\CheckoutModule;
+use Clubify\Checkout\Modules\Payments\PaymentsModule;
+use Clubify\Checkout\Modules\Customers\CustomersModule;
+use Clubify\Checkout\Modules\Webhooks\WebhooksModule;
 use Clubify\Checkout\Enums\Environment;
 use Clubify\Checkout\Exceptions\ConfigurationException;
 use Clubify\Checkout\Exceptions\SDKException;
@@ -22,20 +33,20 @@ class ClubifyCheckoutSDK
     private bool $initialized = false;
     private bool $initializing = false;
 
-    // Core components (will be injected)
-    private mixed $httpClient = null;
-    private mixed $authManager = null;
-    private mixed $eventDispatcher = null;
-    private mixed $logger = null;
-    private mixed $cache = null;
+    // Core components
+    private ?Client $httpClient = null;
+    private ?AuthManager $authManager = null;
+    private ?EventDispatcher $eventDispatcher = null;
+    private ?Logger $logger = null;
+    private ?CacheManager $cache = null;
 
-    // Module instances (will be created on demand)
-    private mixed $organization = null;
-    private mixed $products = null;
-    private mixed $checkout = null;
-    private mixed $payments = null;
-    private mixed $customers = null;
-    private mixed $webhooks = null;
+    // Module instances (created on demand)
+    private ?OrganizationModule $organization = null;
+    private ?ProductsModule $products = null;
+    private ?CheckoutModule $checkout = null;
+    private ?PaymentsModule $payments = null;
+    private ?CustomersModule $customers = null;
+    private ?WebhooksModule $webhooks = null;
 
     /**
      * Cria nova instância do SDK
@@ -51,8 +62,8 @@ class ClubifyCheckoutSDK
         // Criar configuração centralizada
         $this->config = new Configuration($config);
 
-        // TODO: Inicializar core components quando estiverem implementados
-        // $this->initializeCoreComponents();
+        // Inicializar core components
+        $this->initializeCoreComponents();
     }
 
     /**
@@ -79,10 +90,15 @@ class ClubifyCheckoutSDK
         $this->initializing = true;
 
         try {
-            // TODO: Implementar lógica de inicialização completa
-            // - Autenticação automática
-            // - Validação de conectividade
-            // - Setup de módulos
+            // Autenticação automática
+            $authResult = $this->authManager->authenticate();
+
+            // Validação de conectividade
+            $connectivityCheck = $this->httpClient->healthCheck();
+
+            if (!$connectivityCheck) {
+                throw new SDKException('API connectivity check failed');
+            }
 
             $this->initialized = true;
             $this->initializing = false;
@@ -92,6 +108,8 @@ class ClubifyCheckoutSDK
                 'authenticated' => $this->isAuthenticated(),
                 'tenant_id' => $this->config->getTenantId(),
                 'environment' => $this->config->getEnvironment(),
+                'auth_result' => $authResult,
+                'connectivity' => $connectivityCheck,
                 'timestamp' => date('c'),
             ];
         } catch (\Throwable $e) {
@@ -119,7 +137,6 @@ class ClubifyCheckoutSDK
      */
     public function isAuthenticated(): bool
     {
-        // TODO: Implementar verificação de autenticação
         return $this->authManager?->isAuthenticated() ?? false;
     }
 
@@ -128,8 +145,9 @@ class ClubifyCheckoutSDK
      */
     public function logout(): void
     {
-        // TODO: Implementar logout
         $this->authManager?->logout();
+        $this->cache?->clear();
+        $this->initialized = false;
     }
 
     /**
@@ -151,7 +169,6 @@ class ClubifyCheckoutSDK
     {
         $this->requireInitialized('setupOrganization');
 
-        // TODO: Implementar quando OrganizationModule estiver pronto
         return $this->organization()->setupComplete($organizationData);
     }
 
@@ -166,7 +183,6 @@ class ClubifyCheckoutSDK
     {
         $this->requireInitialized('createCompleteProduct');
 
-        // TODO: Implementar quando ProductsModule estiver pronto
         return $this->products()->createComplete($productData);
     }
 
@@ -181,7 +197,6 @@ class ClubifyCheckoutSDK
     {
         $this->requireInitialized('createCheckoutSession');
 
-        // TODO: Implementar quando CheckoutModule estiver pronto
         return $this->checkout()->createSession($sessionData);
     }
 
@@ -196,19 +211,16 @@ class ClubifyCheckoutSDK
     {
         $this->requireInitialized('processOneClick');
 
-        // TODO: Implementar quando CheckoutModule estiver pronto
         return $this->checkout()->oneClick($paymentData);
     }
 
     /**
      * Acesso ao módulo Organization
      */
-    public function organization(): mixed // TODO: OrganizationModule
+    public function organization(): OrganizationModule
     {
         if (!$this->organization) {
-            // TODO: Criar instância do OrganizationModule
-            // $this->organization = new OrganizationModule($this);
-            throw new SDKException('OrganizationModule not implemented yet');
+            $this->organization = new OrganizationModule($this);
         }
 
         return $this->organization;
@@ -217,12 +229,10 @@ class ClubifyCheckoutSDK
     /**
      * Acesso ao módulo Products
      */
-    public function products(): mixed // TODO: ProductsModule
+    public function products(): ProductsModule
     {
         if (!$this->products) {
-            // TODO: Criar instância do ProductsModule
-            // $this->products = new ProductsModule($this);
-            throw new SDKException('ProductsModule not implemented yet');
+            $this->products = new ProductsModule($this);
         }
 
         return $this->products;
@@ -231,12 +241,10 @@ class ClubifyCheckoutSDK
     /**
      * Acesso ao módulo Checkout
      */
-    public function checkout(): mixed // TODO: CheckoutModule
+    public function checkout(): CheckoutModule
     {
         if (!$this->checkout) {
-            // TODO: Criar instância do CheckoutModule
-            // $this->checkout = new CheckoutModule($this);
-            throw new SDKException('CheckoutModule not implemented yet');
+            $this->checkout = new CheckoutModule($this);
         }
 
         return $this->checkout;
@@ -245,12 +253,10 @@ class ClubifyCheckoutSDK
     /**
      * Acesso ao módulo Payments
      */
-    public function payments(): mixed // TODO: PaymentsModule
+    public function payments(): PaymentsModule
     {
         if (!$this->payments) {
-            // TODO: Criar instância do PaymentsModule
-            // $this->payments = new PaymentsModule($this);
-            throw new SDKException('PaymentsModule not implemented yet');
+            $this->payments = new PaymentsModule($this);
         }
 
         return $this->payments;
@@ -259,12 +265,10 @@ class ClubifyCheckoutSDK
     /**
      * Acesso ao módulo Customers
      */
-    public function customers(): mixed // TODO: CustomersModule
+    public function customers(): CustomersModule
     {
         if (!$this->customers) {
-            // TODO: Criar instância do CustomersModule
-            // $this->customers = new CustomersModule($this);
-            throw new SDKException('CustomersModule not implemented yet');
+            $this->customers = new CustomersModule($this);
         }
 
         return $this->customers;
@@ -273,12 +277,10 @@ class ClubifyCheckoutSDK
     /**
      * Acesso ao módulo Webhooks
      */
-    public function webhooks(): mixed // TODO: WebhooksModule
+    public function webhooks(): WebhooksModule
     {
         if (!$this->webhooks) {
-            // TODO: Criar instância do WebhooksModule
-            // $this->webhooks = new WebhooksModule($this);
-            throw new SDKException('WebhooksModule not implemented yet');
+            $this->webhooks = new WebhooksModule($this);
         }
 
         return $this->webhooks;
@@ -337,12 +339,11 @@ class ClubifyCheckoutSDK
      */
     private function initializeCoreComponents(): void
     {
-        // TODO: Implementar quando componentes estiverem prontos
-        // $this->httpClient = new HttpClient($this->config);
-        // $this->authManager = new AuthManager($this->httpClient, $this->config);
-        // $this->eventDispatcher = new EventDispatcher();
-        // $this->logger = new Logger($this->config);
-        // $this->cache = new CacheManager($this->config);
+        $this->httpClient = new Client($this->config);
+        $this->authManager = new AuthManager($this->httpClient, $this->config);
+        $this->eventDispatcher = new EventDispatcher();
+        $this->logger = new Logger($this->config);
+        $this->cache = new CacheManager($this->config);
     }
 
     /**
@@ -374,7 +375,7 @@ class ClubifyCheckoutSDK
     public function setDebugMode(bool $enabled): void
     {
         $this->config->set('debug', $enabled);
-        // TODO: Propagar para logger quando estiver implementado
+        $this->logger?->setDebugMode($enabled);
     }
 
     /**

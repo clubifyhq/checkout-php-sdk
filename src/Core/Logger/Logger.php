@@ -50,6 +50,11 @@ class Logger extends AbstractLogger
         return $child;
     }
 
+    public function setDebugMode(bool $enabled): void
+    {
+        $this->config->set('logger.level', $enabled ? LogLevel::DEBUG : LogLevel::INFO);
+    }
+
     private function shouldLog(string $level): bool
     {
         $configLevel = $this->config->getLoggerConfig()['level'] ?? 'info';

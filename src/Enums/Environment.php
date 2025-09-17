@@ -32,17 +32,20 @@ enum Environment: string
         return $this === self::STAGING;
     }
 
-    public function getBaseUrl(): string
-    {
-        return match ($this) {
-            self::DEVELOPMENT, self::SANDBOX => 'http://localhost:8000',
-            self::STAGING => 'https://staging-api.clubify.com',
-            self::PRODUCTION => 'https://api.clubify.com',
-        };
-    }
 
     public function isSandbox(): bool
     {
         return $this === self::SANDBOX;
     }
+
+    public function getBaseUrl(): string
+    {
+        return match ($this) {
+            self::DEVELOPMENT => 'https://checkout.svelve.com/api/v1',
+            self::SANDBOX => 'https://checkout.svelve.com/api/v1',
+            self::STAGING => 'https://checkout.svelve.com/api/v1',
+            self::PRODUCTION => 'https://checkout.svelve.com/api/v1',
+        };
+    }
+
 }

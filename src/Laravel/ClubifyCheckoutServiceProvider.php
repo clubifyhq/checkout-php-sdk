@@ -140,7 +140,9 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
             $config = $app[ConfigurationInterface::class];
 
             $sdk = new ClubifyCheckoutSDK($config->toArray());
-            $sdk->initialize();
+
+            // Não inicializa automaticamente para evitar problemas durante o boot
+            // A inicialização deve ser feita lazy quando o SDK for usado
 
             return $sdk;
         });
@@ -164,7 +166,8 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
             });
 
             $this->app->singleton(SyncCommand::class, function (Container $app): SyncCommand {
-                return new SyncCommand($app[ClubifyCheckoutSDK::class]);
+                // Não injeta o SDK diretamente para evitar problemas de inicialização
+                return new SyncCommand();
             });
         }
     }

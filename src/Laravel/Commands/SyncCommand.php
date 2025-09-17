@@ -29,17 +29,19 @@ final class SyncCommand extends Command
     protected $description = 'Sincroniza dados e testa conectividade com a API do Clubify Checkout';
 
     /**
-     * SDK instance
-     */
-    private ClubifyCheckoutSDK $sdk;
-
-    /**
      * Construtor
      */
-    public function __construct(ClubifyCheckoutSDK $sdk)
+    public function __construct()
     {
         parent::__construct();
-        $this->sdk = $sdk;
+    }
+
+    /**
+     * Obtem SDK instance de forma lazy
+     */
+    private function getSDK(): ClubifyCheckoutSDK
+    {
+        return app(ClubifyCheckoutSDK::class);
     }
 
     /**
@@ -130,11 +132,12 @@ final class SyncCommand extends Command
     {
         $this->info('  🔧 Testando inicialização do SDK...');
 
-        if (!$this->sdk->isInitialized()) {
-            $this->sdk->initialize();
+        $sdk = $this->getSDK();
+        if (!$sdk->isInitialized()) {
+            $sdk->initialize();
         }
 
-        $stats = $this->sdk->getStats();
+        $stats = $sdk->getStats();
         $this->info("     ✅ SDK inicializado (versão: {$stats['version']})");
     }
 
@@ -145,7 +148,7 @@ final class SyncCommand extends Command
     {
         $this->info('  🌐 Testando conectividade básica...');
 
-        $health = $this->sdk->healthCheck();
+        $health = $this->getSDK()->healthCheck();
 
         if ($health['status'] === 'healthy') {
             $this->info('     ✅ API acessível');
@@ -164,7 +167,7 @@ final class SyncCommand extends Command
 
         try {
             // Testa autenticação através de uma operação simples
-            $this->sdk->organization()->getStatus();
+            $this->getSDK()->organization()->getStatus();
             $this->info('     ✅ Autenticação válida');
         } catch (\Exception $e) {
             throw new \RuntimeException('Falha na autenticação: ' . $e->getMessage());
@@ -189,7 +192,7 @@ final class SyncCommand extends Command
 
         foreach ($modules as $module => $name) {
             try {
-                $moduleInstance = $this->sdk->{$module}();
+                $moduleInstance = $this->getSDK()->{$module}();
                 $status = $moduleInstance->isHealthy();
 
                 if ($status) {
@@ -211,7 +214,7 @@ final class SyncCommand extends Command
         $this->info('  🏢 Sincronizando dados da organização...');
 
         try {
-            $status = $this->sdk->organization()->getStatus();
+            $status = $this->getSDK()->organization()->getStatus();
             Cache::put('clubify.organization.status', $status, 3600);
             $this->info('     ✅ Dados da organização sincronizados');
         } catch (\Exception $e) {
@@ -227,7 +230,7 @@ final class SyncCommand extends Command
         $this->info('  📦 Sincronizando dados de produtos...');
 
         try {
-            $stats = $this->sdk->products()->getStats();
+            $stats = $this->getSDK()->products()->getStats();
             Cache::put('clubify.products.stats', $stats, 1800);
             $this->info('     ✅ Dados de produtos sincronizados');
         } catch (\Exception $e) {
@@ -243,7 +246,7 @@ final class SyncCommand extends Command
         $this->info('  👥 Sincronizando dados de clientes...');
 
         try {
-            $stats = $this->sdk->customers()->getStats();
+            $stats = $this->getSDK()->customers()->getStats();
             Cache::put('clubify.customers.stats', $stats, 1800);
             $this->info('     ✅ Dados de clientes sincronizados');
         } catch (\Exception $e) {
@@ -259,7 +262,7 @@ final class SyncCommand extends Command
         $this->info('  🔗 Sincronizando configuração de webhooks...');
 
         try {
-            $config = $this->sdk->webhooks()->getConfig();
+            $config = $this->getSDK()->webhooks()->getConfig();
             Cache::put('clubify.webhooks.config', $config, 3600);
             $this->info('     ✅ Configuração de webhooks sincronizada');
         } catch (\Exception $e) {
@@ -275,7 +278,7 @@ final class SyncCommand extends Command
         $this->info('  🗂️  Atualizando cache de configuração...');
 
         try {
-            $config = $this->sdk->getConfiguration();
+            $config = $this->getSDK()->getConfiguration();
             Cache::put('clubify.configuration', $config, 7200);
             $this->info('     ✅ Cache de configuração atualizado');
         } catch (\Exception $e) {
@@ -303,7 +306,7 @@ final class SyncCommand extends Command
         }
 
         // Limpa cache do SDK
-        $this->sdk->clearCache();
+        $this->getSDK()->clearCache();
 
         $this->info('     ✅ Cache limpo');
     }

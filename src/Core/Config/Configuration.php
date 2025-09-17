@@ -132,13 +132,21 @@ class Configuration implements ConfigurationInterface
      */
     public function getDefaultHeaders(): array
     {
-        return [
+        $headers = [
             'User-Agent' => 'ClubifyCheckoutSDK-PHP/1.0.0',
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
             'X-SDK-Version' => '1.0.0',
             'X-SDK-Language' => 'php',
         ];
+
+        // Adicionar X-Tenant-ID se disponível
+        $tenantId = $this->getTenantId();
+        if ($tenantId) {
+            $headers['X-Tenant-ID'] = $tenantId;
+        }
+
+        return $headers;
     }
 
     /**

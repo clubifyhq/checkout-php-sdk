@@ -23,12 +23,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | Define o ambiente de execução do SDK.
-    | Valores aceitos: 'development', 'staging', 'production'
+    | Valores aceitos: 'development', 'sandbox', 'staging', 'production'
     |
     */
 
-    'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'development'),
-    'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'https://checkout.svelve.com'),
+    'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'sandbox'),
+    'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'https://checkout.svelve.com/api/v1'),
     'debug' => env('CLUBIFY_CHECKOUT_DEBUG', false),
 
     /*

@@ -42,6 +42,12 @@ class ClubifyDemoController extends Controller
                 $sdk = ClubifySDKHelper::getInstance();
                 $debugInfo['initialized'] = $sdk->isInitialized();
 
+                // NÃO tentar inicializar automaticamente para evitar timeout
+                // Isso deve ser feito manualmente via /clubify/initialize se necessário
+                if (!$sdk->isInitialized()) {
+                    $debugInfo['note_initialization'] = 'SDK not initialized. Use /clubify/initialize to test initialization.';
+                }
+
                 // Tentar obter informações básicas dos módulos
                 try {
                     $debugInfo['organization_module'] = [

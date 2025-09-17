@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use Clubify\Checkout\Enums\Environment;
-
 return [
     /*
     |--------------------------------------------------------------------------
@@ -29,7 +27,7 @@ return [
     |
     */
 
-    'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', Environment::SANDBOX->value),
+    'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'development'),
     'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'https://api.clubify.com'),
     'debug' => env('CLUBIFY_CHECKOUT_DEBUG', false),
 

@@ -471,6 +471,12 @@ class ClubifyDemoController extends Controller
                 return ResponseHelper::error('SDK não está disponível', 500);
             }
 
+            // Garantir que o SDK está inicializado para os testes
+            $sdk = ClubifySDKHelper::getInstance();
+            if (!$sdk->isInitialized()) {
+                ClubifySDKHelper::initializeForTesting();
+            }
+
             $results = [];
             $totalMethods = 0;
             $workingMethods = 0;
@@ -523,6 +529,12 @@ class ClubifyDemoController extends Controller
         try {
             if (!ClubifySDKHelper::isAvailable()) {
                 return ResponseHelper::error('SDK não está disponível', 500);
+            }
+
+            // Garantir que o SDK está inicializado para os testes
+            $sdk = ClubifySDKHelper::getInstance();
+            if (!$sdk->isInitialized()) {
+                ClubifySDKHelper::initializeForTesting();
             }
 
             $results = $this->testModuleInternal($moduleName);

@@ -44,32 +44,42 @@ class AuthManager implements AuthManagerInterface
         }
 
         try {
-            $response = $this->httpClient->post('/auth/token', [
+            $response = $this->httpClient->post('/api-keys/public/validate', [
                 'json' => [
-                    'tenant_id' => $tenantId,
-                    'api_key' => $apiKey,
-                    'grant_type' => 'api_key',
+                    'apiKey' => $apiKey,
+                ],
+                'headers' => [
+                    'X-Tenant-ID' => $tenantId,
                 ],
             ]);
 
             $data = json_decode((string) $response->getBody(), true);
 
-            if (!isset($data['access_token'])) {
-                throw new AuthenticationException('Invalid authentication response');
+            if (!isset($data['success']) || !$data['success'] || !isset($data['data']['valid']) || !$data['data']['valid']) {
+                throw new AuthenticationException('Invalid API key or authentication failed');
             }
 
-            // Armazenar tokens
+            $validationData = $data['data'];
+
+            // Verificar se o tenant ID confere
+            if ($validationData['tenantId'] !== $tenantId) {
+                throw new AuthenticationException('Tenant ID mismatch');
+            }
+
+            // Para API keys, usar a própria chave como "token"
             $this->tokenStorage->storeAccessToken(
-                $data['access_token'],
-                $data['expires_in'] ?? 3600
+                $apiKey,
+                3600 // 1 hora de cache da validação
             );
 
-            if (isset($data['refresh_token'])) {
-                $this->tokenStorage->storeRefreshToken($data['refresh_token']);
-            }
-
-            // Carregar informações do usuário
-            $this->loadUserInfo();
+            // Armazenar informações da API key como user info
+            $this->userInfo = [
+                'tenant_id' => $validationData['tenantId'],
+                'key_id' => $validationData['keyInfo']['keyId'],
+                'environment' => $validationData['keyInfo']['environment'],
+                'permissions' => $validationData['keyInfo']['permissions'],
+                'rate_limit' => $validationData['rateLimit'],
+            ];
 
             return true;
 

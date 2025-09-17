@@ -39,7 +39,7 @@ SDK oficial para integração com a plataforma Clubify Checkout em PHP. Uma solu
 ### Via Composer
 
 ```bash
-composer require clubify/checkout-sdk
+composer require clubify/checkout-sdk-php
 ```
 
 ### Requisitos

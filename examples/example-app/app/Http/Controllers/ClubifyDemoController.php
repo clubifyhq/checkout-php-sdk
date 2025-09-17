@@ -2,77 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Clubify\Checkout\ClubifyCheckoutSDK;
+use App\Helpers\ClubifySDKHelper;
+use App\Helpers\ResponseHelper;
+use App\Helpers\ModuleTestHelper;
 use Exception;
-use TypeError;
 
 class ClubifyDemoController extends Controller
 {
-    private ClubifyCheckoutSDK $sdk;
-
-    public function __construct()
-    {
-        // Configuração completa do SDK baseada na documentação
-        $config = [
-            'credentials' => [
-                'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID', 'demo_tenant'),
-                'api_key' => env('CLUBIFY_CHECKOUT_API_KEY', 'demo_api_key_123'),
-                'api_secret' => env('CLUBIFY_CHECKOUT_API_SECRET', 'demo_secret_456')
-            ],
-            'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'development'),
-            'api' => [
-                'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'https://checkout.svelve.com'),
-                'timeout' => env('CLUBIFY_CHECKOUT_TIMEOUT', 45),
-                'retries' => env('CLUBIFY_CHECKOUT_RETRIES', 3),
-                'verify_ssl' => env('CLUBIFY_CHECKOUT_VERIFY_SSL', false)
-            ],
-            'cache' => [
-                'enabled' => env('CLUBIFY_CHECKOUT_CACHE_ENABLED', true),
-                'ttl' => env('CLUBIFY_CHECKOUT_CACHE_TTL', 3600)
-            ],
-            'logging' => [
-                'enabled' => env('CLUBIFY_CHECKOUT_LOG_REQUESTS', true),
-                'level' => env('CLUBIFY_CHECKOUT_LOG_LEVEL', 'info')
-            ]
-        ];
-
-        try {
-            $this->sdk = new ClubifyCheckoutSDK($config);
-
-            // IMPORTANTE: Inicializar o SDK para autenticação e conectividade
-            $this->sdk->initialize();
-
-            // Log only if Laravel is fully booted and logger is available
-            if (function_exists('logger') && app()->bound('config')) {
-                logger()->info('Clubify SDK inicializado e autenticado com sucesso', ['config' => array_keys($config)]);
-            }
-        } catch (Exception $e) {
-            // Log only if Laravel is fully booted and logger is available
-            if (function_exists('logger') && app()->bound('config')) {
-                logger()->error('Erro ao inicializar Clubify SDK', [
-                    'error' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]);
-            }
-        }
-    }
+    // Controller simplificado usando helpers
 
     /**
      * Página principal de demonstração
      */
     public function index()
     {
-        $sdkStatus = isset($this->sdk) ? 'Conectado' : 'Erro na conexão';
+        $sdkStatus = ClubifySDKHelper::isAvailable() ? 'Conectado' : 'Erro na conexão';
+        $credentials = ClubifySDKHelper::getCredentialsInfo();
 
         return view('clubify.demo', [
             'sdkStatus' => $sdkStatus,
-            'config' => [
-                'tenant_id' => env('CLUBIFY_TENANT_ID', 'demo_tenant'),
-                'environment' => env('CLUBIFY_ENVIRONMENT', 'development'),
-                'base_url' => env('CLUBIFY_BASE_URL', 'https://checkout.svelve.com')
-            ]
+            'config' => $credentials
         ]);
     }
 
@@ -82,36 +31,32 @@ class ClubifyDemoController extends Controller
     public function debug()
     {
         try {
-            // Testar se SDK foi inicializado
-            $initialized = $this->sdk->isInitialized();
+            $debugInfo = [
+                'sdk_available' => ClubifySDKHelper::isAvailable(),
+                'credentials_check' => ClubifySDKHelper::getCredentialsInfo(),
+                'note' => 'SDK created via helper with lazy loading'
+            ];
 
-            // Testar método simples que sabemos que existe
-            $orgName = $this->sdk->organization()->getName();
-            $orgVersion = $this->sdk->organization()->getVersion();
-            $orgStatus = $this->sdk->organization()->getStatus();
+            // Tentar obter informações do SDK se estiver disponível
+            if (ClubifySDKHelper::isAvailable()) {
+                $sdk = ClubifySDKHelper::getInstance();
+                $debugInfo['initialized'] = $sdk->isInitialized();
 
-            return response()->json([
-                'success' => true,
-                'initialized' => $initialized,
-                'org_name' => $orgName,
-                'org_version' => $orgVersion,
-                'org_status' => $orgStatus,
-                'credentials_check' => [
-                    'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID', 'NOT_SET'),
-                    'api_key_first_10' => substr(env('CLUBIFY_CHECKOUT_API_KEY', ''), 0, 10) . '...',
-                    'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'NOT_SET'),
-                    'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'NOT_SET'),
-                ]
-            ]);
+                // Tentar obter informações básicas dos módulos
+                try {
+                    $debugInfo['organization_module'] = [
+                        'name' => $sdk->organization()->getName(),
+                        'version' => $sdk->organization()->getVersion(),
+                    ];
+                } catch (\Throwable $e) {
+                    $debugInfo['organization_module_error'] = $e->getMessage();
+                }
+            }
+
+            return ResponseHelper::debug($debugInfo);
 
         } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => explode("\n", $e->getTraceAsString())
-            ]);
+            return ResponseHelper::exception($e, 'Erro no debug do SDK');
         }
     }
 
@@ -121,26 +66,20 @@ class ClubifyDemoController extends Controller
     public function testProducts()
     {
         try {
-            if (!isset($this->sdk)) {
-                throw new Exception('SDK não inicializado');
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', 500);
             }
 
-            // Testar módulo de produtos
-            $products = $this->sdk->products();
+            $sdk = ClubifySDKHelper::getInstance();
+            $products = $sdk->products();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Módulo de produtos carregado com sucesso',
-                'module' => 'products'
-            ]);
+            return ResponseHelper::success([
+                'module' => 'products',
+                'loaded' => true
+            ], 'Módulo de produtos carregado com sucesso');
 
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ], 500);
+            return ResponseHelper::exception($e, 'Erro ao testar módulo de produtos');
         }
     }
 
@@ -150,26 +89,20 @@ class ClubifyDemoController extends Controller
     public function testCheckout()
     {
         try {
-            if (!isset($this->sdk)) {
-                throw new Exception('SDK não inicializado');
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', 500);
             }
 
-            // Testar módulo de checkout
-            $checkout = $this->sdk->checkout();
+            $sdk = ClubifySDKHelper::getInstance();
+            $checkout = $sdk->checkout();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Módulo de checkout carregado com sucesso',
-                'module' => 'checkout'
-            ]);
+            return ResponseHelper::success([
+                'module' => 'checkout',
+                'loaded' => true
+            ], 'Módulo de checkout carregado com sucesso');
 
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ], 500);
+            return ResponseHelper::exception($e, 'Erro ao testar módulo de checkout');
         }
     }
 
@@ -179,26 +112,20 @@ class ClubifyDemoController extends Controller
     public function testOrganization()
     {
         try {
-            if (!isset($this->sdk)) {
-                throw new Exception('SDK não inicializado');
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', 500);
             }
 
-            // Testar módulo de organização
-            $organization = $this->sdk->organization();
+            $sdk = ClubifySDKHelper::getInstance();
+            $organization = $sdk->organization();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Módulo de organização carregado com sucesso',
-                'module' => 'organization'
-            ]);
+            return ResponseHelper::success([
+                'module' => 'organization',
+                'loaded' => true
+            ], 'Módulo de organização carregado com sucesso');
 
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ], 500);
+            return ResponseHelper::exception($e, 'Erro ao testar módulo de organização');
         }
     }
 
@@ -208,18 +135,10 @@ class ClubifyDemoController extends Controller
     public function status()
     {
         try {
-            if (!isset($this->sdk)) {
-                throw new Exception('SDK não inicializado');
-            }
-
-            return response()->json([
-                'success' => true,
-                'sdk_status' => 'Inicializado',
-                'config' => [
-                    'tenant_id' => env('CLUBIFY_TENANT_ID', 'demo_tenant'),
-                    'environment' => env('CLUBIFY_ENVIRONMENT', 'development'),
-                    'base_url' => env('CLUBIFY_BASE_URL', 'http://localhost:8000')
-                ],
+            $statusInfo = [
+                'sdk_available' => ClubifySDKHelper::isAvailable(),
+                'sdk_status' => ClubifySDKHelper::isAvailable() ? 'Disponível' : 'Não disponível',
+                'config' => ClubifySDKHelper::getCredentialsInfo(),
                 'available_modules' => [
                     'organization',
                     'products',
@@ -228,14 +147,17 @@ class ClubifyDemoController extends Controller
                     'customers',
                     'webhooks'
                 ]
-            ]);
+            ];
+
+            if (ClubifySDKHelper::isAvailable()) {
+                $sdk = ClubifySDKHelper::getInstance();
+                $statusInfo['initialized'] = $sdk->isInitialized();
+            }
+
+            return ResponseHelper::status($statusInfo);
 
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'sdk_status' => 'Erro'
-            ], 500);
+            return ResponseHelper::exception($e, 'Erro ao verificar status do SDK');
         }
     }
 
@@ -253,8 +175,8 @@ class ClubifyDemoController extends Controller
     public function runAllTests()
     {
         try {
-            if (!isset($this->sdk)) {
-                throw new Exception('SDK não inicializado');
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', 500);
             }
 
             $results = [];
@@ -279,26 +201,15 @@ class ClubifyDemoController extends Controller
                 }
             }
 
-            $successRate = $totalMethods > 0 ? round(($workingMethods / $totalMethods) * 100, 2) : 0;
+            $stats = ModuleTestHelper::calculateStats($results);
 
-            return response()->json([
-                'success' => true,
+            return ResponseHelper::success([
                 'results' => $results,
-                'stats' => [
-                    'totalMethods' => $totalMethods,
-                    'workingMethods' => $workingMethods,
-                    'errorMethods' => $errorMethods,
-                    'successRate' => $successRate
-                ]
-            ]);
+                'stats' => $stats
+            ], 'Todos os testes executados com sucesso');
 
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ], 500);
+            return ResponseHelper::exception($e, 'Erro ao executar testes');
         }
     }
 
@@ -308,25 +219,16 @@ class ClubifyDemoController extends Controller
     public function testModule($moduleName)
     {
         try {
-            if (!isset($this->sdk)) {
-                throw new Exception('SDK não inicializado');
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', 500);
             }
 
             $results = $this->testModuleInternal($moduleName);
 
-            return response()->json([
-                'success' => true,
-                'module' => $moduleName,
-                'results' => $results
-            ]);
+            return ResponseHelper::moduleTest($moduleName, true, $results);
 
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ], 500);
+            return ResponseHelper::moduleTest($moduleName, false, [], $e);
         }
     }
 
@@ -336,35 +238,36 @@ class ClubifyDemoController extends Controller
     private function testModuleInternal($moduleName)
     {
         $results = [];
+        $sdk = ClubifySDKHelper::getInstance();
 
         switch ($moduleName) {
             case 'organization':
-                $module = $this->sdk->organization();
+                $module = $sdk->organization();
                 $results = $this->testOrganizationModule($module);
                 break;
 
             case 'products':
-                $module = $this->sdk->products();
+                $module = $sdk->products();
                 $results = $this->testProductsModule($module);
                 break;
 
             case 'checkout':
-                $module = $this->sdk->checkout();
+                $module = $sdk->checkout();
                 $results = $this->testCheckoutModule($module);
                 break;
 
             case 'payments':
-                $module = $this->sdk->payments();
+                $module = $sdk->payments();
                 $results = $this->testPaymentsModule($module);
                 break;
 
             case 'customers':
-                $module = $this->sdk->customers();
+                $module = $sdk->customers();
                 $results = $this->testCustomersModule($module);
                 break;
 
             case 'webhooks':
-                $module = $this->sdk->webhooks();
+                $module = $sdk->webhooks();
                 $results = $this->testWebhooksModule($module);
                 break;
 
@@ -383,27 +286,27 @@ class ClubifyDemoController extends Controller
         $results = [];
 
         // Métodos da Interface ModuleInterface
-        $results[] = $this->testMethod($module, 'getName', [], 'string');
-        $results[] = $this->testMethod($module, 'getVersion', [], 'string');
-        $results[] = $this->testMethod($module, 'getDependencies', [], 'array');
-        $results[] = $this->testMethod($module, 'isInitialized', [], 'boolean');
-        $results[] = $this->testMethod($module, 'isAvailable', [], 'boolean');
-        $results[] = $this->testMethod($module, 'getStatus', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'getName', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getVersion', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getDependencies', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
 
         // Métodos específicos do OrganizationModule
-        $results[] = $this->testMethod($module, 'getRepository', [], 'object');
-        $results[] = $this->testMethod($module, 'tenant', [], 'object');
-        $results[] = $this->testMethod($module, 'admin', [], 'object');
-        $results[] = $this->testMethod($module, 'apiKey', [], 'object');
-        $results[] = $this->testMethod($module, 'domain', [], 'object');
+        $results[] = ModuleTestHelper::testMethod($module, 'getRepository', [], 'object');
+        $results[] = ModuleTestHelper::testMethod($module, 'tenant', [], 'object');
+        $results[] = ModuleTestHelper::testMethod($module, 'admin', [], 'object');
+        $results[] = ModuleTestHelper::testMethod($module, 'apiKey', [], 'object');
+        $results[] = ModuleTestHelper::testMethod($module, 'domain', [], 'object');
 
         // Métodos de negócio
-        $results[] = $this->testMethod($module, 'setupOrganization', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'setupOrganization', [[
             'name' => 'Test Org',
             'admin_name' => 'Admin Test',
             'admin_email' => 'admin@test.com'
         ]], 'array');
-        $results[] = $this->testMethod($module, 'setupComplete', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'setupComplete', [[
             'name' => 'Complete Org',
             'admin_name' => 'Admin Complete',
             'admin_email' => 'admin@complete.com'
@@ -420,24 +323,24 @@ class ClubifyDemoController extends Controller
         $results = [];
 
         // Métodos da Interface ModuleInterface
-        $results[] = $this->testMethod($module, 'getName', [], 'string');
-        $results[] = $this->testMethod($module, 'getVersion', [], 'string');
-        $results[] = $this->testMethod($module, 'getDependencies', [], 'array');
-        $results[] = $this->testMethod($module, 'isInitialized', [], 'boolean');
-        $results[] = $this->testMethod($module, 'isAvailable', [], 'boolean');
-        $results[] = $this->testMethod($module, 'getStatus', [], 'array');
-        $results[] = $this->testMethod($module, 'cleanup', [], 'void');
+        $results[] = ModuleTestHelper::testMethod($module, 'getName', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getVersion', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getDependencies', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
 
         // Métodos específicos do ProductsModule
-        $results[] = $this->testMethod($module, 'isHealthy', [], 'boolean');
-        $results[] = $this->testMethod($module, 'getStats', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStats', [], 'array');
 
         // Métodos de negócio
-        $results[] = $this->testMethod($module, 'setupComplete', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'setupComplete', [[
             'name' => 'Test Product',
             'price' => 99.99
         ]], 'array');
-        $results[] = $this->testMethod($module, 'createComplete', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'createComplete', [[
             'name' => 'Complete Product',
             'price' => 199.99
         ]], 'array');
@@ -453,32 +356,32 @@ class ClubifyDemoController extends Controller
         $results = [];
 
         // Métodos da Interface ModuleInterface
-        $results[] = $this->testMethod($module, 'getName', [], 'string');
-        $results[] = $this->testMethod($module, 'getVersion', [], 'string');
-        $results[] = $this->testMethod($module, 'getDependencies', [], 'array');
-        $results[] = $this->testMethod($module, 'isInitialized', [], 'boolean');
-        $results[] = $this->testMethod($module, 'isAvailable', [], 'boolean');
-        $results[] = $this->testMethod($module, 'getStatus', [], 'array');
-        $results[] = $this->testMethod($module, 'cleanup', [], 'void');
+        $results[] = ModuleTestHelper::testMethod($module, 'getName', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getVersion', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getDependencies', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
 
         // Métodos específicos do CheckoutModule
-        $results[] = $this->testMethod($module, 'isHealthy', [], 'boolean');
-        $results[] = $this->testMethod($module, 'getStats', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStats', [], 'array');
 
         // Métodos de negócio
-        $results[] = $this->testMethod($module, 'createSession', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'createSession', [[
             'product_id' => 'test_prod_123',
             'customer_email' => 'customer@test.com'
         ]], 'array');
-        $results[] = $this->testMethod($module, 'setupComplete', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'setupComplete', [[
             'product_id' => 'setup_prod_123',
             'customer_email' => 'setup@test.com'
         ]], 'array');
-        $results[] = $this->testMethod($module, 'createComplete', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'createComplete', [[
             'product_id' => 'complete_prod_123',
             'customer_email' => 'complete@test.com'
         ]], 'array');
-        $results[] = $this->testMethod($module, 'oneClick', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'oneClick', [[
             'payment_method' => 'credit_card',
             'amount' => 99.99
         ]], 'array');
@@ -494,33 +397,33 @@ class ClubifyDemoController extends Controller
         $results = [];
 
         // Métodos da Interface ModuleInterface
-        $results[] = $this->testMethod($module, 'getName', [], 'string');
-        $results[] = $this->testMethod($module, 'getVersion', [], 'string');
-        $results[] = $this->testMethod($module, 'getDependencies', [], 'array');
-        $results[] = $this->testMethod($module, 'isInitialized', [], 'boolean');
-        $results[] = $this->testMethod($module, 'isAvailable', [], 'boolean');
-        $results[] = $this->testMethod($module, 'getStatus', [], 'array');
-        $results[] = $this->testMethod($module, 'cleanup', [], 'void');
+        $results[] = ModuleTestHelper::testMethod($module, 'getName', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getVersion', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getDependencies', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
 
         // Métodos específicos do PaymentsModule
-        $results[] = $this->testMethod($module, 'isHealthy', [], 'boolean');
-        $results[] = $this->testMethod($module, 'getStats', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStats', [], 'array');
 
         // Métodos de negócio
-        $results[] = $this->testMethod($module, 'processPayment', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'processPayment', [[
             'method' => 'pix',
             'amount' => 50.00,
             'currency' => 'BRL'
         ]], 'array');
-        $results[] = $this->testMethod($module, 'setupComplete', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'setupComplete', [[
             'gateway' => 'stripe',
             'amount' => 100.00
         ]], 'array');
-        $results[] = $this->testMethod($module, 'createComplete', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'createComplete', [[
             'gateway' => 'pagarme',
             'amount' => 150.00
         ]], 'array');
-        $results[] = $this->testMethod($module, 'tokenizeCard', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'tokenizeCard', [[
             'number' => '4111111111111111',
             'brand' => 'visa',
             'exp_month' => '12',
@@ -538,33 +441,33 @@ class ClubifyDemoController extends Controller
         $results = [];
 
         // Métodos da Interface ModuleInterface
-        $results[] = $this->testMethod($module, 'getName', [], 'string');
-        $results[] = $this->testMethod($module, 'getVersion', [], 'string');
-        $results[] = $this->testMethod($module, 'getDependencies', [], 'array');
-        $results[] = $this->testMethod($module, 'isInitialized', [], 'boolean');
-        $results[] = $this->testMethod($module, 'isAvailable', [], 'boolean');
-        $results[] = $this->testMethod($module, 'getStatus', [], 'array');
-        $results[] = $this->testMethod($module, 'cleanup', [], 'void');
+        $results[] = ModuleTestHelper::testMethod($module, 'getName', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getVersion', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getDependencies', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
 
         // Métodos específicos do CustomersModule
-        $results[] = $this->testMethod($module, 'isHealthy', [], 'boolean');
-        $results[] = $this->testMethod($module, 'getStats', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStats', [], 'array');
 
         // Métodos de negócio
-        $results[] = $this->testMethod($module, 'createCustomer', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'createCustomer', [[
             'name' => 'Test Customer',
             'email' => 'test@customer.com'
         ]], 'array');
-        $results[] = $this->testMethod($module, 'setupComplete', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'setupComplete', [[
             'name' => 'Setup Customer',
             'email' => 'setup@customer.com'
         ]], 'array');
-        $results[] = $this->testMethod($module, 'createComplete', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'createComplete', [[
             'name' => 'Complete Customer',
             'email' => 'complete@customer.com'
         ]], 'array');
-        $results[] = $this->testMethod($module, 'findByEmail', ['test@email.com'], 'array');
-        $results[] = $this->testMethod($module, 'updateProfile', [
+        $results[] = ModuleTestHelper::testMethod($module, 'findByEmail', ['test@email.com'], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'updateProfile', [
             'customer_123',
             ['name' => 'Updated Name']
         ], 'array');
@@ -580,217 +483,29 @@ class ClubifyDemoController extends Controller
         $results = [];
 
         // Métodos da Interface ModuleInterface
-        $results[] = $this->testMethod($module, 'getName', [], 'string');
-        $results[] = $this->testMethod($module, 'getVersion', [], 'string');
-        $results[] = $this->testMethod($module, 'getDependencies', [], 'array');
-        $results[] = $this->testMethod($module, 'isInitialized', [], 'boolean');
-        $results[] = $this->testMethod($module, 'isAvailable', [], 'boolean');
-        $results[] = $this->testMethod($module, 'getStatus', [], 'array');
-        $results[] = $this->testMethod($module, 'cleanup', [], 'void');
+        $results[] = ModuleTestHelper::testMethod($module, 'getName', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getVersion', [], 'string');
+        $results[] = ModuleTestHelper::testMethod($module, 'getDependencies', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
 
         // Métodos específicos do WebhooksModule
-        $results[] = $this->testMethod($module, 'isHealthy', [], 'boolean');
-        $results[] = $this->testMethod($module, 'getStats', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
+        $results[] = ModuleTestHelper::testMethod($module, 'getStats', [], 'array');
 
         // Métodos de negócio
-        $results[] = $this->testMethod($module, 'configureWebhook', [[
+        $results[] = ModuleTestHelper::testMethod($module, 'configureWebhook', [[
             'url' => 'https://example.com/webhook',
             'events' => ['order.created', 'payment.completed']
         ]], 'array');
-        $results[] = $this->testMethod($module, 'sendEvent', [
+        $results[] = ModuleTestHelper::testMethod($module, 'sendEvent', [
             'payment.completed',
             ['payment_id' => 'pay_123', 'amount' => 100.00]
         ], 'array');
-        $results[] = $this->testMethod($module, 'listWebhooks', [], 'array');
+        $results[] = ModuleTestHelper::testMethod($module, 'listWebhooks', [], 'array');
 
         return $results;
-    }
-
-    /**
-     * Testa um método específico
-     */
-    private function testMethod($object, $methodName, $params, $expectedType)
-    {
-        try {
-            $result = call_user_func_array([$object, $methodName], $params);
-
-            // Verificar tipo de retorno
-            $actualType = gettype($result);
-            if ($expectedType === 'void') {
-                $typeMatch = true;
-            } elseif ($expectedType === 'object') {
-                $typeMatch = is_object($result);
-            } else {
-                $typeMatch = ($actualType === $expectedType);
-            }
-
-            if ($typeMatch) {
-                $formattedResult = $this->formatReturnValue($result, $expectedType);
-                $detailedInfo = $this->extractDetailedInfo($result, $expectedType);
-
-                return [
-                    'method' => $methodName,
-                    'success' => true,
-                    'result' => $formattedResult,
-                    'raw_result' => $result,
-                    'detailed_info' => $detailedInfo,
-                    'response_type' => $actualType,
-                    'error' => null
-                ];
-            } else {
-                return [
-                    'method' => $methodName,
-                    'success' => false,
-                    'result' => null,
-                    'raw_result' => null,
-                    'detailed_info' => null,
-                    'response_type' => $actualType,
-                    'error' => "Type mismatch: expected {$expectedType}, got {$actualType}"
-                ];
-            }
-        } catch (Exception $e) {
-            return [
-                'method' => $methodName,
-                'success' => false,
-                'result' => null,
-                'raw_result' => null,
-                'detailed_info' => null,
-                'response_type' => null,
-                'error' => $e->getMessage()
-            ];
-        } catch (TypeError $e) {
-            return [
-                'method' => $methodName,
-                'success' => false,
-                'result' => null,
-                'raw_result' => null,
-                'detailed_info' => null,
-                'response_type' => null,
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Extrai informações detalhadas do retorno da API
-     */
-    private function extractDetailedInfo($value, $expectedType)
-    {
-        $info = [];
-
-        if ($expectedType === 'void') {
-            $info['status'] = 'Method executed successfully';
-            $info['return_type'] = 'void';
-        } elseif ($expectedType === 'boolean') {
-            $info['status'] = $value ? 'true' : 'false';
-            $info['return_type'] = 'boolean';
-        } elseif ($expectedType === 'string') {
-            $info['status'] = 'String returned';
-            $info['length'] = strlen($value);
-            $info['preview'] = substr($value, 0, 100) . (strlen($value) > 100 ? '...' : '');
-            $info['return_type'] = 'string';
-        } elseif ($expectedType === 'array') {
-            $info['return_type'] = 'array';
-            $info['item_count'] = count($value);
-
-            // Buscar informações específicas comuns em respostas da API
-            if (isset($value['id'])) {
-                $info['id'] = $value['id'];
-                $info['operation'] = 'Resource with ID returned';
-            }
-
-            if (isset($value['success'])) {
-                $info['api_success'] = $value['success'] ? 'true' : 'false';
-                $info['operation'] = 'API response with success status';
-            }
-
-            if (isset($value['data'])) {
-                $info['has_data'] = true;
-                if (is_array($value['data']) && isset($value['data']['id'])) {
-                    $info['data_id'] = $value['data']['id'];
-                }
-            }
-
-            if (isset($value['message'])) {
-                $info['message'] = $value['message'];
-            }
-
-            if (isset($value['status'])) {
-                $info['status'] = $value['status'];
-            }
-
-            if (isset($value['created_at'])) {
-                $info['created_at'] = $value['created_at'];
-                $info['operation'] = 'Resource created';
-            }
-
-            if (isset($value['updated_at'])) {
-                $info['updated_at'] = $value['updated_at'];
-                $info['operation'] = 'Resource updated';
-            }
-
-            // Capturar chaves principais do array
-            $info['keys'] = array_keys($value);
-
-        } elseif ($expectedType === 'object') {
-            $info['return_type'] = 'object';
-            $info['class'] = get_class($value);
-            $info['status'] = 'Object instance returned';
-
-            // Tentar extrair propriedades públicas se houver
-            $publicProps = get_object_vars($value);
-            if (!empty($publicProps)) {
-                $info['public_properties'] = array_keys($publicProps);
-            }
-        }
-
-        return $info;
-    }
-
-    /**
-     * Formata o valor de retorno para exibição
-     */
-    private function formatReturnValue($value, $expectedType)
-    {
-        if ($expectedType === 'void') {
-            return '✅ OK - Method executed';
-        } elseif ($expectedType === 'boolean') {
-            return ($value ? '✅ true' : '❌ false');
-        } elseif ($expectedType === 'string') {
-            return strlen($value) . ' chars: "' . substr($value, 0, 50) . (strlen($value) > 50 ? '..."' : '"');
-        } elseif ($expectedType === 'array') {
-            $parts = [];
-
-            if (isset($value['id'])) {
-                $parts[] = '🆔 ID: ' . $value['id'];
-            }
-
-            if (isset($value['success'])) {
-                $parts[] = ($value['success'] ? '✅ Success' : '❌ Failed');
-            }
-
-            if (isset($value['data']['id'])) {
-                $parts[] = '📦 Data ID: ' . $value['data']['id'];
-            }
-
-            if (isset($value['message'])) {
-                $parts[] = '💬 ' . substr($value['message'], 0, 30) . (strlen($value['message']) > 30 ? '...' : '');
-            }
-
-            if (isset($value['status'])) {
-                $parts[] = '📊 Status: ' . $value['status'];
-            }
-
-            if (empty($parts)) {
-                $parts[] = '📋 Array (' . count($value) . ' items)';
-            }
-
-            return implode(' | ', $parts);
-
-        } elseif ($expectedType === 'object') {
-            return '🏗️ ' . get_class($value) . ' instance';
-        } else {
-            return (string)$value;
-        }
     }
 }

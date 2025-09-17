@@ -722,10 +722,10 @@
                         const data = await response.json();
 
                         if (data.success) {
-                            this.results = data.results;
+                            this.results = data.data.results;
                             this.calculateStats();
                         } else {
-                            alert('Erro ao executar testes: ' + data.error);
+                            alert('Erro ao executar testes: ' + (data.message || data.error));
                         }
                     } catch (error) {
                         alert('Erro de conexão: ' + error.message);
@@ -749,10 +749,10 @@
                         const data = await response.json();
 
                         if (data.success) {
-                            this.results[moduleName] = data.results;
+                            this.results[moduleName] = data.data.results;
                             this.calculateStats();
                         } else {
-                            alert(`Erro ao testar módulo ${moduleName}: ` + data.error);
+                            alert(`Erro ao testar módulo ${moduleName}: ` + (data.message || data.error));
                         }
                     } catch (error) {
                         alert('Erro de conexão: ' + error.message);

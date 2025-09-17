@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Contracts;
+namespace Clubify\Checkout\Contracts;
 
 /**
  * Interface para objetos que podem ser validados

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Repositories;
+namespace Clubify\Checkout\Repositories;
 
-use ClubifyCheckout\Contracts\RepositoryInterface;
-use ClubifyCheckout\Core\Config\Configuration;
-use ClubifyCheckout\Core\Logger\LoggerInterface;
-use ClubifyCheckout\Core\Http\Client;
-use ClubifyCheckout\Exceptions\HttpException;
+use Clubify\Checkout\Contracts\RepositoryInterface;
+use Clubify\Checkout\Core\Config\Configuration;
+use Clubify\Checkout\Core\Logger\LoggerInterface;
+use Clubify\Checkout\Core\Http\Client;
+use Clubify\Checkout\Exceptions\HttpException;
 
 /**
  * Implementação base para Repository Pattern

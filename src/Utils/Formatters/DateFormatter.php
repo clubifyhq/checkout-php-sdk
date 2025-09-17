@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Utils\Formatters;
+namespace Clubify\Checkout\Utils\Formatters;
 
 use DateTime;
 use DateTimeZone;

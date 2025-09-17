@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Services;
+namespace Clubify\Checkout\Services;
 
 use ClubifyCheckout\Contracts\ServiceInterface;
 use ClubifyCheckout\Core\Config\Configuration;

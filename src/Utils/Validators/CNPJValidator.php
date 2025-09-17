@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Utils\Validators;
+namespace Clubify\Checkout\Utils\Validators;
 
 /**
  * Validador de CNPJ (Cadastro Nacional da Pessoa Jurídica)

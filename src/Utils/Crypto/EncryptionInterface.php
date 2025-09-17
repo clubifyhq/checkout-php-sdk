@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Utils\Crypto;
+namespace Clubify\Checkout\Utils\Crypto;
 
 /**
  * Interface para sistemas de criptografia

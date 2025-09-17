@@ -1,5 +1,5 @@
 {
-    "name": "clubify/checkout-sdk",
+    "name": "checkout/php-sdk",
     "description": "SDK oficial para integração com a plataforma Clubify Checkout em PHP",
     "type": "library",
     "license": "MIT",

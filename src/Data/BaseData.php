@@ -2,16 +2,22 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Data;
+namespace Clubify\Checkout\Data;
 
-use ClubifyCheckout\Contracts\ValidatableInterface;
-use ClubifyCheckout\Exceptions\ValidationException;
+use Clubify\Checkout\Contracts\ValidatableInterface;
+use Clubify\Checkout\Exceptions\ValidationException;
 use Carbon\Carbon;
 
 /**
  * Classe base para DTOs (Data Transfer Objects)
  *
  * Fornece funcionalidades básicas para validação, serialização e manipulação de dados.
+ * Utiliza recursos avançados do PHP 8.2+:
+ * - Readonly Properties: Para imutabilidade de dados críticos
+ * - Union Types: Para flexibilidade de tipos
+ * - Attributes: Para metadados de validação
+ * - Constructor Property Promotion: Para código mais limpo
+ *
  * Segue os princípios SOLID:
  * - S: Single Responsibility - Gerencia apenas dados e validação
  * - O: Open/Closed - Extensível sem modificação
@@ -23,7 +29,8 @@ abstract class BaseData implements ValidatableInterface, \JsonSerializable, \Arr
 {
     protected array $data = [];
     protected array $errors = [];
-    protected bool $validated = false;
+    protected readonly bool $immutable;
+    private bool $validated = false;
 
     public function __construct(array $data = [])
     {

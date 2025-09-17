@@ -1,0 +1,472 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Repositories;
+
+use Clubify\Checkout\Laravel\Facades\ClubifyCheckout;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * {{ class }} Repository
+ *
+ * Template para repositórios que usam o Clubify Checkout SDK
+ */
+class {{ class }}Repository
+{
+    /**
+     * Cache TTL em segundos
+     */
+    private const CACHE_TTL = 3600;
+
+    /**
+     * Prefixo para chaves de cache
+     */
+    private const CACHE_PREFIX = 'clubify.{{ resource }}';
+
+    /**
+     * Busca todos os registros
+     */
+    public function all(array $filters = []): array
+    {
+        try {
+            $cacheKey = $this->getCacheKey('all', md5(serialize($filters)));
+
+            return Cache::remember(
+                $cacheKey,
+                self::CACHE_TTL,
+                fn() => ClubifyCheckout::{{ module }}()->{{ resource }}()->all($filters)
+            );
+        } catch (\Exception $e) {
+            Log::error("Failed to fetch all {{ resource }}s", [
+                'filters' => $filters,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Busca um registro por ID
+     */
+    public function find(string $id): ?array
+    {
+        try {
+            return Cache::remember(
+                $this->getCacheKey('find', $id),
+                self::CACHE_TTL,
+                fn() => ClubifyCheckout::{{ module }}()->{{ resource }}()->find($id)
+            );
+        } catch (\Exception $e) {
+            Log::error("Failed to find {{ resource }}", [
+                'id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Busca múltiplos registros por IDs
+     */
+    public function findMany(array $ids): array
+    {
+        try {
+            $cacheKey = $this->getCacheKey('findMany', md5(implode(',', $ids)));
+
+            return Cache::remember(
+                $cacheKey,
+                self::CACHE_TTL,
+                fn() => ClubifyCheckout::{{ module }}()->{{ resource }}()->findMany($ids)
+            );
+        } catch (\Exception $e) {
+            Log::error("Failed to find multiple {{ resource }}s", [
+                'ids' => $ids,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Busca registro por critério específico
+     */
+    public function findBy(string $field, mixed $value): ?array
+    {
+        try {
+            $cacheKey = $this->getCacheKey('findBy', md5($field . $value));
+
+            return Cache::remember(
+                $cacheKey,
+                self::CACHE_TTL,
+                fn() => ClubifyCheckout::{{ module }}()->{{ resource }}()->findBy($field, $value)
+            );
+        } catch (\Exception $e) {
+            Log::error("Failed to find {{ resource }} by {$field}", [
+                'field' => $field,
+                'value' => $value,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Busca registros com filtros
+     */
+    public function where(array $conditions): array
+    {
+        try {
+            $cacheKey = $this->getCacheKey('where', md5(serialize($conditions)));
+
+            return Cache::remember(
+                $cacheKey,
+                self::CACHE_TTL,
+                fn() => ClubifyCheckout::{{ module }}()->{{ resource }}()->where($conditions)
+            );
+        } catch (\Exception $e) {
+            Log::error("Failed to find {{ resource }}s with conditions", [
+                'conditions' => $conditions,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Cria um novo registro
+     */
+    public function create(array $data): array
+    {
+        try {
+            Log::info("Creating {{ resource }}", ['data' => $this->sanitizeData($data)]);
+
+            $result = ClubifyCheckout::{{ module }}()->{{ resource }}()->create($data);
+
+            Log::info("{{ resource }} created successfully", [
+                'id' => $result['id'] ?? null,
+            ]);
+
+            // Limpa cache relacionado
+            $this->clearCache();
+
+            return $result;
+        } catch (\Exception $e) {
+            Log::error("Failed to create {{ resource }}", [
+                'error' => $e->getMessage(),
+                'data' => $this->sanitizeData($data),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Atualiza um registro
+     */
+    public function update(string $id, array $data): array
+    {
+        try {
+            Log::info("Updating {{ resource }}", [
+                'id' => $id,
+                'data' => $this->sanitizeData($data),
+            ]);
+
+            $result = ClubifyCheckout::{{ module }}()->{{ resource }}()->update($id, $data);
+
+            Log::info("{{ resource }} updated successfully", ['id' => $id]);
+
+            // Limpa cache relacionado
+            $this->clearCache($id);
+
+            return $result;
+        } catch (\Exception $e) {
+            Log::error("Failed to update {{ resource }}", [
+                'id' => $id,
+                'error' => $e->getMessage(),
+                'data' => $this->sanitizeData($data),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Remove um registro
+     */
+    public function delete(string $id): bool
+    {
+        try {
+            Log::info("Deleting {{ resource }}", ['id' => $id]);
+
+            $result = ClubifyCheckout::{{ module }}()->{{ resource }}()->delete($id);
+
+            Log::info("{{ resource }} deleted successfully", ['id' => $id]);
+
+            // Limpa cache relacionado
+            $this->clearCache($id);
+
+            return $result;
+        } catch (\Exception $e) {
+            Log::error("Failed to delete {{ resource }}", [
+                'id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Conta registros com filtros
+     */
+    public function count(array $filters = []): int
+    {
+        try {
+            $cacheKey = $this->getCacheKey('count', md5(serialize($filters)));
+
+            return Cache::remember(
+                $cacheKey,
+                self::CACHE_TTL,
+                fn() => ClubifyCheckout::{{ module }}()->{{ resource }}()->count($filters)
+            );
+        } catch (\Exception $e) {
+            Log::error("Failed to count {{ resource }}s", [
+                'filters' => $filters,
+                'error' => $e->getMessage(),
+            ]);
+
+            return 0;
+        }
+    }
+
+    /**
+     * Verifica se registro existe
+     */
+    public function exists(string $id): bool
+    {
+        try {
+            return $this->find($id) !== null;
+        } catch (\Exception $e) {
+            Log::error("Failed to check {{ resource }} existence", [
+                'id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Busca com paginação
+     */
+    public function paginate(int $page = 1, int $perPage = 20, array $filters = []): array
+    {
+        try {
+            $offset = ($page - 1) * $perPage;
+            $cacheKey = $this->getCacheKey('paginate', md5(serialize($filters) . $page . $perPage));
+
+            return Cache::remember(
+                $cacheKey,
+                self::CACHE_TTL,
+                fn() => ClubifyCheckout::{{ module }}()->{{ resource }}()->list($filters, $perPage, $offset)
+            );
+        } catch (\Exception $e) {
+            Log::error("Failed to paginate {{ resource }}s", [
+                'page' => $page,
+                'perPage' => $perPage,
+                'filters' => $filters,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'data' => [],
+                'total' => 0,
+                'page' => $page,
+                'per_page' => $perPage,
+            ];
+        }
+    }
+
+    /**
+     * Busca com ordenação
+     */
+    public function orderBy(string $field, string $direction = 'asc', array $filters = []): array
+    {
+        try {
+            $cacheKey = $this->getCacheKey('orderBy', md5($field . $direction . serialize($filters)));
+
+            return Cache::remember(
+                $cacheKey,
+                self::CACHE_TTL,
+                function () use ($field, $direction, $filters) {
+                    $data = ClubifyCheckout::{{ module }}()->{{ resource }}()->all($filters);
+
+                    // Ordenação local (se a API não suportar)
+                    usort($data, function ($a, $b) use ($field, $direction) {
+                        $valueA = $a[$field] ?? '';
+                        $valueB = $b[$field] ?? '';
+
+                        return $direction === 'desc'
+                            ? $valueB <=> $valueA
+                            : $valueA <=> $valueB;
+                    });
+
+                    return $data;
+                }
+            );
+        } catch (\Exception $e) {
+            Log::error("Failed to order {{ resource }}s", [
+                'field' => $field,
+                'direction' => $direction,
+                'filters' => $filters,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Busca registros relacionados
+     */
+    public function getRelated(string $id, string $relation): array
+    {
+        try {
+            $cacheKey = $this->getCacheKey('related', md5($id . $relation));
+
+            return Cache::remember(
+                $cacheKey,
+                self::CACHE_TTL,
+                fn() => ClubifyCheckout::{{ module }}()->{{ resource }}()->getRelated($id, $relation)
+            );
+        } catch (\Exception $e) {
+            Log::error("Failed to get related {{ resource }}s", [
+                'id' => $id,
+                'relation' => $relation,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Obtém estatísticas
+     */
+    public function getStatistics(): array
+    {
+        try {
+            return Cache::remember(
+                $this->getCacheKey('statistics'),
+                self::CACHE_TTL,
+                fn() => ClubifyCheckout::{{ module }}()->{{ resource }}()->getStatistics()
+            );
+        } catch (\Exception $e) {
+            Log::error("Failed to get {{ resource }} statistics", [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Gera chave de cache
+     */
+    private function getCacheKey(string $operation, string $suffix = ''): string
+    {
+        $key = self::CACHE_PREFIX . ".{$operation}";
+
+        if ($suffix) {
+            $key .= ".{$suffix}";
+        }
+
+        return $key;
+    }
+
+    /**
+     * Limpa cache relacionado
+     */
+    private function clearCache(?string $id = null): void
+    {
+        $patterns = [
+            self::CACHE_PREFIX . '.all.*',
+            self::CACHE_PREFIX . '.where.*',
+            self::CACHE_PREFIX . '.count.*',
+            self::CACHE_PREFIX . '.paginate.*',
+            self::CACHE_PREFIX . '.orderBy.*',
+            self::CACHE_PREFIX . '.statistics',
+        ];
+
+        if ($id) {
+            $patterns[] = self::CACHE_PREFIX . ".find.{$id}";
+            $patterns[] = self::CACHE_PREFIX . ".related.{$id}.*";
+        }
+
+        foreach ($patterns as $pattern) {
+            // Laravel não suporta wildcard delete, então usar flush ou tags
+            Cache::flush(); // Alternativa: usar cache tags se disponível
+            break; // Só precisa executar uma vez
+        }
+    }
+
+    /**
+     * Sanitiza dados para logging
+     */
+    private function sanitizeData(array $data): array
+    {
+        $sensitiveFields = [
+            'password',
+            'token',
+            'secret',
+            'key',
+            'cvv',
+            'card_number',
+            'account_number',
+        ];
+
+        $sanitized = $data;
+
+        foreach ($sensitiveFields as $field) {
+            if (isset($sanitized[$field])) {
+                $sanitized[$field] = '[REDACTED]';
+            }
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * Executa operação com retry
+     */
+    private function withRetry(callable $operation, int $maxAttempts = 3): mixed
+    {
+        $attempt = 1;
+
+        while ($attempt <= $maxAttempts) {
+            try {
+                return $operation();
+            } catch (\Exception $e) {
+                if ($attempt === $maxAttempts) {
+                    throw $e;
+                }
+
+                Log::warning("{{ resource }} operation failed, retrying", [
+                    'attempt' => $attempt,
+                    'max_attempts' => $maxAttempts,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $attempt++;
+                sleep(1); // Delay antes de tentar novamente
+            }
+        }
+    }
+}

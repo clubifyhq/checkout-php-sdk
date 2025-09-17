@@ -1,6 +1,6 @@
 <?php
 
-// use App\Http\Controllers\ClubifyDemoController; // Temporariamente comentado para debug
+use App\Http\Controllers\ClubifyDemoController;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
@@ -10,16 +10,12 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-// Rotas de teste para debug
-Route::get('/test/simple', [App\Http\Controllers\TestController::class, 'simple']);
-Route::get('/test/view', [App\Http\Controllers\TestController::class, 'view']);
-Route::get('/test/clubify', [App\Http\Controllers\TestController::class, 'clubifyTest']);
 
-/* Temporariamente comentado para debug
 // Rotas do Clubify Checkout SDK Demo
 Route::prefix('clubify')->group(function () {
     Route::get('/', [ClubifyDemoController::class, 'index'])->name('clubify.demo');
     Route::get('/status', [ClubifyDemoController::class, 'status'])->name('clubify.status');
+    Route::get('/debug', [ClubifyDemoController::class, 'debug'])->name('clubify.debug');
     Route::get('/test-products', [ClubifyDemoController::class, 'testProducts'])->name('clubify.test.products');
     Route::get('/test-checkout', [ClubifyDemoController::class, 'testCheckout'])->name('clubify.test.checkout');
     Route::get('/test-organization', [ClubifyDemoController::class, 'testOrganization'])->name('clubify.test.organization');
@@ -29,7 +25,6 @@ Route::prefix('clubify')->group(function () {
     Route::post('/test-all-methods', [ClubifyDemoController::class, 'runAllTests'])->name('clubify.test.all.run');
     Route::post('/test-module/{module}', [ClubifyDemoController::class, 'testModule'])->name('clubify.test.module');
 });
-*/
 
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])

@@ -16,33 +16,36 @@ class ClubifyDemoController extends Controller
         // Configuração completa do SDK baseada na documentação
         $config = [
             'credentials' => [
-                'tenant_id' => env('CLUBIFY_TENANT_ID', 'demo_tenant'),
-                'api_key' => env('CLUBIFY_API_KEY', 'demo_api_key_123'),
-                'api_secret' => env('CLUBIFY_API_SECRET', 'demo_secret_456')
+                'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID', 'demo_tenant'),
+                'api_key' => env('CLUBIFY_CHECKOUT_API_KEY', 'demo_api_key_123'),
+                'api_secret' => env('CLUBIFY_CHECKOUT_API_SECRET', 'demo_secret_456')
             ],
-            'environment' => env('CLUBIFY_ENVIRONMENT', 'development'),
+            'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'development'),
             'api' => [
-                'base_url' => env('CLUBIFY_API_URL', 'https://checkout.svelve.com'),
-                'timeout' => env('CLUBIFY_TIMEOUT', 45),
-                'retries' => env('CLUBIFY_RETRIES', 3),
-                'verify_ssl' => env('CLUBIFY_VERIFY_SSL', false)
+                'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'https://checkout.svelve.com'),
+                'timeout' => env('CLUBIFY_CHECKOUT_TIMEOUT', 45),
+                'retries' => env('CLUBIFY_CHECKOUT_RETRIES', 3),
+                'verify_ssl' => env('CLUBIFY_CHECKOUT_VERIFY_SSL', false)
             ],
             'cache' => [
-                'enabled' => env('CLUBIFY_CACHE_ENABLED', true),
-                'ttl' => env('CLUBIFY_CACHE_TTL', 3600)
+                'enabled' => env('CLUBIFY_CHECKOUT_CACHE_ENABLED', true),
+                'ttl' => env('CLUBIFY_CHECKOUT_CACHE_TTL', 3600)
             ],
             'logging' => [
-                'enabled' => env('CLUBIFY_LOG_REQUESTS', true),
-                'level' => env('CLUBIFY_LOG_LEVEL', 'info')
+                'enabled' => env('CLUBIFY_CHECKOUT_LOG_REQUESTS', true),
+                'level' => env('CLUBIFY_CHECKOUT_LOG_LEVEL', 'info')
             ]
         ];
 
         try {
             $this->sdk = new ClubifyCheckoutSDK($config);
 
+            // IMPORTANTE: Inicializar o SDK para autenticação e conectividade
+            $this->sdk->initialize();
+
             // Log only if Laravel is fully booted and logger is available
             if (function_exists('logger') && app()->bound('config')) {
-                logger()->info('Clubify SDK inicializado com sucesso', ['config' => array_keys($config)]);
+                logger()->info('Clubify SDK inicializado e autenticado com sucesso', ['config' => array_keys($config)]);
             }
         } catch (Exception $e) {
             // Log only if Laravel is fully booted and logger is available
@@ -71,6 +74,45 @@ class ClubifyDemoController extends Controller
                 'base_url' => env('CLUBIFY_BASE_URL', 'https://checkout.svelve.com')
             ]
         ]);
+    }
+
+    /**
+     * Debug de inicialização do SDK
+     */
+    public function debug()
+    {
+        try {
+            // Testar se SDK foi inicializado
+            $initialized = $this->sdk->isInitialized();
+
+            // Testar método simples que sabemos que existe
+            $orgName = $this->sdk->organization()->getName();
+            $orgVersion = $this->sdk->organization()->getVersion();
+            $orgStatus = $this->sdk->organization()->getStatus();
+
+            return response()->json([
+                'success' => true,
+                'initialized' => $initialized,
+                'org_name' => $orgName,
+                'org_version' => $orgVersion,
+                'org_status' => $orgStatus,
+                'credentials_check' => [
+                    'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID', 'NOT_SET'),
+                    'api_key_first_10' => substr(env('CLUBIFY_CHECKOUT_API_KEY', ''), 0, 10) . '...',
+                    'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'NOT_SET'),
+                    'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'NOT_SET'),
+                ]
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => explode("\n", $e->getTraceAsString())
+            ]);
+        }
     }
 
     /**

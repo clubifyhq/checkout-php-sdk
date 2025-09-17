@@ -157,7 +157,7 @@ class Client
                     $retries,
                     RequestInterface $request,
                     ?ResponseInterface $response = null,
-                    ?RequestException $exception = null
+                    ?\Throwable $exception = null
                 ) {
                     return $this->retryStrategy->shouldRetry(
                         $retries,

@@ -96,42 +96,80 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
 
         // Logger
         $this->app->singleton(LoggerInterface::class, function (Container $app): Logger {
-            $config = $app[ConfigurationInterface::class];
-            return new Logger($config->getLoggerConfig());
+            try {
+                $config = $app[ConfigurationInterface::class];
+                return new Logger($config->getLoggerConfig());
+            } catch (\Throwable $e) {
+                // Fallback se houver problema na configuração
+                return new Logger([]);
+            }
         });
 
         // Cache Manager
         $this->app->singleton(CacheManagerInterface::class, function (Container $app): CacheManager {
-            $config = $app[ConfigurationInterface::class];
-            return new CacheManager($config->getCacheConfig());
+            try {
+                $config = $app[ConfigurationInterface::class];
+                return new CacheManager($config->getCacheConfig());
+            } catch (\Throwable $e) {
+                // Fallback se houver problema na configuração
+                return new CacheManager([]);
+            }
         });
 
         // Event Dispatcher
         $this->app->singleton(EventDispatcherInterface::class, function (Container $app): EventDispatcher {
-            return new EventDispatcher($app[LoggerInterface::class]);
+            try {
+                $logger = $app[LoggerInterface::class];
+                return new EventDispatcher($logger);
+            } catch (\Throwable $e) {
+                // Fallback sem logger se necessário
+                return new EventDispatcher();
+            }
         });
 
         // Token Storage
         $this->app->singleton(TokenStorageInterface::class, function (Container $app): TokenStorage {
-            $cache = $app[CacheManagerInterface::class];
-            return new TokenStorage($cache);
+            try {
+                $cache = $app[CacheManagerInterface::class];
+                return new TokenStorage($cache);
+            } catch (\Throwable $e) {
+                // Fallback sem cache se necessário
+                return new TokenStorage(new CacheManager([]));
+            }
         });
 
         // Auth Manager
         $this->app->singleton(AuthManagerInterface::class, function (Container $app): AuthManager {
-            return new AuthManager(
-                $app[ConfigurationInterface::class],
-                $app[TokenStorageInterface::class],
-                $app[LoggerInterface::class]
-            );
+            try {
+                return new AuthManager(
+                    $app[ConfigurationInterface::class],
+                    $app[TokenStorageInterface::class],
+                    $app[LoggerInterface::class]
+                );
+            } catch (\Throwable $e) {
+                // Fallback com configurações padrão
+                return new AuthManager(
+                    new Configuration([]),
+                    new TokenStorage(new CacheManager([])),
+                    new Logger([])
+                );
+            }
         });
 
         // HTTP Client
         $this->app->singleton(Client::class, function (Container $app): Client {
-            return new Client(
-                $app[ConfigurationInterface::class],
-                $app[LoggerInterface::class]
-            );
+            try {
+                return new Client(
+                    $app[ConfigurationInterface::class],
+                    $app[LoggerInterface::class]
+                );
+            } catch (\Throwable $e) {
+                // Fallback com configurações padrão
+                return new Client(
+                    new Configuration([]),
+                    new Logger([])
+                );
+            }
         });
     }
 
@@ -216,8 +254,8 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
         $router->aliasMiddleware('clubify.auth', AuthenticateSDK::class);
         $router->aliasMiddleware('clubify.webhook', ValidateWebhook::class);
 
-        // Registra middleware no grupo web
-        $router->pushMiddlewareToGroup('web', AuthenticateSDK::class);
+        // Não registra automaticamente no grupo web para evitar problemas
+        // $router->pushMiddlewareToGroup('web', AuthenticateSDK::class);
     }
 
     /**

@@ -59,7 +59,7 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../../config/clubify-checkout.php',
+            realpath(__DIR__ . '/../../config/clubify-checkout.php') ?: __DIR__ . '/../../config/clubify-checkout.php',
             'clubify-checkout'
         );
 

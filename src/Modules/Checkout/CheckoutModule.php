@@ -188,24 +188,6 @@ class CheckoutModule implements ModuleInterface
     }
 
     /**
-     * Cria sessão de checkout
-     */
-    public function createSession(array $sessionData): array
-    {
-        $this->logger?->info('Creating checkout session', $sessionData);
-
-        // Implementação básica - será expandida conforme necessário
-        return [
-            'success' => true,
-            'session_id' => uniqid('session_'),
-            'session_data' => $sessionData,
-            'created_at' => time(),
-            'expires_at' => time() + 3600, // 1 hora
-            'status' => 'active'
-        ];
-    }
-
-    /**
      * Processa pagamento one-click
      */
     public function oneClick(array $paymentData): array

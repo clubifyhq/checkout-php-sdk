@@ -100,7 +100,7 @@ class MatchingService extends BaseService
             }
 
             // Ordena por score decrescente
-            usort($scoredCandidates, fn($a, $b) => $b['score'] <=> $a['score']);
+            usort($scoredCandidates, fn ($a, $b) => $b['score'] <=> $a['score']);
 
             $bestMatch = $scoredCandidates[0];
 
@@ -140,7 +140,7 @@ class MatchingService extends BaseService
             }
 
             // Ordena por score decrescente
-            usort($matches, fn($a, $b) => $b['score'] <=> $a['score']);
+            usort($matches, fn ($a, $b) => $b['score'] <=> $a['score']);
 
             return $matches;
         });
@@ -525,7 +525,7 @@ class MatchingService extends BaseService
         // Remove títulos comuns
         $titles = ['mr', 'mrs', 'ms', 'dr', 'prof', 'sr', 'sra', 'srta'];
         $words = explode(' ', $name);
-        $words = array_filter($words, fn($word) => !in_array($word, $titles));
+        $words = array_filter($words, fn ($word) => !in_array($word, $titles));
 
         return implode(' ', $words);
     }

@@ -33,7 +33,8 @@ class TestingService
         private DeliveryService $deliveryService,
         private WebhookRepositoryInterface $repository,
         private LoggerInterface $logger
-    ) {}
+    ) {
+    }
 
     /**
      * Testa webhook individual
@@ -450,8 +451,12 @@ class TestingService
 
             if (!$test['success']) {
                 $errors = [];
-                if (!$details['https']) $errors[] = 'HTTPS não configurado';
-                if (!$details['has_secret']) $errors[] = 'Secret não configurado';
+                if (!$details['https']) {
+                    $errors[] = 'HTTPS não configurado';
+                }
+                if (!$details['has_secret']) {
+                    $errors[] = 'Secret não configurado';
+                }
                 $test['error'] = implode(', ', $errors);
             }
 
@@ -470,7 +475,7 @@ class TestingService
     private function calculateTestSummary(array $tests): array
     {
         $total = count($tests);
-        $passed = count(array_filter($tests, fn($test) => $test['success']));
+        $passed = count(array_filter($tests, fn ($test) => $test['success']));
         $failed = $total - $passed;
 
         return [

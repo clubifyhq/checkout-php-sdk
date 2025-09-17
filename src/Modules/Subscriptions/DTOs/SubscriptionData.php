@@ -82,7 +82,7 @@ class SubscriptionData extends BaseData
      */
     public function isInTrial(): bool
     {
-        return $this->status === 'trialing' || 
+        return $this->status === 'trialing' ||
                ($this->trial_end && $this->trial_end > new DateTime());
     }
 
@@ -118,12 +118,12 @@ class SubscriptionData extends BaseData
         if (!$this->trial_end) {
             return 0;
         }
-        
+
         $now = new DateTime();
         if ($this->trial_end <= $now) {
             return 0;
         }
-        
+
         return $now->diff($this->trial_end)->days;
     }
 
@@ -134,11 +134,11 @@ class SubscriptionData extends BaseData
     {
         $nextBilling = $this->next_billing_date ?? $this->current_period_end;
         $now = new DateTime();
-        
+
         if ($nextBilling <= $now) {
             return 0;
         }
-        
+
         return $now->diff($nextBilling)->days;
     }
 
@@ -150,7 +150,7 @@ class SubscriptionData extends BaseData
         if (!$this->discount_amount) {
             return $this->current_period_amount;
         }
-        
+
         return max(0, $this->current_period_amount - $this->discount_amount);
     }
 
@@ -170,7 +170,7 @@ class SubscriptionData extends BaseData
         if ($this->billing_cycles_completed === 0) {
             return 0.0;
         }
-        
+
         return $this->total_revenue / $this->billing_cycles_completed;
     }
 
@@ -244,7 +244,7 @@ class SubscriptionData extends BaseData
             'yearly' => $this->getTotalAmount() / 12,
             default => 0
         };
-        
+
         return round($monthlyAmount, 2);
     }
 

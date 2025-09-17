@@ -443,7 +443,7 @@ class CreditCardValidator implements ValidatorInterface
      */
     public function getSupportedBrands(): array
     {
-        return array_map(fn($pattern) => $pattern['name'], $this->cardPatterns);
+        return array_map(fn ($pattern) => $pattern['name'], $this->cardPatterns);
     }
 
     /**

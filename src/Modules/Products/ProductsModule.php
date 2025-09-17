@@ -41,7 +41,8 @@ class ProductsModule implements ModuleInterface
 
     public function __construct(
         private ClubifyCheckoutSDK $sdk
-    ) {}
+    ) {
+    }
 
     /**
      * Inicializa o módulo com configurações

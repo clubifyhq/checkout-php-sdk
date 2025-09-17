@@ -18,7 +18,8 @@ class SubscriptionLifecycleService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function pauseSubscription(string $subscriptionId): array
     {

@@ -446,7 +446,7 @@ class KeyDerivation
     {
         return array_keys(array_filter(
             $this->supportedAlgorithms,
-            fn($info) => $info['recommended']
+            fn ($info) => $info['recommended']
         ));
     }
 

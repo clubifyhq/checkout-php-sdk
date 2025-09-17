@@ -67,7 +67,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         return $this->getCachedOrExecute(
             $orderId,
-            fn() => $this->fetchById($orderId)
+            fn () => $this->fetchById($orderId)
         );
     }
 
@@ -78,7 +78,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         return $this->getCachedOrExecute(
             "number:{$orderNumber}",
-            fn() => $this->fetchByField('number', $orderNumber)
+            fn () => $this->fetchByField('number', $orderNumber)
         );
     }
 

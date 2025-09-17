@@ -16,7 +16,8 @@ class TenantService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function createTenant(array $tenantData): array
     {

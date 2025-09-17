@@ -86,7 +86,7 @@ class UpsellService extends BaseService
     {
         return $this->getCachedOrExecute(
             "upsell:{$upsellId}",
-            fn() => $this->fetchUpsellById($upsellId),
+            fn () => $this->fetchUpsellById($upsellId),
             3600
         );
     }

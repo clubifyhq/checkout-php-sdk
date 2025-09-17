@@ -110,7 +110,7 @@ class CustomerService extends BaseService
     {
         return $this->getCachedOrExecute(
             "customer:{$customerId}",
-            fn() => $this->repository->findById($customerId),
+            fn () => $this->repository->findById($customerId),
             300 // 5 minutos
         );
     }
@@ -201,7 +201,7 @@ class CustomerService extends BaseService
 
         return $this->getCachedOrExecute(
             $cacheKey,
-            fn() => $this->repository->findByFilters($filters),
+            fn () => $this->repository->findByFilters($filters),
             180 // 3 minutos
         );
     }
@@ -219,7 +219,7 @@ class CustomerService extends BaseService
 
         return $this->getCachedOrExecute(
             $cacheKey,
-            fn() => $this->repository->findByEmail($email, $organizationId),
+            fn () => $this->repository->findByEmail($email, $organizationId),
             300
         );
     }
@@ -235,7 +235,7 @@ class CustomerService extends BaseService
 
         return $this->getCachedOrExecute(
             $cacheKey,
-            fn() => $this->repository->findByDocument($sanitizedDocument, $organizationId),
+            fn () => $this->repository->findByDocument($sanitizedDocument, $organizationId),
             300
         );
     }
@@ -303,7 +303,7 @@ class CustomerService extends BaseService
 
         return $this->getCachedOrExecute(
             $cacheKey,
-            fn() => $this->repository->findByTag($tag),
+            fn () => $this->repository->findByTag($tag),
             300
         );
     }
@@ -317,7 +317,7 @@ class CustomerService extends BaseService
 
         return $this->getCachedOrExecute(
             $cacheKey,
-            fn() => $this->repository->getStatistics($filters),
+            fn () => $this->repository->getStatistics($filters),
             600 // 10 minutos
         );
     }
@@ -390,7 +390,7 @@ class CustomerService extends BaseService
 
         return $this->getCachedOrExecute(
             $cacheKey,
-            fn() => $this->repository->count($filters),
+            fn () => $this->repository->count($filters),
             300
         );
     }
@@ -436,7 +436,7 @@ class CustomerService extends BaseService
     {
         foreach ($data as $field => $value) {
             if (isset($this->validationRules[$field])) {
-                $rules = array_filter($this->validationRules[$field], fn($rule) => $rule !== 'required');
+                $rules = array_filter($this->validationRules[$field], fn ($rule) => $rule !== 'required');
                 $this->validateField($field, $value, $rules);
             }
         }

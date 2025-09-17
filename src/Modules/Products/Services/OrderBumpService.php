@@ -85,7 +85,7 @@ class OrderBumpService extends BaseService
     {
         return $this->getCachedOrExecute(
             "order_bump:{$bumpId}",
-            fn() => $this->fetchOrderBumpById($bumpId),
+            fn () => $this->fetchOrderBumpById($bumpId),
             3600
         );
     }

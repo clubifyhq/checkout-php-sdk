@@ -104,7 +104,7 @@ class ProductService extends BaseService
     {
         return $this->getCachedOrExecute(
             "product:{$productId}",
-            fn() => $this->fetchProductById($productId),
+            fn () => $this->fetchProductById($productId),
             3600
         );
     }
@@ -116,7 +116,7 @@ class ProductService extends BaseService
     {
         return $this->getCachedOrExecute(
             "product_slug:{$slug}",
-            fn() => $this->fetchProductBySlug($slug),
+            fn () => $this->fetchProductBySlug($slug),
             3600
         );
     }
@@ -128,7 +128,7 @@ class ProductService extends BaseService
     {
         return $this->getCachedOrExecute(
             "product_sku:{$sku}",
-            fn() => $this->fetchProductBySku($sku),
+            fn () => $this->fetchProductBySku($sku),
             1800
         );
     }

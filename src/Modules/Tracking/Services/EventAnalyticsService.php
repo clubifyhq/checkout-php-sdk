@@ -22,7 +22,8 @@ class EventAnalyticsService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     /**
      * Obtém analytics de eventos
@@ -35,23 +36,23 @@ class EventAnalyticsService
                 'filters' => $filters,
                 'organization_id' => $this->config->getTenantId(),
             ]);
-            
+
             // Simular obtenção de dados da API
             $this->populateAnalyticsData($analytics, $filters);
-            
+
             $this->logger->info('Analytics generated', [
                 'filters' => $filters,
                 'metrics_count' => count($analytics->getStats()),
             ]);
-            
+
             return $analytics->toDashboardFormat();
-            
+
         } catch (\Exception $e) {
             $this->logger->error('Analytics generation failed', [
                 'error' => $e->getMessage(),
                 'filters' => $filters,
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -71,7 +72,7 @@ class EventAnalyticsService
             'new_users' => ['users' => 300, 'conversion_rate' => 12.5],
             'at_risk' => ['users' => 75, 'last_activity_days' => 30],
         ];
-        
+
         return [
             'segments' => $segments,
             'criteria' => $criteria,
@@ -88,10 +89,10 @@ class EventAnalyticsService
         // Simular dados de funil
         $conversions = [1000, 750, 500, 300, 150]; // Exemplo de dados
         $conversions = array_slice($conversions, 0, count($steps));
-        
+
         $analytics = new EventAnalyticsData();
         $analytics->setFunnelData($steps, $conversions);
-        
+
         return $analytics->funnel;
     }
 
@@ -101,17 +102,17 @@ class EventAnalyticsService
     public function generateExecutiveReport(array $dateRange = []): array
     {
         $analytics = new EventAnalyticsData();
-        
+
         // Adicionar métricas principais
         $analytics->addMetric('total_events', 15420);
         $analytics->addMetric('unique_users', 3240);
         $analytics->addMetric('conversion_rate', 8.5);
         $analytics->addMetric('revenue', 45600.00);
-        
+
         // Adicionar insights
         $analytics->addInsight('performance', 'Conversion rate increased by 15% this month', [], 'high');
         $analytics->addInsight('recommendation', 'Consider optimizing checkout flow step 2', [], 'medium');
-        
+
         return $analytics->getExecutiveSummary();
     }
 
@@ -124,7 +125,7 @@ class EventAnalyticsService
         $start = new DateTime($filters['start_date'] ?? '-30 days');
         $end = new DateTime($filters['end_date'] ?? 'now');
         $analytics->setPeriod($start, $end);
-        
+
         // Métricas principais
         $analytics->addMetric('total_events', rand(10000, 50000));
         $analytics->addMetric('unique_users', rand(1000, 5000));
@@ -133,21 +134,21 @@ class EventAnalyticsService
         $analytics->addMetric('revenue', rand(10000, 100000));
         $analytics->addMetric('avg_session_duration', rand(120, 600));
         $analytics->addMetric('bounce_rate', rand(20, 60));
-        
+
         // Segmentos
         $analytics->addSegment('mobile', ['users' => rand(800, 2000), 'conversion_rate' => rand(5, 15)]);
         $analytics->addSegment('desktop', ['users' => rand(500, 1500), 'conversion_rate' => rand(8, 20)]);
         $analytics->addSegment('returning', ['users' => rand(300, 800), 'conversion_rate' => rand(15, 30)]);
-        
+
         // Tendências
-        $timeSeriesData = array_map(fn() => rand(100, 1000), range(1, 30));
+        $timeSeriesData = array_map(fn () => rand(100, 1000), range(1, 30));
         $analytics->addTrend('daily_events', $timeSeriesData);
-        
+
         // Funil de conversão
         $steps = ['page_view', 'add_to_cart', 'checkout_start', 'payment', 'purchase'];
         $conversions = [5000, 2500, 1800, 1200, 800];
         $analytics->setFunnelData($steps, $conversions);
-        
+
         // Insights
         $analytics->addInsight('alert', 'Unusual drop in mobile conversions detected', [], 'high');
         $analytics->addInsight('opportunity', 'Desktop users show 25% higher conversion', [], 'medium');

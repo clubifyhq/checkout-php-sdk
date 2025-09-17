@@ -140,7 +140,7 @@ class ApiKeyService extends BaseService
     {
         return $this->getCachedOrExecute(
             "api_key_by_key:{$apiKey}",
-            fn() => $this->fetchApiKeyByKey($apiKey),
+            fn () => $this->fetchApiKeyByKey($apiKey),
             1800
         );
     }
@@ -152,7 +152,7 @@ class ApiKeyService extends BaseService
     {
         return $this->getCachedOrExecute(
             "api_key:{$apiKeyId}",
-            fn() => $this->fetchApiKeyById($apiKeyId),
+            fn () => $this->fetchApiKeyById($apiKeyId),
             7200
         );
     }

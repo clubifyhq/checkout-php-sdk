@@ -77,7 +77,7 @@ class TenantData extends BaseData
         if (!$this->plan_expires_at) {
             return false;
         }
-        
+
         return $this->plan_expires_at < new DateTime();
     }
 

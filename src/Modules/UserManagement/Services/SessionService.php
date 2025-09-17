@@ -15,7 +15,8 @@ class SessionService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function createSession(string $userId, array $sessionData): array
     {

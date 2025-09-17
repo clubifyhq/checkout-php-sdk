@@ -18,7 +18,10 @@ use Illuminate\Support\Facades\Log;
  */
 final class SyncCustomer implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     /**
      * Dados do cliente

@@ -21,14 +21,15 @@ class UserService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function createUser(array $userData): array
     {
         $user = new UserData($userData);
-        
+
         $this->logger->info('Creating user', ['email' => $user->email]);
-        
+
         return [
             'success' => true,
             'user_id' => uniqid('user_'),
@@ -52,7 +53,7 @@ class UserService
     public function updateUser(string $userId, array $userData): array
     {
         $this->logger->info('Updating user', ['user_id' => $userId]);
-        
+
         return [
             'success' => true,
             'user_id' => $userId,
@@ -63,7 +64,7 @@ class UserService
     public function deleteUser(string $userId): array
     {
         $this->logger->info('Deleting user', ['user_id' => $userId]);
-        
+
         return [
             'success' => true,
             'user_id' => $userId,

@@ -45,7 +45,8 @@ class EventTrackingService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     /**
      * Rastreia um evento individual
@@ -55,32 +56,32 @@ class EventTrackingService
         try {
             // Criar DTO do evento com validação
             $event = new EventData($eventData);
-            
+
             // Verificar rate limiting
             if (!$this->checkRateLimit()) {
                 throw new SDKException('Rate limit exceeded for event tracking');
             }
-            
+
             // Enriquecer dados do evento
             $enrichedEvent = $this->enrichEventData($event);
-            
+
             // Enviar evento para API
             $response = $this->sendEventToAPI($enrichedEvent);
-            
+
             // Log de sucesso
             $this->logger->info('Event tracked successfully', [
                 'event_type' => $event->event_type,
                 'session_id' => $event->session_id,
                 'event_id' => $response['event_id'] ?? null,
             ]);
-            
+
             return [
                 'success' => true,
                 'event_id' => $response['event_id'] ?? uniqid('evt_'),
                 'timestamp' => $event->getTimestampIso(),
                 'processed_at' => (new DateTime())->format('c'),
             ];
-            
+
         } catch (\Exception $e) {
             return $this->handleTrackingError($eventData, $e);
         }
@@ -93,17 +94,17 @@ class EventTrackingService
     {
         $maxRetries = $maxRetries ?? $this->maxRetries;
         $lastException = null;
-        
+
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             try {
                 return $this->trackEvent($eventData);
             } catch (\Exception $e) {
                 $lastException = $e;
-                
+
                 if ($attempt < $maxRetries) {
                     $delay = $this->retryDelay * $attempt;
                     usleep($delay * 1000); // Convert to microseconds
-                    
+
                     $this->logger->warning('Event tracking retry', [
                         'attempt' => $attempt,
                         'delay_ms' => $delay,
@@ -112,7 +113,7 @@ class EventTrackingService
                 }
             }
         }
-        
+
         // Todos os retries falharam
         return $this->handleTrackingError($eventData, $lastException);
     }
@@ -129,7 +130,7 @@ class EventTrackingService
             'metadata' => $metadata,
             'organization_id' => $this->config->getTenantId(),
         ];
-        
+
         return $this->trackEvent($eventData);
     }
 
@@ -141,12 +142,12 @@ class EventTrackingService
         try {
             $event = new EventData($eventData);
             $this->eventQueue[] = $event->toArray();
-            
+
             $this->logger->debug('Event queued for batch processing', [
                 'event_type' => $event->event_type,
                 'queue_size' => count($this->eventQueue),
             ]);
-            
+
         } catch (\Exception $e) {
             $this->logger->error('Failed to queue event', [
                 'error' => $e->getMessage(),
@@ -163,19 +164,19 @@ class EventTrackingService
         if (empty($this->eventQueue)) {
             return ['success' => true, 'events_processed' => 0];
         }
-        
+
         $batchService = new BatchEventService($this->sdk, $this->config, $this->logger);
         $result = $batchService->trackBatch($this->eventQueue);
-        
+
         // Limpar fila após processamento
         $eventsProcessed = count($this->eventQueue);
         $this->eventQueue = [];
-        
+
         $this->logger->info('Event queue flushed', [
             'events_processed' => $eventsProcessed,
             'batch_result' => $result,
         ]);
-        
+
         return array_merge($result, ['events_processed' => $eventsProcessed]);
     }
 
@@ -194,7 +195,7 @@ class EventTrackingService
     {
         $queueSize = count($this->eventQueue);
         $this->eventQueue = [];
-        
+
         $this->logger->info('Event queue cleared', [
             'events_cleared' => $queueSize,
         ]);
@@ -225,33 +226,33 @@ class EventTrackingService
         if (!$event->organization_id) {
             $event->organization_id = $this->config->getTenantId();
         }
-        
+
         // Adicionar informações de contexto
         $event->addMetadata('sdk_version', $this->sdk->getVersion());
         $event->addMetadata('environment', $this->config->getEnvironment());
         $event->addMetadata('client_timestamp', $event->getTimestampIso());
         $event->addMetadata('server_timestamp', (new DateTime())->format('c'));
-        
+
         // Adicionar informações de IP (se disponível)
         if (!$event->ip_address && isset($_SERVER['REMOTE_ADDR'])) {
             $event->ip_address = $_SERVER['REMOTE_ADDR'];
         }
-        
+
         // Adicionar User Agent (se disponível)
         if (!$event->user_agent && isset($_SERVER['HTTP_USER_AGENT'])) {
             $event->user_agent = $_SERVER['HTTP_USER_AGENT'];
         }
-        
+
         // Adicionar informações de página (se disponível)
         if (!$event->page_url && isset($_SERVER['REQUEST_URI'])) {
             $event->page_url = $this->getCurrentUrl();
         }
-        
+
         // Adicionar referrer (se disponível)
         if (!$event->referrer && isset($_SERVER['HTTP_REFERER'])) {
             $event->referrer = $_SERVER['HTTP_REFERER'];
         }
-        
+
         return $event;
     }
 
@@ -264,14 +265,14 @@ class EventTrackingService
         // Em implementação real, usaria o HTTP client do SDK
         $endpoint = '/events/event';
         $payload = $event->toAnalyticsFormat();
-        
+
         // Log da tentativa de envio
         $this->logger->debug('Sending event to API', [
             'endpoint' => $endpoint,
             'event_type' => $event->event_type,
             'payload_size' => strlen(json_encode($payload)),
         ]);
-        
+
         // Simular resposta da API
         return [
             'event_id' => uniqid('evt_'),
@@ -286,10 +287,10 @@ class EventTrackingService
     private function checkRateLimit(): bool
     {
         $currentMinute = (int) (time() / 60);
-        
+
         if (!isset($this->rateLimits[$currentMinute])) {
             $this->rateLimits[$currentMinute] = 0;
-            
+
             // Limpar rate limits antigos
             foreach ($this->rateLimits as $minute => $count) {
                 if ($minute < $currentMinute - 1) {
@@ -297,7 +298,7 @@ class EventTrackingService
                 }
             }
         }
-        
+
         if ($this->rateLimits[$currentMinute] >= $this->maxEventsPerMinute) {
             $this->logger->warning('Rate limit exceeded', [
                 'current_minute' => $currentMinute,
@@ -306,7 +307,7 @@ class EventTrackingService
             ]);
             return false;
         }
-        
+
         $this->rateLimits[$currentMinute]++;
         return true;
     }
@@ -321,10 +322,10 @@ class EventTrackingService
             'event_data' => $eventData,
             'trace' => $e->getTraceAsString(),
         ]);
-        
+
         // Tentar salvar em cache local para retry posterior
         $this->saveToLocalCache($eventData);
-        
+
         return [
             'success' => false,
             'error' => $e->getMessage(),
@@ -343,12 +344,12 @@ class EventTrackingService
             // Implementação simplificada de cache local
             $cacheKey = 'failed_events_' . date('Y-m-d-H');
             // Em implementação real, usaria o CacheManager do SDK
-            
+
             $this->logger->debug('Event cached for retry', [
                 'cache_key' => $cacheKey,
                 'event_type' => $eventData['event_type'] ?? 'unknown',
             ]);
-            
+
         } catch (\Exception $e) {
             $this->logger->error('Failed to cache event for retry', [
                 'error' => $e->getMessage(),
@@ -372,7 +373,7 @@ class EventTrackingService
         $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
-        
+
         return $protocol . '://' . $host . $uri;
     }
 }

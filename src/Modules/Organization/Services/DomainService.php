@@ -96,7 +96,7 @@ class DomainService extends BaseService
     {
         return $this->getCachedOrExecute(
             "domain:{$domainId}",
-            fn() => $this->fetchDomainById($domainId),
+            fn () => $this->fetchDomainById($domainId),
             3600
         );
     }
@@ -108,7 +108,7 @@ class DomainService extends BaseService
     {
         return $this->getCachedOrExecute(
             "domain_by_name:{$domain}",
-            fn() => $this->fetchDomainByName($domain),
+            fn () => $this->fetchDomainByName($domain),
             1800
         );
     }

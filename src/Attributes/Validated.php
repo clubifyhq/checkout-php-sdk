@@ -19,7 +19,8 @@ class Validated
         public readonly ?string $message = null,
         public readonly bool $required = true,
         public readonly mixed $default = null,
-    ) {}
+    ) {
+    }
 
     /**
      * Obtém regras como array

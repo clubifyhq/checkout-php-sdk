@@ -19,7 +19,8 @@ class SubscriptionPlanService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function createPlan(array $planData): array
     {
@@ -129,11 +130,11 @@ class SubscriptionPlanService
 
         // Aplicar filtros se fornecidos
         if (isset($filters['is_active'])) {
-            $plans = array_filter($plans, fn($plan) => $plan['is_active'] === $filters['is_active']);
+            $plans = array_filter($plans, fn ($plan) => $plan['is_active'] === $filters['is_active']);
         }
 
         if (isset($filters['billing_cycle'])) {
-            $plans = array_filter($plans, fn($plan) => $plan['billing_cycle'] === $filters['billing_cycle']);
+            $plans = array_filter($plans, fn ($plan) => $plan['billing_cycle'] === $filters['billing_cycle']);
         }
 
         return [

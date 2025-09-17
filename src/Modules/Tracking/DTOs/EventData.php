@@ -57,9 +57,9 @@ class EventData extends BaseData
     {
         // Sanitizar dados antes de processar
         $data = $this->sanitizeData($data);
-        
+
         parent::__construct($data);
-        
+
         // Validar dados após construir
         $this->validate();
     }
@@ -164,7 +164,7 @@ class EventData extends BaseData
             'signup_completed',
             'lead_generated'
         ];
-        
+
         return in_array($this->event_type, $conversionEvents);
     }
 
@@ -181,7 +181,7 @@ class EventData extends BaseData
             'scroll_depth',
             'time_on_page'
         ];
-        
+
         return in_array($this->event_type, $engagementEvents);
     }
 
@@ -231,22 +231,22 @@ class EventData extends BaseData
     public function getMaskedData(): array
     {
         $data = $this->toArray();
-        
+
         // Mascarar IP
         if (isset($data['ip_address'])) {
             $data['ip_address'] = $this->maskIpAddress($data['ip_address']);
         }
-        
+
         // Mascarar user_agent
         if (isset($data['user_agent'])) {
             $data['user_agent'] = substr($data['user_agent'], 0, 50) . '...';
         }
-        
+
         // Remover metadados sensíveis
         if (isset($data['metadata'])) {
             $data['metadata'] = $this->removeSensitiveMetadata($data['metadata']);
         }
-        
+
         return $data;
     }
 
@@ -283,12 +283,12 @@ class EventData extends BaseData
             $parts = explode('.', $ip);
             return $parts[0] . '.' . $parts[1] . '.***.***.***';
         }
-        
+
         if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
             $parts = explode(':', $ip);
             return $parts[0] . ':' . $parts[1] . ':****:****:****:****:****:****';
         }
-        
+
         return '***.***.***';
     }
 

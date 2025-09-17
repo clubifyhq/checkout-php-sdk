@@ -303,7 +303,7 @@ class CPFValidator implements ValidatorInterface
     public function getBatchStats(array $cpfs): array
     {
         $results = $this->validateBatch($cpfs);
-        $valid = array_filter($results, fn($r) => $r['valid']);
+        $valid = array_filter($results, fn ($r) => $r['valid']);
 
         return [
             'total' => count($cpfs),

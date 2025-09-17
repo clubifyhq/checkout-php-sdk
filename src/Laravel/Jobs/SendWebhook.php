@@ -18,7 +18,10 @@ use Illuminate\Support\Facades\Log;
  */
 final class SendWebhook implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     /**
      * URL do webhook

@@ -255,7 +255,7 @@ class OrderData extends BaseData
     public function removeItem(string $itemId): self
     {
         if (is_array($this->items)) {
-            $this->items = array_filter($this->items, fn($item) => $item['id'] !== $itemId);
+            $this->items = array_filter($this->items, fn ($item) => $item['id'] !== $itemId);
             $this->items = array_values($this->items);
             $this->data['items'] = $this->items;
         }
@@ -316,7 +316,7 @@ class OrderData extends BaseData
     public function removeUpsell(string $upsellId): self
     {
         if (is_array($this->upsells)) {
-            $this->upsells = array_filter($this->upsells, fn($upsell) => $upsell['id'] !== $upsellId);
+            $this->upsells = array_filter($this->upsells, fn ($upsell) => $upsell['id'] !== $upsellId);
             $this->upsells = array_values($this->upsells);
             $this->data['upsells'] = $this->upsells;
         }

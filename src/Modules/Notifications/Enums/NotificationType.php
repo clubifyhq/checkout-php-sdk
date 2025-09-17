@@ -113,7 +113,7 @@ enum NotificationType: string
      */
     public static function all(): array
     {
-        return array_map(fn($case) => $case->value, self::cases());
+        return array_map(fn ($case) => $case->value, self::cases());
     }
 
     /**
@@ -209,7 +209,7 @@ enum NotificationType: string
         ];
 
         return array_map(
-            fn($case) => $case->value,
+            fn ($case) => $case->value,
             $categoryMap[strtolower($category)] ?? []
         );
     }

@@ -119,7 +119,7 @@ class OfferData extends BaseData
         if (is_array($this->products)) {
             $this->products = array_filter(
                 $this->products,
-                fn($product) => $product['id'] !== $productId
+                fn ($product) => $product['id'] !== $productId
             );
             $this->products = array_values($this->products);
             $this->data['products'] = $this->products;
@@ -298,7 +298,7 @@ class OfferData extends BaseData
         if (is_array($this->upsells)) {
             $this->upsells = array_filter(
                 $this->upsells,
-                fn($upsell) => $upsell['id'] !== $upsellId
+                fn ($upsell) => $upsell['id'] !== $upsellId
             );
             $this->upsells = array_values($this->upsells);
             $this->data['upsells'] = $this->upsells;
@@ -346,7 +346,7 @@ class OfferData extends BaseData
         if (is_array($this->order_bumps)) {
             $this->order_bumps = array_filter(
                 $this->order_bumps,
-                fn($bump) => $bump['id'] !== $orderBumpId
+                fn ($bump) => $bump['id'] !== $orderBumpId
             );
             $this->order_bumps = array_values($this->order_bumps);
             $this->data['order_bumps'] = $this->order_bumps;

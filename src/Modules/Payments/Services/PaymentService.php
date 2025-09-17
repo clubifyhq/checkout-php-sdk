@@ -111,7 +111,7 @@ class PaymentService extends BaseService
             ]);
 
             $result = $this->executeWithRetry(
-                fn() => $gateway->processPayment($paymentData),
+                fn () => $gateway->processPayment($paymentData),
                 $gatewayName
             );
 
@@ -179,7 +179,7 @@ class PaymentService extends BaseService
 
         try {
             $result = $this->executeWithRetry(
-                fn() => $gateway->authorizePayment($paymentData),
+                fn () => $gateway->authorizePayment($paymentData),
                 $gatewayName
             );
 
@@ -233,7 +233,7 @@ class PaymentService extends BaseService
 
         try {
             $result = $this->executeWithRetry(
-                fn() => $gateway->capturePayment($authorizationId, $amount),
+                fn () => $gateway->capturePayment($authorizationId, $amount),
                 $payment['gateway']
             );
 
@@ -290,7 +290,7 @@ class PaymentService extends BaseService
             }
 
             $result = $this->executeWithRetry(
-                fn() => $gateway->refundPayment($gatewayPaymentId, $refundAmount, $reason),
+                fn () => $gateway->refundPayment($gatewayPaymentId, $refundAmount, $reason),
                 $payment['gateway']
             );
 
@@ -350,7 +350,7 @@ class PaymentService extends BaseService
 
         try {
             $result = $this->executeWithRetry(
-                fn() => $gateway->cancelPayment($authorizationId, $reason),
+                fn () => $gateway->cancelPayment($authorizationId, $reason),
                 $payment['gateway']
             );
 

@@ -87,7 +87,7 @@ class TenantService extends BaseService
     {
         return $this->getCachedOrExecute(
             "tenant:{$tenantId}",
-            fn() => $this->fetchTenantById($tenantId),
+            fn () => $this->fetchTenantById($tenantId),
             3600
         );
     }
@@ -99,7 +99,7 @@ class TenantService extends BaseService
     {
         return $this->getCachedOrExecute(
             "org_tenant:{$organizationId}",
-            fn() => $this->fetchTenantByOrganization($organizationId),
+            fn () => $this->fetchTenantByOrganization($organizationId),
             3600
         );
     }
@@ -111,7 +111,7 @@ class TenantService extends BaseService
     {
         return $this->getCachedOrExecute(
             "subdomain_tenant:{$subdomain}",
-            fn() => $this->fetchTenantBySubdomain($subdomain),
+            fn () => $this->fetchTenantBySubdomain($subdomain),
             1800
         );
     }
@@ -174,7 +174,7 @@ class TenantService extends BaseService
     {
         return $this->getCachedOrExecute(
             "tenant_limits:{$tenantId}",
-            fn() => $this->fetchResourceLimits($tenantId),
+            fn () => $this->fetchResourceLimits($tenantId),
             7200
         );
     }

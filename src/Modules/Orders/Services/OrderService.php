@@ -103,7 +103,7 @@ class OrderService extends BaseService
     {
         return $this->getCachedOrExecute(
             "order:{$orderId}",
-            fn() => $this->fetchOrderById($orderId),
+            fn () => $this->fetchOrderById($orderId),
             3600
         );
     }
@@ -115,7 +115,7 @@ class OrderService extends BaseService
     {
         return $this->getCachedOrExecute(
             "order_number:{$orderNumber}",
-            fn() => $this->fetchOrderByNumber($orderNumber),
+            fn () => $this->fetchOrderByNumber($orderNumber),
             3600
         );
     }

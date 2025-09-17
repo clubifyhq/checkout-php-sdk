@@ -22,7 +22,8 @@ class BeaconService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     /**
      * Rastreia evento beacon
@@ -36,27 +37,27 @@ class BeaconService
                 'session_id' => $this->generateSessionId(),
                 'organization_id' => $this->config->getTenantId(),
             ]));
-            
+
             // Eventos beacon têm prioridade alta
             $response = $this->sendBeaconToAPI($event);
-            
+
             $this->logger->info('Beacon event tracked', [
                 'event_type' => $event->event_type,
                 'session_id' => $event->session_id,
             ]);
-            
+
             return [
                 'success' => true,
                 'event_id' => $response['event_id'] ?? uniqid('beacon_'),
                 'timestamp' => $event->getTimestampIso(),
             ];
-            
+
         } catch (\Exception $e) {
             $this->logger->error('Beacon tracking failed', [
                 'error' => $e->getMessage(),
                 'event_data' => $eventData,
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -100,7 +101,7 @@ class BeaconService
             'event_type' => $event->event_type,
             'priority' => 'high',
         ]);
-        
+
         return [
             'event_id' => uniqid('beacon_'),
             'status' => 'accepted_priority',

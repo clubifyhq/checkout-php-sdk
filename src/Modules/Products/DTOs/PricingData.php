@@ -223,7 +223,7 @@ class PricingData extends BaseData
         if (is_array($this->discounts)) {
             $this->discounts = array_filter(
                 $this->discounts,
-                fn($discount) => $discount['id'] !== $discountId
+                fn ($discount) => $discount['id'] !== $discountId
             );
             $this->discounts = array_values($this->discounts);
             $this->data['discounts'] = $this->discounts;

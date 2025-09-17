@@ -117,7 +117,7 @@ class CartData extends BaseData
         if (is_array($this->items)) {
             $this->items = array_filter(
                 $this->items,
-                fn($item) => $item['id'] !== $itemId
+                fn ($item) => $item['id'] !== $itemId
             );
             $this->items = array_values($this->items);
             $this->data['items'] = $this->items;

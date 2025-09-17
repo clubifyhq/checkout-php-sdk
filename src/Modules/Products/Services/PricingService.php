@@ -85,7 +85,7 @@ class PricingService extends BaseService
     {
         return $this->getCachedOrExecute(
             "pricing_strategy:{$strategyId}",
-            fn() => $this->fetchStrategyById($strategyId),
+            fn () => $this->fetchStrategyById($strategyId),
             3600
         );
     }

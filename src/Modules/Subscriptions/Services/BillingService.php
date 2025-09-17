@@ -18,7 +18,8 @@ class BillingService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function processManualBilling(string $subscriptionId): array
     {

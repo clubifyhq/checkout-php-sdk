@@ -371,7 +371,7 @@ class HistoryService extends BaseService
             return 0.0;
         }
 
-        $dates = array_map(fn($tx) => strtotime($tx['created_at']), $transactions);
+        $dates = array_map(fn ($tx) => strtotime($tx['created_at']), $transactions);
         $firstPurchase = min($dates);
         $lastPurchase = max($dates);
         $daysDiff = max(1, ($lastPurchase - $firstPurchase) / 86400);

@@ -393,7 +393,7 @@ class CNPJValidator implements ValidatorInterface
     public function getBatchStats(array $cnpjs): array
     {
         $results = $this->validateBatch($cnpjs);
-        $valid = array_filter($results, fn($r) => $r['valid']);
+        $valid = array_filter($results, fn ($r) => $r['valid']);
 
         return [
             'total' => count($cnpjs),

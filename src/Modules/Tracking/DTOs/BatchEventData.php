@@ -52,12 +52,12 @@ class BatchEventData extends BaseData
     {
         // Sanitizar dados antes de processar
         $data = $this->sanitizeData($data);
-        
+
         parent::__construct($data);
-        
+
         // Validar dados após construir
         $this->validate();
-        
+
         // Calcular estatísticas
         $this->calculateStats();
     }
@@ -102,7 +102,7 @@ class BatchEventData extends BaseData
         // Garantir arrays
         $data['events'] = $data['events'] ?? [];
         $data['metadata'] = $data['metadata'] ?? [];
-        
+
         // Calcular event_count
         $data['event_count'] = count($data['events']);
 
@@ -132,7 +132,7 @@ class BatchEventData extends BaseData
                 $this->events[] = $eventData->toArray();
             }
         }
-        
+
         $this->event_count = count($this->events);
         $this->calculateStats();
     }
@@ -145,7 +145,7 @@ class BatchEventData extends BaseData
         $originalCount = $this->event_count;
         $uniqueEvents = [];
         $seen = [];
-        
+
         foreach ($this->events as $event) {
             $key = $this->generateEventKey($event);
             if (!isset($seen[$key])) {
@@ -153,11 +153,11 @@ class BatchEventData extends BaseData
                 $seen[$key] = true;
             }
         }
-        
+
         $this->events = $uniqueEvents;
         $this->event_count = count($this->events);
         $this->calculateStats();
-        
+
         return $originalCount - $this->event_count;
     }
 
@@ -206,7 +206,7 @@ class BatchEventData extends BaseData
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -215,13 +215,13 @@ class BatchEventData extends BaseData
      */
     public function decompress(): bool
     {
-        if ($this->compression === 'gzip' && 
+        if ($this->compression === 'gzip' &&
             isset($this->events['compressed']) &&
             function_exists('gzdecode')) {
-            
+
             $compressed = base64_decode($this->events['compressed']);
             $decompressed = gzdecode($compressed);
-            
+
             if ($decompressed !== false) {
                 $this->events = json_decode($decompressed, true);
                 $this->compression = null;
@@ -229,7 +229,7 @@ class BatchEventData extends BaseData
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -238,7 +238,7 @@ class BatchEventData extends BaseData
      */
     public function filterByEventType(string $eventType): array
     {
-        return array_filter($this->events, function($event) use ($eventType) {
+        return array_filter($this->events, function ($event) use ($eventType) {
             return ($event['event_type'] ?? '') === $eventType;
         });
     }
@@ -249,7 +249,7 @@ class BatchEventData extends BaseData
     public function groupByEventType(): array
     {
         $groups = [];
-        
+
         foreach ($this->events as $event) {
             $type = $event['event_type'] ?? 'unknown';
             if (!isset($groups[$type])) {
@@ -257,7 +257,7 @@ class BatchEventData extends BaseData
             }
             $groups[$type][] = $event;
         }
-        
+
         return $groups;
     }
 
@@ -281,8 +281,8 @@ class BatchEventData extends BaseData
             'signup_completed',
             'lead_generated'
         ];
-        
-        return array_filter($this->events, function($event) use ($conversionTypes) {
+
+        return array_filter($this->events, function ($event) use ($conversionTypes) {
             return in_array($event['event_type'] ?? '', $conversionTypes);
         });
     }
@@ -293,13 +293,13 @@ class BatchEventData extends BaseData
     public function getTotalValue(): float
     {
         $total = 0.0;
-        
+
         foreach ($this->events as $event) {
-            $value = $event['metadata']['value'] ?? 
+            $value = $event['metadata']['value'] ??
                     $event['metadata']['amount'] ?? 0;
             $total += (float) $value;
         }
-        
+
         return $total;
     }
 
@@ -334,16 +334,16 @@ class BatchEventData extends BaseData
             $this->stats = [];
             return;
         }
-        
+
         $eventTypes = $this->groupByEventType();
         $conversionEvents = $this->getConversionEvents();
-        
+
         $this->stats = [
             'total_events' => $this->event_count,
             'unique_event_types' => count($eventTypes),
             'event_type_distribution' => array_map('count', $eventTypes),
             'conversion_events' => count($conversionEvents),
-            'conversion_rate' => $this->event_count > 0 ? 
+            'conversion_rate' => $this->event_count > 0 ?
                 round((count($conversionEvents) / $this->event_count) * 100, 2) : 0,
             'total_value' => $this->getTotalValue(),
             'size_bytes' => $this->getSizeInBytes(),
@@ -359,14 +359,14 @@ class BatchEventData extends BaseData
         if (empty($this->events)) {
             return ['min' => null, 'max' => null, 'duration_seconds' => 0];
         }
-        
-        $timestamps = array_map(function($event) {
+
+        $timestamps = array_map(function ($event) {
             return new DateTime($event['timestamp'] ?? 'now');
         }, $this->events);
-        
+
         $min = min($timestamps);
         $max = max($timestamps);
-        
+
         return [
             'min' => $min->format('c'),
             'max' => $max->format('c'),
@@ -385,7 +385,7 @@ class BatchEventData extends BaseData
             $event['timestamp'] ?? '',
             $event['page_url'] ?? '',
         ];
-        
+
         return md5(implode('|', $keyParts));
     }
 }

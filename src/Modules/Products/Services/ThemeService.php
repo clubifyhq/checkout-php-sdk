@@ -19,7 +19,8 @@ class ThemeService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function createTheme(array $themeData): array
     {
@@ -166,15 +167,15 @@ class ThemeService
 
         // Aplicar filtros
         if (isset($filters['category'])) {
-            $themes = array_filter($themes, fn($theme) => $theme['category'] === $filters['category']);
+            $themes = array_filter($themes, fn ($theme) => $theme['category'] === $filters['category']);
         }
 
         if (isset($filters['is_premium'])) {
-            $themes = array_filter($themes, fn($theme) => $theme['is_premium'] === $filters['is_premium']);
+            $themes = array_filter($themes, fn ($theme) => $theme['is_premium'] === $filters['is_premium']);
         }
 
         if (isset($filters['is_active'])) {
-            $themes = array_filter($themes, fn($theme) => $theme['is_active'] === $filters['is_active']);
+            $themes = array_filter($themes, fn ($theme) => $theme['is_active'] === $filters['is_active']);
         }
 
         return [

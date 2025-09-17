@@ -96,7 +96,7 @@ class FlowService extends BaseService
     {
         return $this->getCachedOrExecute(
             "sales_flow:{$flowId}",
-            fn() => $this->fetchFlowById($flowId),
+            fn () => $this->fetchFlowById($flowId),
             3600
         );
     }
@@ -108,7 +108,7 @@ class FlowService extends BaseService
     {
         return $this->getCachedOrExecute(
             "flow_slug:{$slug}",
-            fn() => $this->fetchFlowBySlug($slug),
+            fn () => $this->fetchFlowBySlug($slug),
             3600
         );
     }
@@ -761,7 +761,7 @@ class FlowService extends BaseService
         }
 
         // Ordenar por ordem
-        usort($processedSteps, fn($a, $b) => $a['order'] <=> $b['order']);
+        usort($processedSteps, fn ($a, $b) => $a['order'] <=> $b['order']);
 
         return $processedSteps;
     }

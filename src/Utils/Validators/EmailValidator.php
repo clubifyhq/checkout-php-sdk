@@ -354,7 +354,7 @@ class EmailValidator implements ValidatorInterface
     {
         $this->disposableDomains = array_filter(
             $this->disposableDomains,
-            fn($d) => $d !== strtolower($domain)
+            fn ($d) => $d !== strtolower($domain)
         );
     }
 

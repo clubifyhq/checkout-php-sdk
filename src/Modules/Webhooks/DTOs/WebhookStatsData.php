@@ -296,9 +296,15 @@ class WebhookStatsData extends BaseDTO
 
         // Estabilidade (20% do score)
         $stabilityScore = 20;
-        if ($this->circuitBreakerTrips > 0) $stabilityScore -= 5;
-        if ($this->rateLimitHits > 0) $stabilityScore -= 3;
-        if ($this->pendingRetries > 10) $stabilityScore -= 5;
+        if ($this->circuitBreakerTrips > 0) {
+            $stabilityScore -= 5;
+        }
+        if ($this->rateLimitHits > 0) {
+            $stabilityScore -= 3;
+        }
+        if ($this->pendingRetries > 10) {
+            $stabilityScore -= 5;
+        }
         $score += max(0, $stabilityScore);
 
         // Consistência (10% do score)

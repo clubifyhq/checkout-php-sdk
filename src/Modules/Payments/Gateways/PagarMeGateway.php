@@ -676,8 +676,12 @@ class PagarMeGateway implements GatewayInterface
      */
     public function getMaxInstallments(float $amount): int
     {
-        if ($amount >= 100) return 12;
-        if ($amount >= 50) return 6;
+        if ($amount >= 100) {
+            return 12;
+        }
+        if ($amount >= 50) {
+            return 6;
+        }
         return 1;
     }
 

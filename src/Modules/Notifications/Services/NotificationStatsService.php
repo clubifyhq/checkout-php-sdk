@@ -560,7 +560,7 @@ class NotificationStatsService extends BaseService
     private function rankWebhooks(array $webhooks): array
     {
         // Ordena por taxa de sucesso
-        usort($webhooks, function($a, $b) {
+        usort($webhooks, function ($a, $b) {
             return ($b['success_rate'] ?? 0) <=> ($a['success_rate'] ?? 0);
         });
 
@@ -709,7 +709,7 @@ class NotificationStatsService extends BaseService
     {
         $webhooks = $webhookPerformance['webhooks'] ?? [];
 
-        usort($webhooks, function($a, $b) {
+        usort($webhooks, function ($a, $b) {
             return ($b['success_rate'] ?? 0) <=> ($a['success_rate'] ?? 0);
         });
 

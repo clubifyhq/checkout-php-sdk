@@ -67,7 +67,7 @@ class PasskeyData extends BaseData
         if (!$this->last_used_at) {
             return false;
         }
-        
+
         $threshold = new DateTime("-{$hours} hours");
         return $this->last_used_at > $threshold;
     }
@@ -94,11 +94,11 @@ class PasskeyData extends BaseData
     public function toSafeArray(): array
     {
         $data = $this->toArray();
-        
+
         // Remover dados sensíveis
         unset($data['public_key']);
         unset($data['credential_id']);
-        
+
         return $data;
     }
 

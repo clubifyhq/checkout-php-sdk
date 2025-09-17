@@ -46,7 +46,8 @@ class BatchEventService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     /**
      * Processa lote de eventos
@@ -61,28 +62,28 @@ class BatchEventService
                     'message' => 'No events to process',
                 ];
             }
-            
+
             // Criar DTO do lote
             $batch = new BatchEventData([
                 'events' => $events,
                 'organization_id' => $this->config->getTenantId(),
             ]);
-            
+
             // Validar e otimizar lote
             $optimizedBatch = $this->optimizeBatch($batch);
-            
+
             // Fragmentar se necessário
             $fragments = $this->fragmentBatch($optimizedBatch);
-            
+
             // Processar fragmentos
             $results = [];
             foreach ($fragments as $index => $fragment) {
                 $results[] = $this->processBatchFragment($fragment, $index);
             }
-            
+
             // Consolidar resultados
             return $this->consolidateResults($results);
-            
+
         } catch (\Exception $e) {
             return $this->handleBatchError($events, $e);
         }
@@ -95,7 +96,7 @@ class BatchEventService
     {
         $events = [];
         $errors = [];
-        
+
         // Converter dados em EventData objects
         foreach ($eventDataArray as $index => $eventData) {
             try {
@@ -109,7 +110,7 @@ class BatchEventService
                 ];
             }
         }
-        
+
         if (!empty($errors)) {
             $this->logger->warning('Some events failed validation', [
                 'valid_events' => count($events),
@@ -117,7 +118,7 @@ class BatchEventService
                 'errors' => $errors,
             ]);
         }
-        
+
         if (empty($events)) {
             return [
                 'success' => false,
@@ -125,10 +126,10 @@ class BatchEventService
                 'validation_errors' => $errors,
             ];
         }
-        
+
         $result = $this->trackBatch($events);
         $result['validation_errors'] = $errors;
-        
+
         return $result;
     }
 
@@ -150,10 +151,10 @@ class BatchEventService
                 ]);
             }
         }
-        
+
         // Adicionar eventos válidos
         $batch->addEvents($validEvents);
-        
+
         return $batch;
     }
 
@@ -162,7 +163,7 @@ class BatchEventService
      */
     public function shouldProcessBatch(BatchEventData $batch): bool
     {
-        return $batch->isFull($this->maxBatchSize) || 
+        return $batch->isFull($this->maxBatchSize) ||
                $batch->getSizeInBytes() >= $this->maxBatchSizeBytes;
     }
 
@@ -174,13 +175,13 @@ class BatchEventService
         // Ajustar tamanho do lote baseado em métricas
         $avgResponseTime = $metrics['avg_response_time'] ?? 0;
         $errorRate = $metrics['error_rate'] ?? 0;
-        
+
         if ($avgResponseTime > 5000) { // 5 segundos
             $this->maxBatchSize = max(50, $this->maxBatchSize - 10);
         } elseif ($avgResponseTime < 1000 && $errorRate < 0.01) { // 1 segundo, 1% erro
             $this->maxBatchSize = min(200, $this->maxBatchSize + 10);
         }
-        
+
         $this->logger->info('Batch settings optimized', [
             'new_max_batch_size' => $this->maxBatchSize,
             'avg_response_time' => $avgResponseTime,
@@ -218,14 +219,14 @@ class BatchEventService
                 ]);
             }
         }
-        
+
         // Comprimir se necessário e habilitado
         if ($this->enableCompression && $batch->shouldCompress($this->compressionThreshold)) {
             $originalSize = $batch->getSizeInBytes();
             if ($batch->compress()) {
                 $compressedSize = $batch->getSizeInBytes();
                 $compressionRatio = round((1 - $compressedSize / $originalSize) * 100, 2);
-                
+
                 $this->logger->info('Batch compressed', [
                     'original_size_bytes' => $originalSize,
                     'compressed_size_bytes' => $compressedSize,
@@ -233,7 +234,7 @@ class BatchEventService
                 ]);
             }
         }
-        
+
         return $batch;
     }
 
@@ -242,30 +243,30 @@ class BatchEventService
      */
     private function fragmentBatch(BatchEventData $batch): array
     {
-        if ($batch->event_count <= $this->maxBatchSize && 
+        if ($batch->event_count <= $this->maxBatchSize &&
             $batch->getSizeInBytes() <= $this->maxBatchSizeBytes) {
             return [$batch];
         }
-        
+
         $fragments = [];
         $events = $batch->events;
-        
+
         // Se o lote está comprimido, descomprimir primeiro
         if ($batch->compression) {
             $batch->decompress();
             $events = $batch->events;
         }
-        
+
         $currentFragment = [];
         $currentSize = 0;
-        
+
         foreach ($events as $event) {
             $eventSize = strlen(json_encode($event));
-            
+
             // Verificar se adicionar este evento excederia os limites
-            if (count($currentFragment) >= $this->maxBatchSize || 
+            if (count($currentFragment) >= $this->maxBatchSize ||
                 ($currentSize + $eventSize) > $this->maxBatchSizeBytes) {
-                
+
                 if (!empty($currentFragment)) {
                     $fragments[] = new BatchEventData([
                         'events' => $currentFragment,
@@ -275,11 +276,11 @@ class BatchEventService
                     $currentSize = 0;
                 }
             }
-            
+
             $currentFragment[] = $event;
             $currentSize += $eventSize;
         }
-        
+
         // Adicionar último fragmento se não estiver vazio
         if (!empty($currentFragment)) {
             $fragments[] = new BatchEventData([
@@ -287,15 +288,15 @@ class BatchEventService
                 'organization_id' => $batch->organization_id,
             ]);
         }
-        
+
         if (count($fragments) > 1) {
             $this->logger->info('Batch fragmented', [
                 'original_events' => $batch->event_count,
                 'fragments_created' => count($fragments),
-                'fragment_sizes' => array_map(fn($f) => $f->event_count, $fragments),
+                'fragment_sizes' => array_map(fn ($f) => $f->event_count, $fragments),
             ]);
         }
-        
+
         return $fragments;
     }
 
@@ -305,17 +306,17 @@ class BatchEventService
     private function processBatchFragment(BatchEventData $fragment, int $fragmentIndex): array
     {
         $lastException = null;
-        
+
         for ($attempt = 1; $attempt <= $this->maxRetries; $attempt++) {
             try {
                 return $this->sendBatchToAPI($fragment, $fragmentIndex);
             } catch (\Exception $e) {
                 $lastException = $e;
-                
+
                 if ($attempt < $this->maxRetries) {
                     $delay = $attempt * 1000; // 1s, 2s, 3s
                     usleep($delay * 1000);
-                    
+
                     $this->logger->warning('Batch fragment retry', [
                         'fragment_index' => $fragmentIndex,
                         'attempt' => $attempt,
@@ -325,7 +326,7 @@ class BatchEventService
                 }
             }
         }
-        
+
         // Todos os retries falharam
         throw $lastException;
     }
@@ -337,7 +338,7 @@ class BatchEventService
     {
         $endpoint = '/events/batch';
         $payload = $batch->toAnalyticsFormat();
-        
+
         $this->logger->debug('Sending batch to API', [
             'endpoint' => $endpoint,
             'fragment_index' => $fragmentIndex,
@@ -345,7 +346,7 @@ class BatchEventService
             'payload_size_bytes' => $batch->getSizeInBytes(),
             'compressed' => $batch->compression !== null,
         ]);
-        
+
         // Simular resposta da API
         return [
             'batch_id' => $batch->batch_id,
@@ -366,28 +367,28 @@ class BatchEventService
         $totalProcessingTime = 0;
         $allSuccessful = true;
         $errors = [];
-        
+
         foreach ($fragmentResults as $result) {
             if (isset($result['events_processed'])) {
                 $totalEvents += $result['events_processed'];
             }
-            
+
             if (isset($result['processing_time_ms'])) {
                 $totalProcessingTime += $result['processing_time_ms'];
             }
-            
+
             if (isset($result['success']) && !$result['success']) {
                 $allSuccessful = false;
                 $errors[] = $result;
             }
         }
-        
+
         return [
             'success' => $allSuccessful,
             'events_processed' => $totalEvents,
             'fragments_processed' => count($fragmentResults),
             'total_processing_time_ms' => $totalProcessingTime,
-            'avg_processing_time_ms' => count($fragmentResults) > 0 ? 
+            'avg_processing_time_ms' => count($fragmentResults) > 0 ?
                 round($totalProcessingTime / count($fragmentResults), 2) : 0,
             'errors' => $errors,
             'timestamp' => (new DateTime())->format('c'),
@@ -404,7 +405,7 @@ class BatchEventService
             'event_count' => count($events),
             'trace' => $e->getTraceAsString(),
         ]);
-        
+
         return [
             'success' => false,
             'error' => $e->getMessage(),

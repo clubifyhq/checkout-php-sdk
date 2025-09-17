@@ -97,7 +97,7 @@ class ConfigService extends BaseService
     {
         return $this->withCache(
             self::CACHE_PREFIX . 'global',
-            fn() => $this->repository->getGlobalConfig(),
+            fn () => $this->repository->getGlobalConfig(),
             self::CACHE_TTL
         );
     }

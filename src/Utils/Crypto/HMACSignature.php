@@ -331,7 +331,7 @@ class HMACSignature
 
         return array_keys(array_filter(
             $this->supportedAlgorithms,
-            fn($info) => $info['secure']
+            fn ($info) => $info['secure']
         ));
     }
 

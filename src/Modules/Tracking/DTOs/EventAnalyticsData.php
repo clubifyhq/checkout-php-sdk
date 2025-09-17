@@ -48,9 +48,9 @@ class EventAnalyticsData extends BaseData
     {
         // Sanitizar dados antes de processar
         $data = $this->sanitizeData($data);
-        
+
         parent::__construct($data);
-        
+
         // Validar dados após construir
         $this->validate();
     }
@@ -239,7 +239,7 @@ class EventAnalyticsData extends BaseData
      */
     public function getInsightsByType(string $type): array
     {
-        return array_filter($this->insights, function($insight) use ($type) {
+        return array_filter($this->insights, function ($insight) use ($type) {
             return $insight['type'] === $type;
         });
     }
@@ -249,7 +249,7 @@ class EventAnalyticsData extends BaseData
      */
     public function getInsightsByPriority(string $priority): array
     {
-        return array_filter($this->insights, function($insight) use ($priority) {
+        return array_filter($this->insights, function ($insight) use ($priority) {
             return $insight['priority'] === $priority;
         });
     }
@@ -300,7 +300,7 @@ class EventAnalyticsData extends BaseData
         if (empty($conversions) || $conversions[0] == 0) {
             return 0.0;
         }
-        
+
         $finalConversions = end($conversions) ?: 0;
         return round(($finalConversions / $conversions[0]) * 100, 2);
     }
@@ -311,18 +311,18 @@ class EventAnalyticsData extends BaseData
     private function calculateStepConversionRates(array $conversions): array
     {
         $rates = [];
-        
+
         for ($i = 1; $i < count($conversions); $i++) {
             $previous = $conversions[$i - 1];
             $current = $conversions[$i];
-            
+
             if ($previous > 0) {
                 $rates[] = round(($current / $previous) * 100, 2);
             } else {
                 $rates[] = 0.0;
             }
         }
-        
+
         return $rates;
     }
 
@@ -333,7 +333,7 @@ class EventAnalyticsData extends BaseData
     {
         $stepRates = $this->calculateStepConversionRates($conversions);
         $dropOffs = [];
-        
+
         foreach ($stepRates as $index => $rate) {
             if ($rate < 50) { // Considera drop-off significativo abaixo de 50%
                 $dropOffs[] = [
@@ -343,7 +343,7 @@ class EventAnalyticsData extends BaseData
                 ];
             }
         }
-        
+
         return $dropOffs;
     }
 
@@ -355,10 +355,10 @@ class EventAnalyticsData extends BaseData
         if (count($data) < 2) {
             return 'insufficient_data';
         }
-        
+
         $first = reset($data);
         $last = end($data);
-        
+
         if ($last > $first) {
             return 'upward';
         } elseif ($last < $first) {
@@ -376,14 +376,14 @@ class EventAnalyticsData extends BaseData
         if (count($data) < 2) {
             return 0.0;
         }
-        
+
         $first = reset($data);
         $last = end($data);
-        
+
         if ($first == 0) {
             return 0.0;
         }
-        
+
         return round((($last - $first) / $first) * 100, 2);
     }
 
@@ -395,12 +395,12 @@ class EventAnalyticsData extends BaseData
         if (count($data) < 2) {
             return 0.0;
         }
-        
+
         $mean = array_sum($data) / count($data);
-        $variance = array_sum(array_map(function($x) use ($mean) {
+        $variance = array_sum(array_map(function ($x) use ($mean) {
             return pow($x - $mean, 2);
         }, $data)) / count($data);
-        
+
         return round(sqrt($variance), 2);
     }
 
@@ -411,7 +411,7 @@ class EventAnalyticsData extends BaseData
     {
         $currentSum = array_sum($current);
         $previousSum = array_sum($previous);
-        
+
         return round($currentSum - $previousSum, 2);
     }
 
@@ -422,11 +422,11 @@ class EventAnalyticsData extends BaseData
     {
         $currentSum = array_sum($current);
         $previousSum = array_sum($previous);
-        
+
         if ($previousSum == 0) {
             return 0.0;
         }
-        
+
         return round((($currentSum - $previousSum) / $previousSum) * 100, 2);
     }
 
@@ -436,7 +436,7 @@ class EventAnalyticsData extends BaseData
     private function calculateSignificance(array $current, array $previous): string
     {
         $change = abs($this->calculatePercentageChange($current, $previous));
-        
+
         if ($change > 20) {
             return 'high';
         } elseif ($change > 10) {
@@ -455,13 +455,13 @@ class EventAnalyticsData extends BaseData
     {
         $keyMetrics = ['total_events', 'unique_users', 'conversion_rate', 'revenue'];
         $result = [];
-        
+
         foreach ($keyMetrics as $metric) {
             if (isset($this->metrics[$metric])) {
                 $result[$metric] = $this->metrics[$metric];
             }
         }
-        
+
         return $result;
     }
 
@@ -470,15 +470,15 @@ class EventAnalyticsData extends BaseData
      */
     private function getTopInsights(): array
     {
-        $topInsights = array_filter($this->insights, function($insight) {
+        $topInsights = array_filter($this->insights, function ($insight) {
             return in_array($insight['priority'], ['high', 'medium']);
         });
-        
-        usort($topInsights, function($a, $b) {
+
+        usort($topInsights, function ($a, $b) {
             $priorities = ['high' => 3, 'medium' => 2, 'low' => 1];
             return $priorities[$b['priority']] - $priorities[$a['priority']];
         });
-        
+
         return array_slice($topInsights, 0, 5);
     }
 
@@ -502,9 +502,9 @@ class EventAnalyticsData extends BaseData
         if (empty($this->funnel)) {
             return 'unknown';
         }
-        
+
         $overallRate = $this->funnel['overall_conversion_rate'] ?? 0;
-        
+
         if ($overallRate > 10) {
             return 'excellent';
         } elseif ($overallRate > 5) {
@@ -522,11 +522,11 @@ class EventAnalyticsData extends BaseData
     private function getGrowthIndicators(): array
     {
         $indicators = [];
-        
+
         foreach ($this->trends as $metric => $trend) {
             $indicators[$metric] = $trend['trend_direction'];
         }
-        
+
         return $indicators;
     }
 
@@ -547,7 +547,7 @@ class EventAnalyticsData extends BaseData
      */
     private function getRecommendations(): array
     {
-        return array_map(function($insight) {
+        return array_map(function ($insight) {
             return $insight['message'];
         }, $this->getInsightsByType('recommendation'));
     }

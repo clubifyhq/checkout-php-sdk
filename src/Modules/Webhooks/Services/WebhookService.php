@@ -126,7 +126,7 @@ class WebhookService extends BaseService
     {
         return $this->getCachedOrExecute(
             "webhook:{$webhookId}",
-            fn() => $this->repository->findById($webhookId),
+            fn () => $this->repository->findById($webhookId),
             300 // 5 minutos
         );
     }
@@ -217,7 +217,7 @@ class WebhookService extends BaseService
 
         return $this->getCachedOrExecute(
             $cacheKey,
-            fn() => $this->repository->findByEvent($eventType),
+            fn () => $this->repository->findByEvent($eventType),
             180 // 3 minutos
         );
     }
@@ -231,7 +231,7 @@ class WebhookService extends BaseService
 
         return $this->getCachedOrExecute(
             $cacheKey,
-            fn() => $this->repository->findByOrganization($organizationId),
+            fn () => $this->repository->findByOrganization($organizationId),
             300 // 5 minutos
         );
     }
@@ -403,7 +403,7 @@ class WebhookService extends BaseService
 
         return $this->getCachedOrExecute(
             $cacheKey,
-            fn() => $this->repository->getWebhookStats($webhookId),
+            fn () => $this->repository->getWebhookStats($webhookId),
             300 // 5 minutos
         );
     }
@@ -635,7 +635,7 @@ class WebhookService extends BaseService
     {
         foreach ($data as $field => $value) {
             if (isset($this->validationRules[$field])) {
-                $rules = array_filter($this->validationRules[$field], fn($rule) => $rule !== 'required');
+                $rules = array_filter($this->validationRules[$field], fn ($rule) => $rule !== 'required');
                 $this->validateField($field, $value, $rules);
             }
         }

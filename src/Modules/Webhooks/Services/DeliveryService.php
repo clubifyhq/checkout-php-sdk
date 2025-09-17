@@ -40,7 +40,8 @@ class DeliveryService
         private EventDispatcherInterface $eventDispatcher,
         private LoggerInterface $logger,
         private CacheItemPoolInterface $cache
-    ) {}
+    ) {
+    }
 
     /**
      * Entrega webhook
@@ -153,7 +154,7 @@ class DeliveryService
         $this->logger->info('Batch de webhooks processado', [
             'webhook_count' => count($webhooks),
             'delivery_count' => count($deliveries),
-            'successful_count' => count(array_filter($deliveries, fn($d) => $d['success'])),
+            'successful_count' => count(array_filter($deliveries, fn ($d) => $d['success'])),
             'event_type' => $eventType,
         ]);
 

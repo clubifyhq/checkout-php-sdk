@@ -14,7 +14,8 @@ class ApiKeyService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function createApiKey(string $userId, array $keyData): array
     {

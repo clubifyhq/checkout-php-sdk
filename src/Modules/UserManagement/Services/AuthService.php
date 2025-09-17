@@ -15,7 +15,8 @@ class AuthService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function requestReAuthentication(string $userId, string $operation): array
     {

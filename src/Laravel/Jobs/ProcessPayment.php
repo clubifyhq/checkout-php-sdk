@@ -19,7 +19,10 @@ use Illuminate\Support\Facades\Log;
  */
 final class ProcessPayment implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     /**
      * Dados do pagamento

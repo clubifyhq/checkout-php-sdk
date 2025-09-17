@@ -42,7 +42,8 @@ class RetryService
         private WebhookRepositoryInterface $repository,
         private LoggerInterface $logger,
         private CacheItemPoolInterface $cache
-    ) {}
+    ) {
+    }
 
     /**
      * Agenda retry para webhook

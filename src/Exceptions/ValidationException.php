@@ -16,7 +16,7 @@ class ValidationException extends SDKException
         array $context = []
     ) {
         $this->validationErrors = $validationErrors;
-        
+
         parent::__construct(
             $message,
             $code,

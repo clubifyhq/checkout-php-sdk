@@ -95,7 +95,7 @@ class OfferService extends BaseService
     {
         return $this->getCachedOrExecute(
             "offer:{$offerId}",
-            fn() => $this->fetchOfferById($offerId),
+            fn () => $this->fetchOfferById($offerId),
             3600
         );
     }
@@ -107,7 +107,7 @@ class OfferService extends BaseService
     {
         return $this->getCachedOrExecute(
             "offer_slug:{$slug}",
-            fn() => $this->fetchOfferBySlug($slug),
+            fn () => $this->fetchOfferBySlug($slug),
             3600
         );
     }

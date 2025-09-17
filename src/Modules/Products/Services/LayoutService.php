@@ -19,7 +19,8 @@ class LayoutService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function createLayout(array $layoutData): array
     {
@@ -166,15 +167,15 @@ class LayoutService
 
         // Aplicar filtros
         if (isset($filters['type'])) {
-            $layouts = array_filter($layouts, fn($layout) => $layout['type'] === $filters['type']);
+            $layouts = array_filter($layouts, fn ($layout) => $layout['type'] === $filters['type']);
         }
 
         if (isset($filters['is_active'])) {
-            $layouts = array_filter($layouts, fn($layout) => $layout['is_active'] === $filters['is_active']);
+            $layouts = array_filter($layouts, fn ($layout) => $layout['is_active'] === $filters['is_active']);
         }
 
         if (isset($filters['complexity'])) {
-            $layouts = array_filter($layouts, fn($layout) => $layout['complexity'] === $filters['complexity']);
+            $layouts = array_filter($layouts, fn ($layout) => $layout['complexity'] === $filters['complexity']);
         }
 
         return [

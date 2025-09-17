@@ -109,16 +109,16 @@ class UserData extends BaseData
     public function toSafeArray(): array
     {
         $data = $this->toArray();
-        
+
         // Remover dados sensíveis
         unset($data['permissions']);
         unset($data['passkeys']);
-        
+
         // Mascarar metadados sensíveis
         if (isset($data['metadata'])) {
             $data['metadata'] = $this->removeSensitiveMetadata($data['metadata']);
         }
-        
+
         return $data;
     }
 
@@ -128,13 +128,13 @@ class UserData extends BaseData
     private function removeSensitiveMetadata(array $metadata): array
     {
         $sensitiveKeys = ['password', 'token', 'secret', 'key', 'api_key', 'private'];
-        
+
         foreach ($sensitiveKeys as $key) {
             if (isset($metadata[$key])) {
                 $metadata[$key] = '[REDACTED]';
             }
         }
-        
+
         return $metadata;
     }
 }

@@ -334,7 +334,7 @@ class ProfileData extends BaseData
             $personas['loyal_customer'] += 0.9;
         }
 
-        $this->primary_persona = array_key_first(array_filter($personas, fn($score) => $score > 0.5)) ?? 'undefined';
+        $this->primary_persona = array_key_first(array_filter($personas, fn ($score) => $score > 0.5)) ?? 'undefined';
 
         return $this->primary_persona;
     }

@@ -98,7 +98,7 @@ class AdminService extends BaseService
     {
         return $this->getCachedOrExecute(
             "admin:{$adminId}",
-            fn() => $this->fetchAdminById($adminId),
+            fn () => $this->fetchAdminById($adminId),
             3600
         );
     }
@@ -110,7 +110,7 @@ class AdminService extends BaseService
     {
         return $this->getCachedOrExecute(
             "admin_email:{$email}",
-            fn() => $this->fetchAdminByEmail($email),
+            fn () => $this->fetchAdminByEmail($email),
             3600
         );
     }

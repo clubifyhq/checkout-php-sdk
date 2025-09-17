@@ -22,7 +22,8 @@ class PasskeyService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     /**
      * Inicia processo de registro de passkey
@@ -32,27 +33,27 @@ class PasskeyService
         try {
             $challenge = $this->generateChallenge();
             $options = $this->createRegistrationOptions($userId, $challenge);
-            
+
             // Salvar challenge em cache temporário
             $this->storeChallengeTemporarily($userId, $challenge);
-            
+
             $this->logger->info('Passkey registration started', [
                 'user_id' => $userId,
                 'challenge_id' => substr($challenge, 0, 8) . '...',
             ]);
-            
+
             return [
                 'success' => true,
                 'options' => $options,
                 'challenge' => $challenge,
             ];
-            
+
         } catch (\Exception $e) {
             $this->logger->error('Failed to start passkey registration', [
                 'user_id' => $userId,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -71,10 +72,10 @@ class PasskeyService
             if (!$storedChallenge) {
                 throw new \Exception('Invalid or expired challenge');
             }
-            
+
             // Validar credencial
             $validatedCredential = $this->validateCredential($credential, $storedChallenge);
-            
+
             // Criar passkey data
             $passkeyData = new PasskeyData([
                 'user_id' => $userId,
@@ -88,31 +89,31 @@ class PasskeyService
                 'transports' => $credential['transports'] ?? [],
                 'created_at' => new DateTime(),
             ]);
-            
+
             // Salvar passkey
             $response = $this->savePasskey($passkeyData);
-            
+
             // Limpar challenge temporário
             $this->clearStoredChallenge($userId);
-            
+
             $this->logger->info('Passkey registration completed', [
                 'user_id' => $userId,
                 'passkey_id' => $response['passkey_id'],
                 'device_type' => $passkeyData->device_type,
             ]);
-            
+
             return [
                 'success' => true,
                 'passkey_id' => $response['passkey_id'],
                 'passkey' => $passkeyData->toSafeArray(),
             ];
-            
+
         } catch (\Exception $e) {
             $this->logger->error('Failed to complete passkey registration', [
                 'user_id' => $userId,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -128,34 +129,34 @@ class PasskeyService
         try {
             $challenge = $this->generateChallenge();
             $userPasskeys = $this->getUserPasskeys($userId);
-            
+
             if (empty($userPasskeys)) {
                 throw new \Exception('No passkeys found for user');
             }
-            
+
             $options = $this->createAuthenticationOptions($userPasskeys, $challenge);
-            
+
             // Salvar challenge em cache temporário
             $this->storeChallengeTemporarily($userId, $challenge);
-            
+
             $this->logger->info('Passkey authentication started', [
                 'user_id' => $userId,
                 'available_passkeys' => count($userPasskeys),
                 'challenge_id' => substr($challenge, 0, 8) . '...',
             ]);
-            
+
             return [
                 'success' => true,
                 'options' => $options,
                 'challenge' => $challenge,
             ];
-            
+
         } catch (\Exception $e) {
             $this->logger->error('Failed to start passkey authentication', [
                 'user_id' => $userId,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -174,47 +175,47 @@ class PasskeyService
             if (!$storedChallenge) {
                 throw new \Exception('Invalid or expired challenge');
             }
-            
+
             // Verificar assertion
             $credentialId = $assertion['credential_id'];
             $passkey = $this->getPasskeyByCredentialId($credentialId);
-            
+
             if (!$passkey || $passkey->user_id !== $userId) {
                 throw new \Exception('Invalid passkey');
             }
-            
+
             // Validar assertion
             $validated = $this->validateAssertion($assertion, $passkey, $storedChallenge);
-            
+
             if (!$validated) {
                 throw new \Exception('Authentication failed');
             }
-            
+
             // Atualizar último uso
             $this->updatePasskeyLastUsed($passkey->id);
-            
+
             // Limpar challenge temporário
             $this->clearStoredChallenge($userId);
-            
+
             $this->logger->info('Passkey authentication completed', [
                 'user_id' => $userId,
                 'passkey_id' => $passkey->id,
                 'device_type' => $passkey->device_type,
             ]);
-            
+
             return [
                 'success' => true,
                 'user_id' => $userId,
                 'passkey_id' => $passkey->id,
                 'authenticated_at' => (new DateTime())->format('c'),
             ];
-            
+
         } catch (\Exception $e) {
             $this->logger->error('Failed to complete passkey authentication', [
                 'user_id' => $userId,
                 'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -228,7 +229,7 @@ class PasskeyService
     public function checkBrowserSupport(): array
     {
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
-        
+
         $support = [
             'webauthn_supported' => true, // Assumir suporte por padrão
             'platform_authenticator' => $this->detectPlatformAuthenticatorSupport($userAgent),
@@ -236,9 +237,9 @@ class PasskeyService
             'conditional_ui' => $this->detectConditionalUISupport($userAgent),
             'user_agent' => $userAgent,
         ];
-        
+
         $this->logger->debug('Browser WebAuthn support check', $support);
-        
+
         return [
             'success' => true,
             'support' => $support,
@@ -315,7 +316,7 @@ class PasskeyService
     {
         return [
             'challenge' => $challenge,
-            'allowCredentials' => array_map(function($passkey) {
+            'allowCredentials' => array_map(function ($passkey) {
                 return [
                     'id' => $passkey['credential_id'],
                     'type' => 'public-key',
@@ -333,7 +334,7 @@ class PasskeyService
     private function detectDeviceType(array $credential): string
     {
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
-        
+
         if (stripos($userAgent, 'iPhone') !== false || stripos($userAgent, 'iPad') !== false) {
             return 'mobile';
         } elseif (stripos($userAgent, 'Android') !== false) {
@@ -343,7 +344,7 @@ class PasskeyService
         } elseif (stripos($userAgent, 'Mac') !== false) {
             return 'desktop';
         }
-        
+
         return 'unknown';
     }
 
@@ -353,7 +354,7 @@ class PasskeyService
     private function detectDeviceName(array $credential): string
     {
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
-        
+
         if (stripos($userAgent, 'iPhone') !== false) {
             return 'iPhone';
         } elseif (stripos($userAgent, 'iPad') !== false) {
@@ -365,7 +366,7 @@ class PasskeyService
         } elseif (stripos($userAgent, 'Mac') !== false) {
             return 'Mac';
         }
-        
+
         return 'Unknown Device';
     }
 

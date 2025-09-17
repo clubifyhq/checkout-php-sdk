@@ -153,7 +153,7 @@ class CustomerRepository extends BaseRepository implements CustomerRepositoryInt
             return [];
         }
 
-        $query = $this->buildQuery(['$or' => array_map(fn($k, $v) => [$k => $v], array_keys($conditions), $conditions)]);
+        $query = $this->buildQuery(['$or' => array_map(fn ($k, $v) => [$k => $v], array_keys($conditions), $conditions)]);
         return $this->executeQuery($query);
     }
 
@@ -436,7 +436,7 @@ class CustomerRepository extends BaseRepository implements CustomerRepositoryInt
         }
 
         $tags = $customer['tags'] ?? [];
-        $tags = array_filter($tags, fn($t) => $t !== $tag);
+        $tags = array_filter($tags, fn ($t) => $t !== $tag);
 
         return $this->update($id, ['tags' => array_values($tags)]);
     }
@@ -505,7 +505,7 @@ class CustomerRepository extends BaseRepository implements CustomerRepositoryInt
 
         // Aplica filtros se necessário
         if (!empty($filters)) {
-            $transactions = array_filter($transactions, function($transaction) use ($filters) {
+            $transactions = array_filter($transactions, function ($transaction) use ($filters) {
                 foreach ($filters as $key => $value) {
                     if (isset($transaction[$key]) && $transaction[$key] !== $value) {
                         return false;
@@ -684,31 +684,112 @@ class CustomerRepository extends BaseRepository implements CustomerRepositoryInt
     // Implementações simplificadas dos métodos restantes...
     // Em uma implementação completa, cada método teria sua lógica específica
 
-    public function countBySegment(array $filters = []): array { return []; }
-    public function countByLocation(array $filters = []): array { return []; }
-    public function countByRegistrationPeriod(string $period = 'month'): array { return []; }
-    public function getAgeDistribution(): array { return []; }
-    public function getAverageCustomerValue(array $filters = []): float { return 0.0; }
-    public function getAveragePurchaseFrequency(array $filters = []): float { return 0.0; }
-    public function getRetentionRate(string $period = 'month'): float { return 0.0; }
-    public function getChurnRate(string $period = 'month'): float { return 0.0; }
-    public function getGrowthReport(string $period = 'month'): array { return []; }
-    public function getTopCustomers(int $limit = 10, string $metric = 'value'): array { return []; }
-    public function findForRemarketing(array $criteria = []): array { return []; }
-    public function findForCrossSell(array $criteria = []): array { return []; }
-    public function findForUpSell(array $criteria = []): array { return []; }
-    public function getRecommendations(string $customerId, string $type = 'products'): array { return []; }
-    public function calculateLifetimeValue(string $customerId): array { return []; }
-    public function predictNextPurchase(string $customerId): array { return []; }
-    public function calculateChurnProbability(string $customerId): float { return 0.0; }
-    public function updateLastAccess(string $id): array { return $this->update($id, ['last_access_at' => date('Y-m-d H:i:s')]); }
-    public function recordLogin(string $customerId, array $loginData): array { return []; }
-    public function getLoginHistory(string $customerId): array { return []; }
-    public function cleanupOldData(int $daysAgo = 365): int { return 0; }
-    public function archiveInactive(int $daysAgo = 730): int { return 0; }
-    public function detectDuplicates(array $criteria = []): array { return []; }
-    public function consolidateCustomerData(string $customerId): array { return []; }
-    public function syncWithExternal(string $customerId, string $system, array $data): array { return []; }
-    public function validateDataIntegrity(string $customerId): array { return []; }
-    public function repairInconsistentData(): int { return 0; }
+    public function countBySegment(array $filters = []): array
+    {
+        return [];
+    }
+    public function countByLocation(array $filters = []): array
+    {
+        return [];
+    }
+    public function countByRegistrationPeriod(string $period = 'month'): array
+    {
+        return [];
+    }
+    public function getAgeDistribution(): array
+    {
+        return [];
+    }
+    public function getAverageCustomerValue(array $filters = []): float
+    {
+        return 0.0;
+    }
+    public function getAveragePurchaseFrequency(array $filters = []): float
+    {
+        return 0.0;
+    }
+    public function getRetentionRate(string $period = 'month'): float
+    {
+        return 0.0;
+    }
+    public function getChurnRate(string $period = 'month'): float
+    {
+        return 0.0;
+    }
+    public function getGrowthReport(string $period = 'month'): array
+    {
+        return [];
+    }
+    public function getTopCustomers(int $limit = 10, string $metric = 'value'): array
+    {
+        return [];
+    }
+    public function findForRemarketing(array $criteria = []): array
+    {
+        return [];
+    }
+    public function findForCrossSell(array $criteria = []): array
+    {
+        return [];
+    }
+    public function findForUpSell(array $criteria = []): array
+    {
+        return [];
+    }
+    public function getRecommendations(string $customerId, string $type = 'products'): array
+    {
+        return [];
+    }
+    public function calculateLifetimeValue(string $customerId): array
+    {
+        return [];
+    }
+    public function predictNextPurchase(string $customerId): array
+    {
+        return [];
+    }
+    public function calculateChurnProbability(string $customerId): float
+    {
+        return 0.0;
+    }
+    public function updateLastAccess(string $id): array
+    {
+        return $this->update($id, ['last_access_at' => date('Y-m-d H:i:s')]);
+    }
+    public function recordLogin(string $customerId, array $loginData): array
+    {
+        return [];
+    }
+    public function getLoginHistory(string $customerId): array
+    {
+        return [];
+    }
+    public function cleanupOldData(int $daysAgo = 365): int
+    {
+        return 0;
+    }
+    public function archiveInactive(int $daysAgo = 730): int
+    {
+        return 0;
+    }
+    public function detectDuplicates(array $criteria = []): array
+    {
+        return [];
+    }
+    public function consolidateCustomerData(string $customerId): array
+    {
+        return [];
+    }
+    public function syncWithExternal(string $customerId, string $system, array $data): array
+    {
+        return [];
+    }
+    public function validateDataIntegrity(string $customerId): array
+    {
+        return [];
+    }
+    public function repairInconsistentData(): int
+    {
+        return 0;
+    }
 }

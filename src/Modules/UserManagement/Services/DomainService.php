@@ -14,7 +14,8 @@ class DomainService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function configureDomain(string $tenantId, array $domainData): array
     {

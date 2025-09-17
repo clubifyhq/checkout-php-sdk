@@ -19,7 +19,8 @@ class Sensitive
         public readonly string $maskChar = '*',
         public readonly int $visibleChars = 4,
         public readonly bool $logSafe = false,
-    ) {}
+    ) {
+    }
 
     /**
      * Mascara um valor baseado no tipo

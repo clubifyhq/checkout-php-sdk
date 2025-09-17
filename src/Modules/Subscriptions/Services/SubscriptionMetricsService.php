@@ -18,7 +18,8 @@ class SubscriptionMetricsService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function getMetrics(array $filters = []): array
     {

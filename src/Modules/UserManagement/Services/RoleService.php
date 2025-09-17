@@ -14,7 +14,8 @@ class RoleService
         private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     public function assignRole(string $userId, string $role): array
     {

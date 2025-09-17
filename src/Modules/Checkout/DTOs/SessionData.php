@@ -368,7 +368,7 @@ class SessionData extends BaseData
      */
     public function getEventsByType(string $type): array
     {
-        return array_filter($this->getEvents(), fn($event) => $event['type'] === $type);
+        return array_filter($this->getEvents(), fn ($event) => $event['type'] === $type);
     }
 
     /**

@@ -4,9 +4,16 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Enums;
 
+/**
+ * Enum para ambientes de execução do SDK
+ *
+ * Define os ambientes disponíveis e suas configurações correspondentes.
+ * SANDBOX é um alias para DEVELOPMENT para compatibilidade.
+ */
 enum Environment: string
 {
     case DEVELOPMENT = 'development';
+    case SANDBOX = 'development'; // Alias para DEVELOPMENT
     case STAGING = 'staging';
     case PRODUCTION = 'production';
 
@@ -17,7 +24,7 @@ enum Environment: string
 
     public function isDevelopment(): bool
     {
-        return $this === self::DEVELOPMENT;
+        return $this === self::DEVELOPMENT || $this === self::SANDBOX;
     }
 
     public function isStaging(): bool
@@ -28,9 +35,14 @@ enum Environment: string
     public function getBaseUrl(): string
     {
         return match ($this) {
-            self::DEVELOPMENT => 'http://localhost:8000',
+            self::DEVELOPMENT, self::SANDBOX => 'http://localhost:8000',
             self::STAGING => 'https://staging-api.clubify.com',
             self::PRODUCTION => 'https://api.clubify.com',
         };
+    }
+
+    public function isSandbox(): bool
+    {
+        return $this === self::SANDBOX;
     }
 }

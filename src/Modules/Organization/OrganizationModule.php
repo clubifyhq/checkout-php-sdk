@@ -118,10 +118,7 @@ class OrganizationModule implements ModuleInterface
      */
     public function isAvailable(): bool
     {
-        return $this->initialized &&
-               $this->httpClient !== null &&
-               $this->cache !== null &&
-               $this->eventDispatcher !== null;
+        return $this->initialized;
     }
 
     /**

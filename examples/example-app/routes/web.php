@@ -10,6 +10,11 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
+// Rota de teste fora do grupo clubify
+Route::get('/test-simple', function () {
+    return response()->json(['status' => 'working', 'message' => 'Simple route working']);
+});
+
 
 // Rotas do Clubify Checkout SDK Demo
 Route::prefix('clubify')->group(function () {

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\ClubifySDKHelper;
-use App\Helpers\ResponseHelper;
-use App\Helpers\ModuleTestHelper;
+// use App\Helpers\ClubifySDKHelper;
+// use App\Helpers\ResponseHelper;
+// use App\Helpers\ModuleTestHelper;
 use Exception;
 
 class ClubifyDemoController extends Controller
@@ -16,12 +16,10 @@ class ClubifyDemoController extends Controller
      */
     public function index()
     {
-        $sdkStatus = ClubifySDKHelper::isAvailable() ? 'Conectado' : 'Erro na conexão';
-        $credentials = ClubifySDKHelper::getCredentialsInfo();
-
+        // Evitar chamadas ao SDK no index para debug
         return view('clubify.demo', [
-            'sdkStatus' => $sdkStatus,
-            'config' => $credentials
+            'sdkStatus' => 'Debug mode - SDK calls disabled',
+            'config' => ['status' => 'debug_mode']
         ]);
     }
 
@@ -30,40 +28,11 @@ class ClubifyDemoController extends Controller
      */
     public function debug()
     {
-        try {
-            $debugInfo = [
-                'sdk_available' => ClubifySDKHelper::isAvailable(),
-                'credentials_check' => ClubifySDKHelper::getCredentialsInfo(),
-                'note' => 'SDK created via helper with lazy loading'
-            ];
-
-            // Tentar obter informações do SDK se estiver disponível
-            if (ClubifySDKHelper::isAvailable()) {
-                $sdk = ClubifySDKHelper::getInstance();
-                $debugInfo['initialized'] = $sdk->isInitialized();
-
-                // NÃO tentar inicializar automaticamente para evitar timeout
-                // Isso deve ser feito manualmente via /clubify/initialize se necessário
-                if (!$sdk->isInitialized()) {
-                    $debugInfo['note_initialization'] = 'SDK not initialized. Use /clubify/initialize to test initialization.';
-                }
-
-                // Tentar obter informações básicas dos módulos
-                try {
-                    $debugInfo['organization_module'] = [
-                        'name' => $sdk->organization()->getName(),
-                        'version' => $sdk->organization()->getVersion(),
-                    ];
-                } catch (\Throwable $e) {
-                    $debugInfo['organization_module_error'] = $e->getMessage();
-                }
-            }
-
-            return ResponseHelper::debug($debugInfo);
-
-        } catch (\Throwable $e) {
-            return ResponseHelper::exception($e, 'Erro no debug do SDK');
-        }
+        return response()->json([
+            'status' => 'working',
+            'timestamp' => date('Y-m-d H:i:s'),
+            'message' => 'Debug endpoint is working correctly'
+        ]);
     }
 
     /**

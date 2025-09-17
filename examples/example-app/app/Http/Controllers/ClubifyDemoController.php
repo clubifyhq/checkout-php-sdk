@@ -63,7 +63,7 @@ class ClubifyDemoController extends Controller
     {
         try {
             if (!ClubifySDKHelper::isAvailable()) {
-                return ResponseHelper::error('SDK não está disponível', [], 500);
+                return ResponseHelper::error('SDK não está disponível', 500, []);
             }
 
             $sdk = ClubifySDKHelper::getInstance();

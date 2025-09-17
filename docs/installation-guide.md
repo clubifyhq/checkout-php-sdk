@@ -79,7 +79,7 @@ Se preferir instalar manualmente:
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/clubify/checkout-sdk-php.git
+git clone https://github.com/clubifyhq/checkout-sdk-php.git
 
 # 2. Instale dependências
 cd checkout-sdk-php
@@ -90,12 +90,12 @@ composer install --no-dev
 {
     "repositories": [
         {
-            "type": "path",
-            "url": "./path/to/checkout-sdk-php"
+            "type": "vcs",
+            "url": "git@github.com:clubifyhq/checkout-php-sdk.git"
         }
     ],
     "require": {
-        "clubify/checkout-sdk-php": "*"
+        "clubify/checkout-sdk-php": "dev-main"
     }
 }
 ```

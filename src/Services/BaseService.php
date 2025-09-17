@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Services;
 
-use ClubifyCheckout\Contracts\ServiceInterface;
-use ClubifyCheckout\Core\Config\Configuration;
-use ClubifyCheckout\Core\Http\Client;
-use ClubifyCheckout\Core\Logger\LoggerInterface;
-use ClubifyCheckout\Core\Cache\CacheManagerInterface;
-use ClubifyCheckout\Core\Events\EventDispatcherInterface;
+use Clubify\Checkout\Contracts\ServiceInterface;
+use Clubify\Checkout\Core\Config\Configuration;
+use Clubify\Checkout\Core\Http\Client;
+use Clubify\Checkout\Core\Logger\Logger;
+use Clubify\Checkout\Core\Cache\CacheManagerInterface;
+use Clubify\Checkout\Core\Events\EventDispatcherInterface;
 
 /**
  * Classe base para Services
@@ -24,7 +24,7 @@ use ClubifyCheckout\Core\Events\EventDispatcherInterface;
 abstract class BaseService implements ServiceInterface
 {
     protected Configuration $config;
-    protected LoggerInterface $logger;
+    protected Logger $logger;
     protected Client $httpClient;
     protected CacheManagerInterface $cache;
     protected EventDispatcherInterface $eventDispatcher;
@@ -33,7 +33,7 @@ abstract class BaseService implements ServiceInterface
 
     public function __construct(
         Configuration $config,
-        LoggerInterface $logger,
+        Logger $logger,
         Client $httpClient,
         CacheManagerInterface $cache,
         EventDispatcherInterface $eventDispatcher

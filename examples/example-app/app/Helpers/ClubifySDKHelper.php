@@ -116,11 +116,13 @@ class ClubifySDKHelper
                 'api_secret' => env('CLUBIFY_CHECKOUT_API_SECRET', 'demo_secret_456')
             ],
             'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'development'),
-            'api' => [
-                'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'https://checkout.svelve.com/api/v1'),
-                'timeout' => env('CLUBIFY_CHECKOUT_TIMEOUT', 5), // Timeout reduzido para desenvolvimento
-                'retries' => env('CLUBIFY_CHECKOUT_RETRIES', 1), // Menos tentativas
-                'verify_ssl' => env('CLUBIFY_CHECKOUT_VERIFY_SSL', false)
+            'http' => [
+                'timeout' => 5000, // 5 segundos em milissegundos (convertido automaticamente)
+                'connect_timeout' => 3, // 3 segundos para conectar (já em segundos!)
+                'retries' => 1
+            ],
+            'endpoints' => [
+                'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'https://checkout.svelve.com/api/v1')
             ],
             'cache' => [
                 'enabled' => env('CLUBIFY_CHECKOUT_CACHE_ENABLED', true),

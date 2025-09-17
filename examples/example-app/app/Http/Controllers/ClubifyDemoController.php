@@ -73,9 +73,9 @@ class ClubifyDemoController extends Controller
                     'sdk_status' => $sdk->isInitialized()
                 ]);
             } else {
-                return ResponseHelper::error('Falha na inicialização do SDK', [
+                return ResponseHelper::error('Falha na inicialização do SDK', 400, [
                     'suggestion' => 'Verifique suas credenciais no arquivo .env'
-                ], 400);
+                ]);
             }
 
         } catch (\Throwable $e) {

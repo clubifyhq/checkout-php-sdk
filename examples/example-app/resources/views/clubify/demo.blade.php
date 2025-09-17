@@ -143,6 +143,54 @@
                         </div>
                         <p class="text-sm text-gray-600">Testa o carregamento do módulo de organização</p>
                     </div>
+
+                    <!-- Payments Test -->
+                    <div class="border rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-medium text-gray-700">Módulo de Pagamentos</h3>
+                            <button
+                                @click="testPayments()"
+                                :disabled="loading"
+                                class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
+                            >
+                                <span x-show="!loading">Testar</span>
+                                <span x-show="loading">🔄 Testando...</span>
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600">Testa o carregamento do módulo de pagamentos</p>
+                    </div>
+
+                    <!-- Customers Test -->
+                    <div class="border rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-medium text-gray-700">Módulo de Clientes</h3>
+                            <button
+                                @click="testCustomers()"
+                                :disabled="loading"
+                                class="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50"
+                            >
+                                <span x-show="!loading">Testar</span>
+                                <span x-show="loading">🔄 Testando...</span>
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600">Testa o carregamento do módulo de clientes</p>
+                    </div>
+
+                    <!-- Webhooks Test -->
+                    <div class="border rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-medium text-gray-700">Módulo de Webhooks</h3>
+                            <button
+                                @click="testWebhooks()"
+                                :disabled="loading"
+                                class="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700 disabled:opacity-50"
+                            >
+                                <span x-show="!loading">Testar</span>
+                                <span x-show="loading">🔄 Testando...</span>
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600">Testa o carregamento do módulo de webhooks</p>
+                    </div>
                 </div>
             </div>
 
@@ -363,6 +411,72 @@
                         }
                     } catch (error) {
                         this.addResult('Módulo de Organização', false, 'Erro de conexão', error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async testPayments() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/clubify/test-payments', {
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.addResult('Módulo de Pagamentos', true, data.message);
+                        } else {
+                            this.addResult('Módulo de Pagamentos', false, 'Falha no teste', data.error, data.file, data.line);
+                        }
+                    } catch (error) {
+                        this.addResult('Módulo de Pagamentos', false, 'Erro de conexão', error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async testCustomers() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/clubify/test-customers', {
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.addResult('Módulo de Clientes', true, data.message);
+                        } else {
+                            this.addResult('Módulo de Clientes', false, 'Falha no teste', data.error, data.file, data.line);
+                        }
+                    } catch (error) {
+                        this.addResult('Módulo de Clientes', false, 'Erro de conexão', error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async testWebhooks() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/clubify/test-webhooks', {
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.addResult('Módulo de Webhooks', true, data.message);
+                        } else {
+                            this.addResult('Módulo de Webhooks', false, 'Falha no teste', data.error, data.file, data.line);
+                        }
+                    } catch (error) {
+                        this.addResult('Módulo de Webhooks', false, 'Erro de conexão', error.message);
                     } finally {
                         this.loading = false;
                     }

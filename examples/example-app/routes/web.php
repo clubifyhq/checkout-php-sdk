@@ -26,6 +26,9 @@ Route::prefix('clubify')->group(function () {
     Route::get('/test-products', [ClubifyDemoController::class, 'testProducts'])->name('clubify.test.products');
     Route::get('/test-checkout', [ClubifyDemoController::class, 'testCheckout'])->name('clubify.test.checkout');
     Route::get('/test-organization', [ClubifyDemoController::class, 'testOrganization'])->name('clubify.test.organization');
+    Route::get('/test-payments', [ClubifyDemoController::class, 'testPayments'])->name('clubify.test.payments');
+    Route::get('/test-customers', [ClubifyDemoController::class, 'testCustomers'])->name('clubify.test.customers');
+    Route::get('/test-webhooks', [ClubifyDemoController::class, 'testWebhooks'])->name('clubify.test.webhooks');
 
     // Rotas da página de testes completos
     Route::get('/test-all-methods', [ClubifyDemoController::class, 'testAllMethodsPage'])->name('clubify.test.all.page');

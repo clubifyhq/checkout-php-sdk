@@ -281,6 +281,75 @@ class ClubifyDemoController extends Controller
     }
 
     /**
+     * Teste de pagamentos
+     */
+    public function testPayments()
+    {
+        try {
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', 500);
+            }
+
+            $sdk = ClubifySDKHelper::getInstance();
+            $payments = $sdk->payments();
+
+            return ResponseHelper::success([
+                'module' => 'payments',
+                'loaded' => true
+            ], 'Módulo de pagamentos carregado com sucesso');
+
+        } catch (Exception $e) {
+            return ResponseHelper::exception($e, 'Erro ao testar módulo de pagamentos');
+        }
+    }
+
+    /**
+     * Teste de clientes
+     */
+    public function testCustomers()
+    {
+        try {
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', 500);
+            }
+
+            $sdk = ClubifySDKHelper::getInstance();
+            $customers = $sdk->customers();
+
+            return ResponseHelper::success([
+                'module' => 'customers',
+                'loaded' => true
+            ], 'Módulo de clientes carregado com sucesso');
+
+        } catch (Exception $e) {
+            return ResponseHelper::exception($e, 'Erro ao testar módulo de clientes');
+        }
+    }
+
+    /**
+     * Teste de webhooks
+     */
+    public function testWebhooks()
+    {
+        try {
+            if (!ClubifySDKHelper::isAvailable()) {
+                return ResponseHelper::error('SDK não está disponível', 500);
+            }
+
+            $sdk = ClubifySDKHelper::getInstance();
+            $webhooks = $sdk->webhooks();
+
+            return ResponseHelper::success([
+                'module' => 'webhooks',
+                'loaded' => true
+            ], 'Módulo de webhooks carregado com sucesso');
+
+        } catch (Exception $e) {
+            return ResponseHelper::exception($e, 'Erro ao testar módulo de webhooks');
+        }
+    }
+
+    /**
      * Status geral do SDK
      */
     public function status()

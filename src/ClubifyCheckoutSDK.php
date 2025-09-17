@@ -17,6 +17,9 @@ use Clubify\Checkout\Modules\Checkout\CheckoutModule;
 use Clubify\Checkout\Modules\Payments\PaymentsModule;
 use Clubify\Checkout\Modules\Customers\CustomersModule;
 use Clubify\Checkout\Modules\Webhooks\WebhooksModule;
+use Clubify\Checkout\Modules\Tracking\TrackingModule;
+use Clubify\Checkout\Modules\UserManagement\UserManagementModule;
+use Clubify\Checkout\Modules\Subscriptions\SubscriptionsModule;
 use Clubify\Checkout\Enums\Environment;
 use Clubify\Checkout\Exceptions\ConfigurationException;
 use Clubify\Checkout\Exceptions\SDKException;
@@ -47,6 +50,9 @@ class ClubifyCheckoutSDK
     private ?PaymentsModule $payments = null;
     private ?CustomersModule $customers = null;
     private ?WebhooksModule $webhooks = null;
+    private ?TrackingModule $tracking = null;
+    private ?UserManagementModule $userManagement = null;
+    private ?SubscriptionsModule $subscriptions = null;
 
     /**
      * Cria nova instância do SDK
@@ -216,6 +222,30 @@ class ClubifyCheckoutSDK
     }
 
     /**
+     * Criar assinatura completa (método de conveniência)
+     *
+     * @param array $subscriptionData Dados da assinatura
+     * @return array Assinatura criada
+     * @throws SDKException
+     */
+    public function createSubscription(array $subscriptionData): array
+    {
+        return $this->subscriptions()->createSubscription($subscriptionData);
+    }
+
+    /**
+     * Obter métricas de assinaturas (método de conveniência)
+     *
+     * @param array $filters Filtros para métricas
+     * @return array Métricas de assinaturas
+     * @throws SDKException
+     */
+    public function getSubscriptionMetrics(array $filters = []): array
+    {
+        return $this->subscriptions()->getSubscriptionMetrics($filters);
+    }
+
+    /**
      * Acesso ao módulo Organization
      */
     public function organization(): OrganizationModule
@@ -291,6 +321,45 @@ class ClubifyCheckoutSDK
         }
 
         return $this->webhooks;
+    }
+
+    /**
+     * Acesso ao módulo Tracking
+     */
+    public function tracking(): TrackingModule
+    {
+        if (!$this->tracking) {
+            $this->tracking = new TrackingModule($this);
+            $this->tracking->initialize($this->config, $this->getLogger());
+        }
+
+        return $this->tracking;
+    }
+
+    /**
+     * Acesso ao módulo User Management
+     */
+    public function userManagement(): UserManagementModule
+    {
+        if (!$this->userManagement) {
+            $this->userManagement = new UserManagementModule($this);
+            $this->userManagement->initialize($this->config, $this->getLogger());
+        }
+
+        return $this->userManagement;
+    }
+
+    /**
+     * Acesso ao módulo Subscriptions
+     */
+    public function subscriptions(): SubscriptionsModule
+    {
+        if (!$this->subscriptions) {
+            $this->subscriptions = new SubscriptionsModule($this);
+            $this->subscriptions->initialize($this->config, $this->getLogger());
+        }
+
+        return $this->subscriptions;
     }
 
     /**
@@ -442,6 +511,9 @@ class ClubifyCheckoutSDK
                 'payments' => $this->payments !== null,
                 'customers' => $this->customers !== null,
                 'webhooks' => $this->webhooks !== null,
+                'tracking' => $this->tracking !== null,
+                'user_management' => $this->userManagement !== null,
+                'subscriptions' => $this->subscriptions !== null,
             ],
             'memory_usage' => memory_get_usage(true),
             'peak_memory' => memory_get_peak_usage(true),

@@ -167,8 +167,6 @@ class ClubifyCheckoutSDK
      */
     public function setupOrganization(array $organizationData): array
     {
-        $this->requireInitialized('setupOrganization');
-
         return $this->organization()->setupComplete($organizationData);
     }
 
@@ -181,8 +179,6 @@ class ClubifyCheckoutSDK
      */
     public function createCompleteProduct(array $productData): array
     {
-        $this->requireInitialized('createCompleteProduct');
-
         return $this->products()->createComplete($productData);
     }
 
@@ -195,8 +191,6 @@ class ClubifyCheckoutSDK
      */
     public function createCheckoutSession(array $sessionData): array
     {
-        $this->requireInitialized('createCheckoutSession');
-
         return $this->checkout()->createSession($sessionData);
     }
 
@@ -209,8 +203,6 @@ class ClubifyCheckoutSDK
      */
     public function processOneClick(array $paymentData): array
     {
-        $this->requireInitialized('processOneClick');
-
         return $this->checkout()->oneClick($paymentData);
     }
 
@@ -221,6 +213,7 @@ class ClubifyCheckoutSDK
     {
         if (!$this->organization) {
             $this->organization = new OrganizationModule($this);
+            $this->organization->initialize($this->config, $this->logger);
         }
 
         return $this->organization;
@@ -233,6 +226,7 @@ class ClubifyCheckoutSDK
     {
         if (!$this->products) {
             $this->products = new ProductsModule($this);
+            $this->products->initialize($this->config, $this->logger);
         }
 
         return $this->products;
@@ -245,6 +239,7 @@ class ClubifyCheckoutSDK
     {
         if (!$this->checkout) {
             $this->checkout = new CheckoutModule($this);
+            $this->checkout->initialize($this->config, $this->logger);
         }
 
         return $this->checkout;
@@ -257,6 +252,7 @@ class ClubifyCheckoutSDK
     {
         if (!$this->payments) {
             $this->payments = new PaymentsModule($this);
+            $this->payments->initialize($this->config, $this->logger);
         }
 
         return $this->payments;
@@ -269,6 +265,7 @@ class ClubifyCheckoutSDK
     {
         if (!$this->customers) {
             $this->customers = new CustomersModule($this);
+            $this->customers->initialize($this->config, $this->logger);
         }
 
         return $this->customers;
@@ -281,6 +278,7 @@ class ClubifyCheckoutSDK
     {
         if (!$this->webhooks) {
             $this->webhooks = new WebhooksModule($this);
+            $this->webhooks->initialize($this->config, $this->logger);
         }
 
         return $this->webhooks;

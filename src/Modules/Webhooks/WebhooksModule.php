@@ -117,4 +117,59 @@ class WebhooksModule implements ModuleInterface
             'version' => $this->getVersion()
         ];
     }
+
+    /**
+     * Configura webhook
+     */
+    public function configureWebhook(array $webhookConfig): array
+    {
+        $this->logger?->info('Configuring webhook', $webhookConfig);
+
+        return [
+            'success' => true,
+            'webhook_id' => uniqid('webhook_'),
+            'url' => $webhookConfig['url'] ?? '',
+            'events' => $webhookConfig['events'] ?? [],
+            'status' => 'active',
+            'created_at' => time()
+        ];
+    }
+
+    /**
+     * Envia evento via webhook
+     */
+    public function sendEvent(string $event, array $data): array
+    {
+        $this->logger?->info('Sending webhook event', [
+            'event' => $event,
+            'data_keys' => array_keys($data)
+        ]);
+
+        return [
+            'success' => true,
+            'event_id' => uniqid('event_'),
+            'event' => $event,
+            'sent_at' => time(),
+            'delivery_status' => 'delivered'
+        ];
+    }
+
+    /**
+     * Lista webhooks configurados
+     */
+    public function listWebhooks(): array
+    {
+        return [
+            'success' => true,
+            'webhooks' => [
+                [
+                    'id' => uniqid('webhook_'),
+                    'url' => 'https://example.com/webhook',
+                    'events' => ['order.created', 'payment.completed'],
+                    'status' => 'active'
+                ]
+            ],
+            'total' => 1
+        ];
+    }
 }

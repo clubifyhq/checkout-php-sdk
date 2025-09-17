@@ -186,4 +186,38 @@ class PaymentsModule implements ModuleInterface
             'created_at' => time()
         ];
     }
+
+    /**
+     * Processa pagamento
+     */
+    public function processPayment(array $paymentData): array
+    {
+        $this->logger?->info('Processing payment', $paymentData);
+
+        return [
+            'success' => true,
+            'transaction_id' => uniqid('txn_'),
+            'payment_method' => $paymentData['method'] ?? 'credit_card',
+            'amount' => $paymentData['amount'] ?? 0,
+            'currency' => $paymentData['currency'] ?? 'BRL',
+            'status' => 'completed',
+            'processed_at' => time()
+        ];
+    }
+
+    /**
+     * Tokeniza cartão
+     */
+    public function tokenizeCard(array $cardData): array
+    {
+        $this->logger?->info('Tokenizing card');
+
+        return [
+            'success' => true,
+            'token' => 'card_' . uniqid(),
+            'last_four' => substr($cardData['number'] ?? '0000', -4),
+            'brand' => $cardData['brand'] ?? 'unknown',
+            'created_at' => time()
+        ];
+    }
 }

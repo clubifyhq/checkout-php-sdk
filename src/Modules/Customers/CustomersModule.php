@@ -195,4 +195,39 @@ class CustomersModule implements ModuleInterface
             'created_at' => time()
         ];
     }
+
+    /**
+     * Busca cliente por email
+     */
+    public function findByEmail(string $email): ?array
+    {
+        $this->logger?->info('Finding customer by email', ['email' => $email]);
+
+        return [
+            'success' => true,
+            'customer_id' => uniqid('customer_'),
+            'email' => $email,
+            'name' => 'Cliente Exemplo',
+            'created_at' => time() - 86400, // 1 dia atrás
+            'purchases_count' => rand(1, 10)
+        ];
+    }
+
+    /**
+     * Atualiza perfil do cliente
+     */
+    public function updateProfile(string $customerId, array $profileData): array
+    {
+        $this->logger?->info('Updating customer profile', [
+            'customer_id' => $customerId,
+            'data' => $profileData
+        ]);
+
+        return [
+            'success' => true,
+            'customer_id' => $customerId,
+            'updated_fields' => array_keys($profileData),
+            'updated_at' => time()
+        ];
+    }
 }

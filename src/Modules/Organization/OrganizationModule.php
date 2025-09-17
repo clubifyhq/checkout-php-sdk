@@ -310,4 +310,15 @@ class OrganizationModule implements ModuleInterface
             throw $e;
         }
     }
+
+    /**
+     * Método de conveniência para setup completo (alias para setupOrganization)
+     *
+     * @param array $organizationData Dados da organização
+     * @return array Resultado do setup
+     */
+    public function setupComplete(array $organizationData): array
+    {
+        return $this->setupOrganization($organizationData);
+    }
 }

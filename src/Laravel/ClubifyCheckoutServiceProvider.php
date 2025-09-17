@@ -144,24 +144,6 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
             }
         });
 
-        // Auth Manager
-        $this->app->singleton(AuthManagerInterface::class, function (Container $app): AuthManager {
-            try {
-                return new AuthManager(
-                    $app[ConfigurationInterface::class],
-                    $app[TokenStorageInterface::class],
-                    $app[LoggerInterface::class]
-                );
-            } catch (\Throwable $e) {
-                // Fallback com configurações padrão
-                return new AuthManager(
-                    new Configuration([]),
-                    new TokenStorage(new CacheManager([])),
-                    new Logger([])
-                );
-            }
-        });
-
         // HTTP Client
         $this->app->singleton(Client::class, function (Container $app): Client {
             try {
@@ -171,9 +153,39 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
                 );
             } catch (\Throwable $e) {
                 // Fallback com configurações padrão
+                $fallbackConfig = new Configuration([
+                    'logger' => [
+                        'enabled' => false,
+                        'level' => 'error'
+                    ]
+                ]);
                 return new Client(
-                    new Configuration([]),
-                    new Logger([])
+                    $fallbackConfig,
+                    new Logger($fallbackConfig)
+                );
+            }
+        });
+
+        // Auth Manager
+        $this->app->singleton(AuthManagerInterface::class, function (Container $app): AuthManager {
+            try {
+                return new AuthManager(
+                    $app[Client::class],
+                    $app[ConfigurationInterface::class],
+                    $app[TokenStorageInterface::class]
+                );
+            } catch (\Throwable $e) {
+                // Fallback com configurações padrão
+                $fallbackConfig = new Configuration([
+                    'logger' => [
+                        'enabled' => false,
+                        'level' => 'error'
+                    ]
+                ]);
+                return new AuthManager(
+                    new Client($fallbackConfig, new Logger($fallbackConfig)),
+                    $fallbackConfig,
+                    new TokenStorage(new CacheManager([]))
                 );
             }
         });

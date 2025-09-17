@@ -210,6 +210,7 @@ class Configuration implements ConfigurationInterface
         $environment = $this->getEnvironment();
         if (!in_array($environment, [
             Environment::DEVELOPMENT->value,
+            Environment::SANDBOX->value,
             Environment::STAGING->value,
             Environment::PRODUCTION->value
         ])) {
@@ -217,7 +218,7 @@ class Configuration implements ConfigurationInterface
                 "Invalid environment: {$environment}",
                 0,
                 null,
-                ['valid_environments' => ['development', 'staging', 'production']]
+                ['valid_environments' => ['development', 'sandbox', 'staging', 'production']]
             );
         }
 

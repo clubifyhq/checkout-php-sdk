@@ -129,7 +129,7 @@
             "composer dump-autoload"
         ],
         "post-autoload-dump": [
-            "@setup"
+            "echo 'Autoload generated successfully'"
         ]
     },
     "scripts-descriptions": {

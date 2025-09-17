@@ -146,10 +146,13 @@ class PaymentsModule implements ModuleInterface
     {
         $this->logger?->info('Processing payment', $paymentData);
 
+        $transactionId = uniqid('txn_');
+
         // Implementação básica - será expandida conforme necessário
         return [
             'success' => true,
             'payment_id' => uniqid('payment_'),
+            'transaction_id' => $transactionId,
             'data' => $paymentData,
             'processed_at' => time()
         ];

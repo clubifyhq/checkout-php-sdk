@@ -17,16 +17,28 @@ class ClubifyDemoController extends Controller
     public function index()
     {
         try {
-            // Página principal simplificada - sem inicialização do SDK
-            $sdkStatus = 'SDK disponível (não inicializado) ⚪';
+            // Verificar status real do SDK (pode estar auto-inicializado)
+            $sdk = ClubifySDKHelper::getInstance();
+            $isInitialized = $sdk->isInitialized();
+
+            if ($isInitialized) {
+                $sdkStatus = 'SDK inicializado e pronto ✅';
+                $initializationDetails = [
+                    'status' => 'initialized',
+                    'message' => 'SDK foi auto-inicializado com sucesso!'
+                ];
+            } else {
+                $sdkStatus = 'SDK disponível (não inicializado) ⚪';
+                $initializationDetails = [
+                    'status' => 'not_initialized',
+                    'message' => 'Use o botão "Inicializar SDK" para conectar à API'
+                ];
+            }
+
             $credentials = [
                 'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID', 'NOT_SET'),
                 'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'NOT_SET'),
                 'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'NOT_SET'),
-            ];
-            $initializationDetails = [
-                'status' => 'not_initialized',
-                'message' => 'Use o botão "Inicializar SDK" para conectar à API'
             ];
 
             return view('clubify.demo', [

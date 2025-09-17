@@ -20,6 +20,16 @@ class ClubifySDKHelper
     {
         if (self::$instance === null) {
             self::$instance = self::createSDKInstance();
+
+            // Inicializar automaticamente se habilitado
+            if (self::shouldAutoInitialize()) {
+                try {
+                    self::$instance->initialize();
+                } catch (\Exception $e) {
+                    // Log do erro mas não quebra a aplicação
+                    error_log('Clubify SDK auto-initialization failed: ' . $e->getMessage());
+                }
+            }
         }
 
         return self::$instance;
@@ -148,6 +158,14 @@ class ClubifySDKHelper
             'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'NOT_SET'),
             'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'NOT_SET'),
         ];
+    }
+
+    /**
+     * Verificar se deve inicializar automaticamente
+     */
+    private static function shouldAutoInitialize(): bool
+    {
+        return config('clubify-checkout.features.auto_initialize', true);
     }
 
     /**

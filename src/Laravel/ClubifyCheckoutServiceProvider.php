@@ -98,10 +98,16 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
         $this->app->singleton(LoggerInterface::class, function (Container $app): Logger {
             try {
                 $config = $app[ConfigurationInterface::class];
-                return new Logger($config->getLoggerConfig());
+                return new Logger($config);
             } catch (\Throwable $e) {
-                // Fallback se houver problema na configuração
-                return new Logger([]);
+                // Fallback se houver problema na configuração - criar configuração mínima
+                $fallbackConfig = new \Clubify\Checkout\Core\Config\Configuration([
+                    'logger' => [
+                        'enabled' => false,
+                        'level' => 'error'
+                    ]
+                ]);
+                return new Logger($fallbackConfig);
             }
         });
 

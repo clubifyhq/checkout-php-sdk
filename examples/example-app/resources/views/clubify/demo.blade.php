@@ -39,7 +39,7 @@
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-2xl font-semibold text-gray-800">Status do SDK</h2>
                 <div class="flex items-center space-x-2">
-                    @if($sdkStatus === 'Conectado')
+                    @if(str_contains($sdkStatus, 'inicializado e pronto') || $sdkStatus === 'Conectado')
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                             <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
@@ -291,7 +291,7 @@
                         const data = await response.json();
 
                         if (data.success) {
-                            this.addResult('Status do SDK', true, `${data.sdk_status} - ${data.available_modules.length} módulos disponíveis`);
+                            this.addResult('Status do SDK', true, `${data.status.sdk_status} - ${data.status.available_modules.length} módulos disponíveis`);
                         } else {
                             this.addResult('Status do SDK', false, 'Falha ao verificar status', data.error);
                         }

@@ -249,6 +249,7 @@ return [
     */
 
     'features' => [
+        'auto_initialize' => env('CLUBIFY_CHECKOUT_AUTO_INITIALIZE', true),
         'metrics' => env('CLUBIFY_CHECKOUT_METRICS_ENABLED', true),
         'health_check' => env('CLUBIFY_CHECKOUT_HEALTH_CHECK_ENABLED', true),
         'auto_refresh_token' => env('CLUBIFY_CHECKOUT_AUTO_REFRESH_TOKEN', true),

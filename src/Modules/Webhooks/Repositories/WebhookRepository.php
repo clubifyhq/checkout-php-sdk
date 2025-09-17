@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Webhooks\Repositories;
 
-use ClubifyCheckout\Repositories\BaseRepository;
+use Clubify\Checkout\Repositories\BaseRepository;
 use Clubify\Checkout\Modules\Webhooks\Repositories\WebhookRepositoryInterface;
 use DateTime;
 

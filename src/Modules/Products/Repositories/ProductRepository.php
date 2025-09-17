@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Products\Repositories;
 
-use ClubifyCheckout\Repositories\BaseRepository;
+use Clubify\Checkout\Repositories\BaseRepository;
 use Clubify\Checkout\Modules\Products\Repositories\ProductRepositoryInterface;
-use ClubifyCheckout\Exceptions\ValidationException;
-use ClubifyCheckout\Exceptions\HttpException;
+use Clubify\Checkout\Exceptions\ValidationException;
+use Clubify\Checkout\Exceptions\HttpException;
 
 /**
  * Repositório de produtos

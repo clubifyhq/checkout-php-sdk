@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Organization\Repositories;
 
-use ClubifyCheckout\Repositories\BaseRepository;
+use Clubify\Checkout\Repositories\BaseRepository;
 use Clubify\Checkout\Modules\Organization\Repositories\OrganizationRepositoryInterface;
-use ClubifyCheckout\Exceptions\HttpException;
+use Clubify\Checkout\Exceptions\HttpException;
 
 /**
  * Repository para gestão de organizações

@@ -188,24 +188,6 @@ class PaymentsModule implements ModuleInterface
     }
 
     /**
-     * Processa pagamento
-     */
-    public function processPayment(array $paymentData): array
-    {
-        $this->logger?->info('Processing payment', $paymentData);
-
-        return [
-            'success' => true,
-            'transaction_id' => uniqid('txn_'),
-            'payment_method' => $paymentData['method'] ?? 'credit_card',
-            'amount' => $paymentData['amount'] ?? 0,
-            'currency' => $paymentData['currency'] ?? 'BRL',
-            'status' => 'completed',
-            'processed_at' => time()
-        ];
-    }
-
-    /**
      * Tokeniza cartão
      */
     public function tokenizeCard(array $cardData): array

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Contracts;
+namespace Clubify\Checkout\Contracts;
 
-use ClubifyCheckout\Core\Config\Configuration;
-use ClubifyCheckout\Core\Logger\LoggerInterface;
+use Clubify\Checkout\Core\Config\Configuration;
+use Clubify\Checkout\Core\Logger\LoggerInterface;
 
 /**
  * Interface base para Module Pattern

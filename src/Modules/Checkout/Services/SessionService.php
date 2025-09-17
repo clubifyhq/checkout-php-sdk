@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Checkout\Services;
+namespace Clubify\Checkout\Modules\Checkout\Services;
 
 use ClubifyCheckout\Services\BaseService;
-use ClubifyCheckout\Modules\Checkout\Contracts\SessionRepositoryInterface;
-use ClubifyCheckout\Modules\Checkout\DTOs\SessionData;
+use Clubify\Checkout\Modules\Checkout\Contracts\SessionRepositoryInterface;
+use Clubify\Checkout\Modules\Checkout\DTOs\SessionData;
 use Psr\Log\LoggerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Products\Services;
+namespace Clubify\Checkout\Modules\Products\Services;
 
 use ClubifyCheckout\Services\BaseService;
 use ClubifyCheckout\Exceptions\ValidationException;

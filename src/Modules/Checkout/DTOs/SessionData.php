@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Checkout\DTOs;
+namespace Clubify\Checkout\Modules\Checkout\DTOs;
 
 use ClubifyCheckout\Data\BaseData;
 

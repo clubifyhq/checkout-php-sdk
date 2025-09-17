@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Webhooks\Exceptions;
+namespace Clubify\Checkout\Modules\Webhooks\Exceptions;
 
 /**
  * Exception para erros de configuração de webhooks

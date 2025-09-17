@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Webhooks\Services;
+namespace Clubify\Checkout\Modules\Webhooks\Services;
 
-use ClubifyCheckout\Modules\Webhooks\Repositories\WebhookRepositoryInterface;
+use Clubify\Checkout\Modules\Webhooks\Repositories\WebhookRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use DateTime;

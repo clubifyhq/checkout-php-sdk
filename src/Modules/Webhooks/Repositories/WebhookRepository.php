@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Webhooks\Repositories;
+namespace Clubify\Checkout\Modules\Webhooks\Repositories;
 
 use ClubifyCheckout\Repositories\BaseRepository;
-use ClubifyCheckout\Modules\Webhooks\Repositories\WebhookRepositoryInterface;
+use Clubify\Checkout\Modules\Webhooks\Repositories\WebhookRepositoryInterface;
 use DateTime;
 
 /**

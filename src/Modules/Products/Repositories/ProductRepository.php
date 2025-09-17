@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Products\Repositories;
+namespace Clubify\Checkout\Modules\Products\Repositories;
 
 use ClubifyCheckout\Repositories\BaseRepository;
-use ClubifyCheckout\Modules\Products\Repositories\ProductRepositoryInterface;
+use Clubify\Checkout\Modules\Products\Repositories\ProductRepositoryInterface;
 use ClubifyCheckout\Exceptions\ValidationException;
 use ClubifyCheckout\Exceptions\HttpException;
 

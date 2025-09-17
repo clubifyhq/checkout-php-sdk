@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Organization\Repositories;
+namespace Clubify\Checkout\Modules\Organization\Repositories;
 
-use ClubifyCheckout\Contracts\RepositoryInterface;
+use Clubify\Checkout\Contracts\RepositoryInterface;
 
 /**
  * Interface específica para Organization Repository

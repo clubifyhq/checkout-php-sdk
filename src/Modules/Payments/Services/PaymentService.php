@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Payments\Services;
+namespace Clubify\Checkout\Modules\Payments\Services;
 
-use ClubifyCheckout\Core\BaseService;
-use ClubifyCheckout\Modules\Payments\Contracts\GatewayInterface;
-use ClubifyCheckout\Modules\Payments\Contracts\PaymentRepositoryInterface;
-use ClubifyCheckout\Modules\Payments\Exceptions\PaymentException;
-use ClubifyCheckout\Modules\Payments\Exceptions\GatewayException;
+use Clubify\Checkout\Core\BaseService;
+use Clubify\Checkout\Modules\Payments\Contracts\GatewayInterface;
+use Clubify\Checkout\Modules\Payments\Contracts\PaymentRepositoryInterface;
+use Clubify\Checkout\Modules\Payments\Exceptions\PaymentException;
+use Clubify\Checkout\Modules\Payments\Exceptions\GatewayException;
 use ClubifyCheckout\Utils\Validators\CreditCardValidator;
 use ClubifyCheckout\Utils\Formatters\CurrencyFormatter;
 use Psr\Log\LoggerInterface;

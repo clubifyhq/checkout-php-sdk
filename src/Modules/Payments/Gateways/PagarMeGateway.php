@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Payments\Gateways;
+namespace Clubify\Checkout\Modules\Payments\Gateways;
 
-use ClubifyCheckout\Modules\Payments\Contracts\GatewayInterface;
+use Clubify\Checkout\Modules\Payments\Contracts\GatewayInterface;
 use Psr\Log\LoggerInterface;
 
 /**

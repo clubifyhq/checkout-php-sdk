@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Customers\DTOs;
+namespace Clubify\Checkout\Modules\Customers\DTOs;
 
 use ClubifyCheckout\Data\BaseData;
 use DateTime;

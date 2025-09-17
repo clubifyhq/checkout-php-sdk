@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Payments\DTOs;
+namespace Clubify\Checkout\Modules\Payments\DTOs;
 
-use ClubifyCheckout\Core\BaseDTO;
+use Clubify\Checkout\Core\BaseDTO;
 use ClubifyCheckout\Utils\Validators\CreditCardValidator;
 use ClubifyCheckout\Utils\Validators\EmailValidator;
 use ClubifyCheckout\Utils\Validators\CPFValidator;

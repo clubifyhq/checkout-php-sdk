@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Customers\Exceptions;
+namespace Clubify\Checkout\Modules\Customers\Exceptions;
 
 /**
  * Exceção para cliente não encontrado

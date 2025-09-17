@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Payments\Services;
+namespace Clubify\Checkout\Modules\Payments\Services;
 
-use ClubifyCheckout\Core\BaseService;
-use ClubifyCheckout\Modules\Payments\Contracts\GatewayInterface;
-use ClubifyCheckout\Modules\Payments\Gateways\PagarMeGateway;
-use ClubifyCheckout\Modules\Payments\Gateways\StripeGateway;
-use ClubifyCheckout\Modules\Payments\Exceptions\GatewayException;
-use ClubifyCheckout\Modules\Payments\Exceptions\ConfigurationException;
+use Clubify\Checkout\Core\BaseService;
+use Clubify\Checkout\Modules\Payments\Contracts\GatewayInterface;
+use Clubify\Checkout\Modules\Payments\Gateways\PagarMeGateway;
+use Clubify\Checkout\Modules\Payments\Gateways\StripeGateway;
+use Clubify\Checkout\Modules\Payments\Exceptions\GatewayException;
+use Clubify\Checkout\Modules\Payments\Exceptions\ConfigurationException;
 use Psr\Log\LoggerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use InvalidArgumentException;

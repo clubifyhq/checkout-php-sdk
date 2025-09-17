@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Webhooks\Services;
+namespace Clubify\Checkout\Modules\Webhooks\Services;
 
 use ClubifyCheckout\Services\BaseService;
-use ClubifyCheckout\Modules\Webhooks\Repositories\WebhookRepositoryInterface;
+use Clubify\Checkout\Modules\Webhooks\Repositories\WebhookRepositoryInterface;
 use ClubifyCheckout\Utils\Validators\EmailValidator;
 use ClubifyCheckout\Utils\Validators\ValidatorInterface;
 use Psr\Log\LoggerInterface;

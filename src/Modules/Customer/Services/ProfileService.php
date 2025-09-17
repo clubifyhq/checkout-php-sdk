@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Customer\Services;
+namespace Clubify\Checkout\Modules\Customer\Services;
 
 use ClubifyCheckout\Services\BaseService;
-use ClubifyCheckout\Modules\Customer\Repositories\CustomerRepositoryInterface;
-use ClubifyCheckout\Modules\Customer\DTOs\ProfileData;
+use Clubify\Checkout\Modules\Customer\Repositories\CustomerRepositoryInterface;
+use Clubify\Checkout\Modules\Customer\DTOs\ProfileData;
 use ClubifyCheckout\Utils\Formatters\DocumentFormatter;
 use ClubifyCheckout\Utils\Formatters\PhoneFormatter;
 use Psr\Log\LoggerInterface;

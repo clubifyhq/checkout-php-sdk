@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Webhooks\Exceptions;
+namespace Clubify\Checkout\Modules\Webhooks\Exceptions;
 
-use ClubifyCheckout\Core\Exceptions\BaseException;
+use Clubify\Checkout\Core\Exceptions\BaseException;
 
 /**
  * Exception base para webhooks

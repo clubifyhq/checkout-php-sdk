@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Webhooks\Repositories;
+namespace Clubify\Checkout\Modules\Webhooks\Repositories;
 
-use ClubifyCheckout\Contracts\RepositoryInterface;
+use Clubify\Checkout\Contracts\RepositoryInterface;
 
 /**
  * Interface para repositório de webhooks

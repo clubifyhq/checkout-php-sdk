@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Webhooks\DTOs;
+namespace Clubify\Checkout\Modules\Webhooks\DTOs;
 
-use ClubifyCheckout\Core\DTOs\BaseDTO;
+use Clubify\Checkout\Core\DTOs\BaseDTO;
 
 /**
  * DTO para estatísticas de webhook

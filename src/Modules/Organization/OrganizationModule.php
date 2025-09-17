@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Organization;
+namespace Clubify\Checkout\Modules\Organization;
 
-use ClubifyCheckout\Contracts\ModuleInterface;
-use ClubifyCheckout\Core\Config\Configuration;
-use ClubifyCheckout\Core\Logger\LoggerInterface;
-use ClubifyCheckout\Core\Http\Client;
-use ClubifyCheckout\Core\Cache\CacheManagerInterface;
-use ClubifyCheckout\Core\Events\EventDispatcherInterface;
-use ClubifyCheckout\Modules\Organization\Services\TenantService;
-use ClubifyCheckout\Modules\Organization\Services\AdminService;
-use ClubifyCheckout\Modules\Organization\Services\ApiKeyService;
-use ClubifyCheckout\Modules\Organization\Services\DomainService;
-use ClubifyCheckout\Modules\Organization\Repositories\OrganizationRepository;
+use Clubify\Checkout\Contracts\ModuleInterface;
+use Clubify\Checkout\Core\Config\Configuration;
+use Clubify\Checkout\Core\Logger\LoggerInterface;
+use Clubify\Checkout\Core\Http\Client;
+use Clubify\Checkout\Core\Cache\CacheManagerInterface;
+use Clubify\Checkout\Core\Events\EventDispatcherInterface;
+use Clubify\Checkout\Modules\Organization\Services\TenantService;
+use Clubify\Checkout\Modules\Organization\Services\AdminService;
+use Clubify\Checkout\Modules\Organization\Services\ApiKeyService;
+use Clubify\Checkout\Modules\Organization\Services\DomainService;
+use Clubify\Checkout\Modules\Organization\Repositories\OrganizationRepository;
 
 /**
  * Módulo de Organização

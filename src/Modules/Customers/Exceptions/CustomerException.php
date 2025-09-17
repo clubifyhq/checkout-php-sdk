@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Customers\Exceptions;
+namespace Clubify\Checkout\Modules\Customers\Exceptions;
 
-use ClubifyCheckout\Core\BaseException;
+use Clubify\Checkout\Core\BaseException;
 
 /**
  * Exceção base para operações de clientes

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Payments\Contracts;
+namespace Clubify\Checkout\Modules\Payments\Contracts;
 
 /**
  * Interface para Gateway de Pagamento

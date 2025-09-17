@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Customers\Services;
+namespace Clubify\Checkout\Modules\Customers\Services;
 
-use ClubifyCheckout\Core\BaseService;
-use ClubifyCheckout\Modules\Customers\Contracts\CustomerRepositoryInterface;
-use ClubifyCheckout\Modules\Customers\Exceptions\CustomerException;
+use Clubify\Checkout\Core\BaseService;
+use Clubify\Checkout\Modules\Customers\Contracts\CustomerRepositoryInterface;
+use Clubify\Checkout\Modules\Customers\Exceptions\CustomerException;
 use Psr\Log\LoggerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 

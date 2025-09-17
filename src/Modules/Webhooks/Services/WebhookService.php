@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Webhooks\Services;
+namespace Clubify\Checkout\Modules\Webhooks\Services;
 
 use ClubifyCheckout\Services\BaseService;
-use ClubifyCheckout\Modules\Webhooks\Repositories\WebhookRepositoryInterface;
-use ClubifyCheckout\Modules\Webhooks\DTOs\WebhookData;
-use ClubifyCheckout\Modules\Webhooks\Exceptions\WebhookNotFoundException;
-use ClubifyCheckout\Modules\Webhooks\Exceptions\InvalidWebhookException;
+use Clubify\Checkout\Modules\Webhooks\Repositories\WebhookRepositoryInterface;
+use Clubify\Checkout\Modules\Webhooks\DTOs\WebhookData;
+use Clubify\Checkout\Modules\Webhooks\Exceptions\WebhookNotFoundException;
+use Clubify\Checkout\Modules\Webhooks\Exceptions\InvalidWebhookException;
 use Psr\Log\LoggerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use InvalidArgumentException;

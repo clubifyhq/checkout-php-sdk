@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Webhooks\Services;
+namespace Clubify\Checkout\Modules\Webhooks\Services;
 
-use ClubifyCheckout\Core\Http\Client;
+use Clubify\Checkout\Core\Http\Client;
 use ClubifyCheckout\Utils\Crypto\HMACSignature;
-use ClubifyCheckout\Core\Events\EventDispatcherInterface;
+use Clubify\Checkout\Core\Events\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use GuzzleHttp\Exception\RequestException;

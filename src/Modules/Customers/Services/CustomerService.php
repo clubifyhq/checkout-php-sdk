@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Customers\Services;
+namespace Clubify\Checkout\Modules\Customers\Services;
 
-use ClubifyCheckout\Core\BaseService;
-use ClubifyCheckout\Modules\Customers\Contracts\CustomerRepositoryInterface;
-use ClubifyCheckout\Modules\Customers\Exceptions\CustomerNotFoundException;
-use ClubifyCheckout\Modules\Customers\Exceptions\DuplicateCustomerException;
+use Clubify\Checkout\Core\BaseService;
+use Clubify\Checkout\Modules\Customers\Contracts\CustomerRepositoryInterface;
+use Clubify\Checkout\Modules\Customers\Exceptions\CustomerNotFoundException;
+use Clubify\Checkout\Modules\Customers\Exceptions\DuplicateCustomerException;
 use ClubifyCheckout\Utils\Validators\EmailValidator;
 use ClubifyCheckout\Utils\Validators\CPFValidator;
 use ClubifyCheckout\Utils\Validators\CNPJValidator;

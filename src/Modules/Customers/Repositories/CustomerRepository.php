@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Customers\Repositories;
+namespace Clubify\Checkout\Modules\Customers\Repositories;
 
-use ClubifyCheckout\Core\BaseRepository;
-use ClubifyCheckout\Modules\Customers\Contracts\CustomerRepositoryInterface;
-use ClubifyCheckout\Modules\Customers\Exceptions\CustomerNotFoundException;
-use ClubifyCheckout\Modules\Customers\Exceptions\DuplicateCustomerException;
+use Clubify\Checkout\Core\BaseRepository;
+use Clubify\Checkout\Modules\Customers\Contracts\CustomerRepositoryInterface;
+use Clubify\Checkout\Modules\Customers\Exceptions\CustomerNotFoundException;
+use Clubify\Checkout\Modules\Customers\Exceptions\DuplicateCustomerException;
 use Psr\Log\LoggerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 

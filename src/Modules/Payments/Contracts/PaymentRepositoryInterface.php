@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Payments\Contracts;
+namespace Clubify\Checkout\Modules\Payments\Contracts;
 
-use ClubifyCheckout\Contracts\RepositoryInterface;
+use Clubify\Checkout\Contracts\RepositoryInterface;
 
 /**
  * Interface para Repository de Pagamentos

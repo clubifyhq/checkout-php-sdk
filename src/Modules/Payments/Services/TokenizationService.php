@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace ClubifyCheckout\Modules\Payments\Services;
+namespace Clubify\Checkout\Modules\Payments\Services;
 
-use ClubifyCheckout\Core\BaseService;
-use ClubifyCheckout\Modules\Payments\Contracts\GatewayInterface;
-use ClubifyCheckout\Modules\Payments\Contracts\CardRepositoryInterface;
-use ClubifyCheckout\Modules\Payments\Exceptions\TokenizationException;
-use ClubifyCheckout\Modules\Payments\Exceptions\SecurityException;
+use Clubify\Checkout\Core\BaseService;
+use Clubify\Checkout\Modules\Payments\Contracts\GatewayInterface;
+use Clubify\Checkout\Modules\Payments\Contracts\CardRepositoryInterface;
+use Clubify\Checkout\Modules\Payments\Exceptions\TokenizationException;
+use Clubify\Checkout\Modules\Payments\Exceptions\SecurityException;
 use ClubifyCheckout\Utils\Validators\CreditCardValidator;
 use ClubifyCheckout\Utils\Crypto\AESEncryption;
 use ClubifyCheckout\Utils\Crypto\HMACSignature;

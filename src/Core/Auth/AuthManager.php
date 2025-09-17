@@ -44,6 +44,11 @@ class AuthManager implements AuthManagerInterface
         }
 
         try {
+            // Debug log para verificar o que está sendo enviado
+            error_log("SDK Auth Debug - Tenant ID: " . $tenantId);
+            error_log("SDK Auth Debug - API Key (first 10): " . substr($apiKey, 0, 10) . '...');
+            error_log("SDK Auth Debug - Base URL: " . $this->config->getBaseUrl());
+
             $response = $this->httpClient->post('/api-keys/public/validate', [
                 'json' => [
                     'apiKey' => $apiKey,

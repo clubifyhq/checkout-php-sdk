@@ -65,6 +65,7 @@ class ClubifySDKHelper
                 logger()->info('Clubify SDK inicializado para testes', [
                     'duration_ms' => $duration,
                     'success' => $initResult['success'] ?? false,
+                    'init_result' => $initResult,
                     'helper_class' => self::class
                 ]);
             }
@@ -73,15 +74,16 @@ class ClubifySDKHelper
 
         } catch (Exception $e) {
             if (function_exists('logger') && app()->bound('config')) {
-                logger()->warning('Falha ao inicializar SDK para testes (esperado em desenvolvimento)', [
+                logger()->error('Falha ao inicializar SDK para testes', [
                     'error' => $e->getMessage(),
                     'error_type' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
                     'helper_class' => self::class
                 ]);
             }
 
-            // Em desenvolvimento, falha de inicialização é esperada
-            // Retornamos false mas não consideramos erro crítico
             return false;
         }
     }
@@ -111,11 +113,10 @@ class ClubifySDKHelper
     {
         return [
             'credentials' => [
-                'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID', 'demo_tenant'),
-                'api_key' => env('CLUBIFY_CHECKOUT_API_KEY', 'demo_api_key_123'),
-                'api_secret' => env('CLUBIFY_CHECKOUT_API_SECRET', 'demo_secret_456')
+                'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID'),
+                'api_key' => env('CLUBIFY_CHECKOUT_API_KEY'),
+                'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'sandbox')
             ],
-            'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'development'),
             'http' => [
                 'timeout' => 5000, // 5 segundos em milissegundos (convertido automaticamente)
                 'connect_timeout' => 3, // 3 segundos para conectar (já em segundos!)

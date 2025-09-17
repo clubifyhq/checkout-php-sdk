@@ -53,6 +53,9 @@ class AuthManager implements AuthManagerInterface
                 'json' => [
                     'apiKey' => $apiKey,
                 ],
+                'headers' => [
+                    'X-Tenant-ID' => $tenantId
+                ]
             ]);
 
             $data = json_decode((string) $response->getBody(), true);

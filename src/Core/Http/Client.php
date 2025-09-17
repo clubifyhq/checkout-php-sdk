@@ -71,7 +71,7 @@ class Client
     public function healthCheck(): bool
     {
         try {
-            $response = $this->get('/health');
+            $response = $this->get('health');
             $data = json_decode($response->getBody()->getContents(), true);
             return isset($data['status']) && in_array($data['status'], ['healthy', 'ok']);
         } catch (\Exception) {

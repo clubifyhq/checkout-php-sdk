@@ -49,7 +49,7 @@ class AuthManager implements AuthManagerInterface
             error_log("SDK Auth Debug - API Key (first 10): " . substr($apiKey, 0, 10) . '...');
             error_log("SDK Auth Debug - Base URL: " . $this->config->getBaseUrl());
 
-            $response = $this->httpClient->post('/api-keys/public/validate', [
+            $response = $this->httpClient->post('api-keys/public/validate', [
                 'json' => [
                     'apiKey' => $apiKey,
                 ],

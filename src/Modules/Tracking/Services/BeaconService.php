@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Tracking\Services;
 
+use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
@@ -16,7 +17,7 @@ use DateTime;
  * Especializado em eventos críticos que precisam ser enviados
  * mesmo quando o usuário sai da página (page unload, navegador fechando).
  */
-class BeaconService
+class BeaconService implements ServiceInterface
 {
     public function __construct(
         private ClubifyCheckoutSDK $sdk,
@@ -112,5 +113,89 @@ class BeaconService
     private function generateSessionId(): string
     {
         return session_id() ?: uniqid('session_', true);
+    }
+
+    /**
+     * Obtém o nome do serviço
+     */
+    public function getName(): string
+    {
+        return 'beacon_service';
+    }
+
+    /**
+     * Obtém a versão do serviço
+     */
+    public function getVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
+     * Verifica se o serviço está saudável (health check)
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            // Test basic functionality
+            return isset($this->sdk) && isset($this->config) && isset($this->logger);
+        } catch (\Exception $e) {
+            $this->logger->error('BeaconService health check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Obtém métricas do serviço
+     */
+    public function getMetrics(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'beacon_events_count' => 0, // Could be tracked with instance variables
+            'priority_events_count' => 0,
+            'timestamp' => time()
+        ];
+    }
+
+    /**
+     * Obtém configurações específicas do serviço
+     */
+    public function getConfig(): array
+    {
+        return [
+            'priority_mode' => true,
+            'timeout_ms' => 5000,
+            'retry_attempts' => 1,
+            'supports_unload_events' => true,
+        ];
+    }
+
+    /**
+     * Verifica se o serviço está disponível
+     */
+    public function isAvailable(): bool
+    {
+        return $this->isHealthy();
+    }
+
+    /**
+     * Obtém o status do serviço
+     */
+    public function getStatus(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'available' => $this->isAvailable(),
+            'config' => $this->getConfig(),
+            'metrics' => $this->getMetrics(),
+            'timestamp' => time()
+        ];
     }
 }

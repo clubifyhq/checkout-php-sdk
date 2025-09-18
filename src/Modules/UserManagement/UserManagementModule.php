@@ -266,6 +266,8 @@ class UserManagementModule implements ModuleInterface
         return $this->getUserService()->deactivateUser($userId);
     }
 
+
+
     // === FACTORY AND SERVICE CREATION ===
 
     /**
@@ -289,6 +291,8 @@ class UserManagementModule implements ModuleInterface
         }
         return $this->userService;
     }
+
+
 
     /**
      * Verifica se o módulo está inicializado antes de executar operações

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Tracking\Services;
 
+use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
@@ -16,7 +17,7 @@ use DateTime;
  * Responsável por gerar insights, métricas e relatórios
  * baseados nos dados de eventos rastreados.
  */
-class EventAnalyticsService
+class EventAnalyticsService implements ServiceInterface
 {
     public function __construct(
         private ClubifyCheckoutSDK $sdk,
@@ -153,5 +154,91 @@ class EventAnalyticsService
         $analytics->addInsight('alert', 'Unusual drop in mobile conversions detected', [], 'high');
         $analytics->addInsight('opportunity', 'Desktop users show 25% higher conversion', [], 'medium');
         $analytics->addInsight('recommendation', 'Optimize mobile checkout experience', [], 'high');
+    }
+
+    /**
+     * Obtém o nome do serviço
+     */
+    public function getName(): string
+    {
+        return 'event_analytics_service';
+    }
+
+    /**
+     * Obtém a versão do serviço
+     */
+    public function getVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
+     * Verifica se o serviço está saudável (health check)
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            // Test basic functionality
+            return isset($this->sdk) && isset($this->config) && isset($this->logger);
+        } catch (\Exception $e) {
+            $this->logger->error('EventAnalyticsService health check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Obtém métricas do serviço
+     */
+    public function getMetrics(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'reports_generated' => 0, // Could be tracked with instance variables
+            'analytics_requests' => 0,
+            'segmentation_queries' => 0,
+            'timestamp' => time()
+        ];
+    }
+
+    /**
+     * Obtém configurações específicas do serviço
+     */
+    public function getConfig(): array
+    {
+        return [
+            'default_date_range_days' => 30,
+            'max_segments_per_query' => 10,
+            'cache_analytics_minutes' => 60,
+            'enable_real_time_insights' => true,
+            'supported_report_formats' => ['dashboard', 'executive', 'detailed']
+        ];
+    }
+
+    /**
+     * Verifica se o serviço está disponível
+     */
+    public function isAvailable(): bool
+    {
+        return $this->isHealthy();
+    }
+
+    /**
+     * Obtém o status do serviço
+     */
+    public function getStatus(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'available' => $this->isAvailable(),
+            'config' => $this->getConfig(),
+            'metrics' => $this->getMetrics(),
+            'timestamp' => time()
+        ];
     }
 }

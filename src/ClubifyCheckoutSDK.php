@@ -20,6 +20,10 @@ use Clubify\Checkout\Modules\Webhooks\WebhooksModule;
 use Clubify\Checkout\Modules\Tracking\TrackingModule;
 use Clubify\Checkout\Modules\UserManagement\UserManagementModule;
 use Clubify\Checkout\Modules\UserManagement\Factories\UserServiceFactory;
+use Clubify\Checkout\Modules\Customers\Factories\CustomersServiceFactory;
+use Clubify\Checkout\Modules\Products\Factories\ProductsServiceFactory;
+use Clubify\Checkout\Modules\Webhooks\Factories\WebhooksServiceFactory;
+use Clubify\Checkout\Modules\Notifications\Factories\NotificationsServiceFactory;
 use Clubify\Checkout\Modules\Subscriptions\SubscriptionsModule;
 use Clubify\Checkout\Enums\Environment;
 use Clubify\Checkout\Exceptions\ConfigurationException;
@@ -548,6 +552,77 @@ class ClubifyCheckoutSDK
             $this->getHttpClient(),
             $this->getCache(),
             $this->getEventDispatcher()
+        );
+    }
+
+    /**
+     * Criar Customers Service Factory
+     *
+     * Cria uma factory para gerenciar services do Customers
+     * com todas as dependências necessárias injetadas.
+     *
+     * @return CustomersServiceFactory Factory configurada
+     */
+    public function createCustomersServiceFactory(): CustomersServiceFactory
+    {
+        return new CustomersServiceFactory(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher()
+        );
+    }
+
+    /**
+     * Cria uma factory para gerenciar services do Products
+     * com todas as dependências necessárias injetadas.
+     *
+     * @return ProductsServiceFactory Factory configurada
+     */
+    public function createProductsServiceFactory(): ProductsServiceFactory
+    {
+        return new ProductsServiceFactory(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher()
+        );
+    }
+
+    /**
+     * Cria uma factory para gerenciar services do Webhooks
+     * com todas as dependências necessárias injetadas.
+     *
+     * @return WebhooksServiceFactory Factory configurada
+     */
+    public function createWebhooksServiceFactory(): WebhooksServiceFactory
+    {
+        return new WebhooksServiceFactory(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher()
+        );
+    }
+
+    /**
+     * Cria uma factory para gerenciar services do Notifications
+     * com todas as dependências necessárias injetadas.
+     *
+     * @return NotificationsServiceFactory Factory configurada
+     */
+    public function createNotificationsServiceFactory(): NotificationsServiceFactory
+    {
+        return new NotificationsServiceFactory(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher(),
+            $this
         );
     }
 

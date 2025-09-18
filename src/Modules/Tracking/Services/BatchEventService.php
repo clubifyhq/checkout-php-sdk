@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Tracking\Services;
 
+use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
@@ -33,7 +34,7 @@ use DateTime;
  * - I: Interface Segregation - Interface específica para lotes
  * - D: Dependency Inversion - Depende de abstrações
  */
-class BatchEventService
+class BatchEventService implements ServiceInterface
 {
     private int $maxBatchSize = 100;
     private int $maxBatchSizeBytes = 1024 * 1024; // 1MB
@@ -201,6 +202,90 @@ class BatchEventService
             'compression_threshold' => $this->compressionThreshold,
             'deduplication_enabled' => $this->enableDeduplication,
             'max_retries' => $this->maxRetries,
+        ];
+    }
+
+    /**
+     * Obtém o nome do serviço
+     */
+    public function getName(): string
+    {
+        return 'batch_event_service';
+    }
+
+    /**
+     * Obtém a versão do serviço
+     */
+    public function getVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
+     * Verifica se o serviço está saudável (health check)
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            // Test basic functionality
+            return isset($this->sdk) && isset($this->config) && isset($this->logger);
+        } catch (\Exception $e) {
+            $this->logger->error('BatchEventService health check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Obtém métricas do serviço
+     */
+    public function getMetrics(): array
+    {
+        return array_merge($this->getServiceStats(), [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'timestamp' => time()
+        ]);
+    }
+
+    /**
+     * Obtém configurações específicas do serviço
+     */
+    public function getConfig(): array
+    {
+        return [
+            'max_batch_size' => $this->maxBatchSize,
+            'max_batch_size_bytes' => $this->maxBatchSizeBytes,
+            'compression_threshold' => $this->compressionThreshold,
+            'max_retries' => $this->maxRetries,
+            'enable_compression' => $this->enableCompression,
+            'enable_deduplication' => $this->enableDeduplication,
+        ];
+    }
+
+    /**
+     * Verifica se o serviço está disponível
+     */
+    public function isAvailable(): bool
+    {
+        return $this->isHealthy();
+    }
+
+    /**
+     * Obtém o status do serviço
+     */
+    public function getStatus(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'available' => $this->isAvailable(),
+            'config' => $this->getConfig(),
+            'metrics' => $this->getMetrics(),
+            'timestamp' => time()
         ];
     }
 

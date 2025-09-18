@@ -8,6 +8,7 @@ use Clubify\Checkout\Contracts\ModuleInterface;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
+use Clubify\Checkout\Modules\Tracking\Factories\TrackingServiceFactory;
 use Clubify\Checkout\Modules\Tracking\Services\EventTrackingService;
 use Clubify\Checkout\Modules\Tracking\Services\BatchEventService;
 use Clubify\Checkout\Modules\Tracking\Services\BeaconService;
@@ -36,8 +37,9 @@ class TrackingModule implements ModuleInterface
     private Configuration $config;
     private Logger $logger;
     private bool $initialized = false;
+    private ?TrackingServiceFactory $serviceFactory = null;
 
-    // Services (lazy loading)
+    // Services (lazy loading via factory)
     private ?EventTrackingService $eventTrackingService = null;
     private ?BatchEventService $batchEventService = null;
     private ?BeaconService $beaconService = null;

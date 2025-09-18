@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Tracking\Services;
 
+use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
@@ -33,7 +34,7 @@ use DateTime;
  * - I: Interface Segregation - Interface específica para tracking
  * - D: Dependency Inversion - Depende de abstrações
  */
-class EventTrackingService
+class EventTrackingService implements ServiceInterface
 {
     private array $eventQueue = [];
     private int $maxRetries = 3;
@@ -375,5 +376,95 @@ class EventTrackingService
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
 
         return $protocol . '://' . $host . $uri;
+    }
+
+    /**
+     * Obtém o nome do serviço
+     */
+    public function getName(): string
+    {
+        return 'event_tracking_service';
+    }
+
+    /**
+     * Obtém a versão do serviço
+     */
+    public function getVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
+     * Verifica se o serviço está saudável (health check)
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            // Test basic functionality
+            return isset($this->sdk) && isset($this->config) && isset($this->logger);
+        } catch (\Exception $e) {
+            $this->logger->error('EventTrackingService health check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Obtém métricas do serviço
+     */
+    public function getMetrics(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'events_tracked' => 0, // Could be tracked with instance variables
+            'events_queued' => $this->getQueueSize(),
+            'rate_limit_hits' => 0,
+            'max_events_per_minute' => $this->maxEventsPerMinute,
+            'max_retries' => $this->maxRetries,
+            'retry_delay_ms' => $this->retryDelay,
+            'timestamp' => time()
+        ];
+    }
+
+    /**
+     * Obtém configurações específicas do serviço
+     */
+    public function getConfig(): array
+    {
+        return [
+            'max_retries' => $this->maxRetries,
+            'retry_delay_ms' => $this->retryDelay,
+            'max_events_per_minute' => $this->maxEventsPerMinute,
+            'auto_enrich_events' => true,
+            'queue_mode' => true,
+            'supported_event_types' => $this->getSupportedEventTypes()
+        ];
+    }
+
+    /**
+     * Verifica se o serviço está disponível
+     */
+    public function isAvailable(): bool
+    {
+        return $this->isHealthy();
+    }
+
+    /**
+     * Obtém o status do serviço
+     */
+    public function getStatus(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'available' => $this->isAvailable(),
+            'config' => $this->getConfig(),
+            'metrics' => $this->getMetrics(),
+            'timestamp' => time()
+        ];
     }
 }

@@ -26,4 +26,16 @@ class RoleService
     {
         return ['success' => true, 'user_id' => $userId, 'has_permission' => true];
     }
+
+    public function getUserRoles(string $userId): array
+    {
+        $this->logger->info('Getting user roles', ['user_id' => $userId]);
+
+        return [
+            'success' => true,
+            'user_id' => $userId,
+            'roles' => ['user', 'customer'],
+            'permissions' => ['read', 'write_own_data']
+        ];
+    }
 }

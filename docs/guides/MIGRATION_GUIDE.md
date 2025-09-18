@@ -6,6 +6,85 @@ Este documento fornece um **guia completo** para migrar módulos existentes do S
 
 ---
 
+## ⚠️ CORREÇÕES CRÍTICAS OBRIGATÓRIAS
+
+**ANTES de migrar qualquer módulo**, você DEVE aplicar estas correções críticas para evitar erros 404:
+
+### 🚨 Problema: URLs Incorretas
+
+**Sintoma**: Requisições retornam 404 com redirects para `/c/checkout/`
+```
+GET /users/search → 307 → GET /c/checkout/users/search → 404
+```
+
+### ✅ Solução 1: Configuration.php
+
+**Arquivo**: `src/Core/Config/Configuration.php`
+
+```php
+public function getBaseUrl(): string
+{
+    // ✅ Aceita múltiplos formatos de configuração
+    $customUrl = $this->get('endpoints.base_url')
+              ?? $this->get('api.base_url')
+              ?? $this->get('base_url');
+
+    if ($customUrl) {
+        $normalizedUrl = rtrim($customUrl, '/');
+
+        // ✅ Automaticamente adiciona /api/v1 se necessário
+        if (!str_ends_with($normalizedUrl, '/api/v1')) {
+            $normalizedUrl .= '/api/v1';
+        }
+
+        return $normalizedUrl;
+    }
+
+    $environment = Environment::from($this->getEnvironment());
+    return $environment->getBaseUrl();
+}
+```
+
+### ✅ Solução 2: Endpoints Relativos
+
+**TODOS os repositories devem usar paths relativos:**
+
+```php
+// ❌ ERRO - Path absoluto
+protected function getEndpoint(): string {
+    return '/users'; // Quebra o Guzzle base_uri
+}
+
+// ✅ CORRETO - Path relativo
+protected function getEndpoint(): string {
+    return 'users'; // Respeita o base_uri
+}
+```
+
+### ✅ Solução 3: Chamadas HTTP
+
+**TODAS as chamadas HTTP devem usar paths relativos:**
+
+```php
+// ❌ ERRO
+$this->httpClient->get('/users/search', $params);
+
+// ✅ CORRETO
+$this->httpClient->get('users/search', $params);
+```
+
+### 🔍 Como Verificar
+
+Execute este teste:
+```bash
+php debug-url-construction.php
+```
+
+**URL correta**: `https://checkout.svelve.com/api/v1/users/search` (401 é esperado)
+**URL incorreta**: `https://checkout.svelve.com/users/search` (404)
+
+---
+
 ## 🎯 Estratégia de Migração
 
 ### Princípios da Migração
@@ -65,7 +144,7 @@ class UserManagementModule extends BaseModule
 
     // ❌ Problema: HTTP calls diretas no módulo
     public function createUser(array $userData): array {
-        $response = $this->client->post('/users', $userData);
+        $response = $this->client->post('users', $userData);
         return $response->getData();
     }
 
@@ -175,7 +254,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
 {
     protected function getEndpoint(): string
     {
-        return '/users';
+        return 'users';
     }
 
     protected function getResourceName(): string
@@ -460,7 +539,7 @@ class UserManagementModule implements ModuleInterface
     // Métodos legados (manter por enquanto)
     private function createUserLegacy(array $userData): array
     {
-        $response = $this->client->post('/users', $userData);
+        $response = $this->client->post('users', $userData);
         return $response->getData();
     }
 

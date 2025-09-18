@@ -738,7 +738,7 @@ public function createOrder(OrderData $orderData): array
     ]);
 
     // 3. Operação principal
-    $response = $this->httpClient->post('/orders', $orderData->toArray());
+    $response = $this->httpClient->post('orders', $orderData->toArray());
 
     // 4. Cache se aplicável
     $this->cache->set("order:{$response['id']}", $response, 3600);

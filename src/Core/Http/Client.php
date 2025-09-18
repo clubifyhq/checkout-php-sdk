@@ -7,6 +7,7 @@ namespace Clubify\Checkout\Core\Http;
 use Clubify\Checkout\Core\Config\ConfigurationInterface;
 use Clubify\Checkout\Core\Http\Interceptor\InterceptorInterface;
 use Clubify\Checkout\Core\Http\Retry\RetryStrategy;
+use Clubify\Checkout\Core\Auth\AuthManagerInterface;
 use Clubify\Checkout\Enums\HttpMethod;
 use Clubify\Checkout\Exceptions\HttpException;
 use GuzzleHttp\Client as GuzzleClient;
@@ -29,10 +30,12 @@ class Client
     private ConfigurationInterface $config;
     private RetryStrategy $retryStrategy;
     private array $interceptors = [];
+    private ?AuthManagerInterface $authManager = null;
 
-    public function __construct(ConfigurationInterface $config)
+    public function __construct(ConfigurationInterface $config, ?AuthManagerInterface $authManager = null)
     {
         $this->config = $config;
+        $this->authManager = $authManager;
         $this->retryStrategy = new RetryStrategy(
             $config->getMaxRetries(),
             $config->getRetryConfig()['delay'] ?? 1000,
@@ -178,7 +181,7 @@ class Client
             'timeout' => $this->config->getTimeout() / 1000, // Guzzle espera segundos
             'connect_timeout' => $this->config->getHttpConfig()['connect_timeout'] ?? 10,
             'verify' => $this->config->getHttpConfig()['verify_ssl'] ?? true,
-            'headers' => $this->config->getDefaultHeaders(),
+            'headers' => $this->config->getDefaultHeaders() ?? $this->defaultHeaders,
             'handler' => $stack,
         ]);
     }
@@ -194,9 +197,9 @@ class Client
         // Resolver URI completa
         $fullUri = $this->resolveUri($uri, $options['query'] ?? []);
 
-        // Preparar headers
+        // Preparar headers com token dinâmico
         $headers = array_merge(
-            $this->config->getDefaultHeaders(),
+            $this->getRequestHeaders(),
             $options['headers'] ?? []
         );
 

@@ -34,7 +34,7 @@ interface UserRepositoryInterface extends RepositoryInterface {
 
 // Implementação concreta com HTTP calls
 class ApiUserRepository extends BaseRepository implements UserRepositoryInterface {
-    protected function getEndpoint(): string { return '/users'; }
+    protected function getEndpoint(): string { return 'users'; }
 
     public function findByEmail(string $email): ?array {
         // HTTP call implementation with cache
@@ -386,7 +386,7 @@ class ApiUserRepositoryTest extends TestCase {
     public function testCreateUserSuccess(): void {
         // Mock HTTP client
         $this->httpClient->shouldReceive('post')
-            ->with('/users', $userData)
+            ->with('users', $userData)
             ->andReturn($mockResponse);
 
         // Test repository

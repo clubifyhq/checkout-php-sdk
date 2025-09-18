@@ -38,14 +38,14 @@ use Clubify\Checkout\Exceptions\HttpException;
  * - Error handling padronizado
  * - HTTP client management
  *
- * Endpoints utilizados:
- * - GET    /{entity}s                 - List {entity}s
- * - POST   /{entity}s                 - Create {entity}
- * - GET    /{entity}s/{id}           - Get {entity} by ID
- * - PUT    /{entity}s/{id}           - Update {entity}
- * - DELETE /{entity}s/{id}           - Delete {entity}
- * - GET    /{entity}s/search         - Search {entity}s
- * - PATCH  /{entity}s/{id}/status    - Update status
+ * Endpoints utilizados (relativos à base_uri):
+ * - GET    {entity}s                 - List {entity}s
+ * - POST   {entity}s                 - Create {entity}
+ * - GET    {entity}s/{id}           - Get {entity} by ID
+ * - PUT    {entity}s/{id}           - Update {entity}
+ * - DELETE {entity}s/{id}           - Delete {entity}
+ * - GET    {entity}s/search         - Search {entity}s
+ * - PATCH  {entity}s/{id}/status    - Update status
  *
  * @package Clubify\Checkout\Modules\{ModuleName}\Repositories
  * @version 2.0.0
@@ -58,7 +58,7 @@ class Api{Entity}Repository extends BaseRepository implements {Entity}Repository
      */
     protected function getEndpoint(): string
     {
-        return '/{entity}s';
+        return '{entity}s';
     }
 
     /**

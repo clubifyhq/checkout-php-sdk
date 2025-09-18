@@ -754,7 +754,7 @@ Route::prefix('webhooks/clubify')->name('webhooks.clubify.')->group(function () 
 // Rotas administrativas (com auth)
 Route::middleware(['auth', 'verified'])->prefix('admin/clubify')->name('admin.clubify.')->group(function () {
     Route::get('/dashboard', [AnalyticsController::class, 'dashboard'])->name('dashboard');
-    Route::get('/orders', [AnalyticsController::class, 'orders'])->name('orders');
+    Route::get('orders', [AnalyticsController::class, 'orders'])->name('orders');
     Route::get('/customers', [AnalyticsController::class, 'customers'])->name('customers');
     Route::get('/analytics', [AnalyticsController::class, 'analytics'])->name('analytics');
 });

@@ -81,7 +81,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
 {
     protected function getEndpoint(): string
     {
-        return '/orders';
+        return 'orders';
     }
 
     protected function getResourceName(): string
@@ -999,7 +999,7 @@ class ApiOrderRepositoryTest extends TestCase
         $mockResponse->shouldReceive('getStatusCode')->andReturn(201);
 
         $this->httpClient->shouldReceive('post')
-            ->with('/orders', $orderData)
+            ->with('orders', $orderData)
             ->once()
             ->andReturn($mockResponse);
 

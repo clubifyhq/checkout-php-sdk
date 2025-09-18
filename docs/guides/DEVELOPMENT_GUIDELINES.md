@@ -43,7 +43,7 @@ abstract class BaseRepository implements RepositoryInterface {
 
 class ApiUserRepository extends BaseRepository {
     // Extensão específica
-    protected function getEndpoint(): string { return '/users'; }
+    protected function getEndpoint(): string { return 'users'; }
 }
 ```
 
@@ -224,7 +224,7 @@ src/Modules/{ModuleName}/
 ```php
 class ApiUserRepository extends BaseRepository implements UserRepositoryInterface {
     // ✅ Métodos abstratos implementados
-    protected function getEndpoint(): string { return '/users'; }
+    protected function getEndpoint(): string { return 'users'; }
     protected function getResourceName(): string { return 'user'; }
     protected function getServiceName(): string { return 'user-management'; }
 
@@ -232,7 +232,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     public function findByEmail(string $email): ?array {
         return $this->getCachedOrExecute(
             $this->getCacheKey("user:email:{$email}"),
-            fn() => $this->httpClient->get("/users/search", ['email' => $email]),
+            fn() => $this->httpClient->get("users/search", ['email' => $email]),
             300
         );
     }
@@ -246,7 +246,110 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
 }
 ```
 
-### 3. Implementação de Service
+### 3. Configuração de URLs e Endpoints
+
+**IMPORTANTE:** Esta seção contém correções críticas para problemas de URL.
+
+#### 3.1. Configuração do Base URL
+
+```php
+// ✅ Configuration.php - Suporte a múltiplas configurações
+public function getBaseUrl(): string
+{
+    // Aceita múltiplos formatos de configuração
+    $customUrl = $this->get('endpoints.base_url')
+              ?? $this->get('api.base_url')
+              ?? $this->get('base_url');
+
+    if ($customUrl) {
+        $normalizedUrl = rtrim($customUrl, '/');
+
+        // Automaticamente adiciona /api/v1 se não estiver presente
+        if (!str_ends_with($normalizedUrl, '/api/v1')) {
+            $normalizedUrl .= '/api/v1';
+        }
+
+        return $normalizedUrl;
+    }
+
+    // Fallback para Environment padrão
+    $environment = Environment::from($this->getEnvironment());
+    return $environment->getBaseUrl();
+}
+```
+
+#### 3.2. Endpoints Relativos (CRÍTICO)
+
+```php
+// ❌ ERRO - Caminho absoluto quebra o base_uri do Guzzle
+class ApiUserRepository extends BaseRepository {
+    protected function getEndpoint(): string {
+        return 'users'; // ❌ Gera: https://checkout.svelve.com/users
+    }
+}
+
+// ✅ CORRETO - Caminho relativo respeita o base_uri
+class ApiUserRepository extends BaseRepository {
+    protected function getEndpoint(): string {
+        return 'users'; // ✅ Gera: https://checkout.svelve.com/api/v1/users
+    }
+}
+```
+
+#### 3.3. Chamadas HTTP nos Repositórios
+
+```php
+// ❌ ERRO - Paths absolutos em chamadas HTTP
+public function findByEmail(string $email): ?array {
+    $response = $this->httpClient->get("/users/search", ['email' => $email]);
+    // ❌ Resultado: https://checkout.svelve.com/users/search (404)
+}
+
+// ✅ CORRETO - Paths relativos
+public function findByEmail(string $email): ?array {
+    $response = $this->httpClient->get("users/search", ['email' => $email]);
+    // ✅ Resultado: https://checkout.svelve.com/api/v1/users/search (200/401)
+}
+```
+
+#### 3.4. Configurações de Exemplo
+
+```php
+// ✅ Configuração recomendada
+$config = [
+    'credentials' => [
+        'environment' => 'development'
+    ],
+    'endpoints' => [
+        'base_url' => 'https://checkout.svelve.com' // SEM /api/v1
+    ]
+];
+
+// ✅ Também funciona (para compatibilidade)
+$config = [
+    'api' => [
+        'base_url' => 'https://checkout.svelve.com'
+    ]
+];
+```
+
+#### 3.5. Guzzle HTTP Client Behavior
+
+O Guzzle trata URLs diferentes dependendo se começam com `/`:
+
+```php
+// Base URI: https://checkout.svelve.com/api/v1/
+
+// Path absoluto (com /) - SUBSTITUI todo o path da base_uri
+$client->get('/users/search');
+// Resultado: https://checkout.svelve.com/users/search ❌
+
+// Path relativo (sem /) - ADICIONA ao path da base_uri
+$client->get('users/search');
+// Resultado: https://checkout.svelve.com/api/v1/users/search ✅
+```
+
+### 4. Implementação de Service
 
 ```php
 class UserService implements ServiceInterface {
@@ -612,7 +715,7 @@ class ApiUserRepository extends BaseRepository {
 
         return $this->getCachedOrExecute(
             $cacheKey,
-            fn() => $this->httpClient->get('/users', $filters),
+            fn() => $this->httpClient->get('users', $filters),
             180 // 3 minutes TTL para listas
         );
     }

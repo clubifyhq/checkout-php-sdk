@@ -81,4 +81,16 @@ class UserService
             'filters' => $filters,
         ];
     }
+
+    public function updateUserProfile(string $userId, array $profileData): array
+    {
+        $this->logger->info('Updating user profile', ['user_id' => $userId]);
+
+        return [
+            'success' => true,
+            'user_id' => $userId,
+            'profile_data' => $profileData,
+            'updated_at' => (new DateTime())->format('c'),
+        ];
+    }
 }

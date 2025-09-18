@@ -54,7 +54,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
         return $this->getCachedOrExecute(
             $this->getCacheKey("user:email:{$email}"),
             function () use ($email) {
-                $response = $this->httpClient->get("users/search", ['email' => $email]);
+                $response = $this->httpClient->get("users/search/advanced", ['email' => $email]);
 
                 if (!$response->isSuccessful()) {
                     return null;

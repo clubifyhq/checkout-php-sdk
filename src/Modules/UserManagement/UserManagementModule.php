@@ -42,10 +42,7 @@ class UserManagementModule implements ModuleInterface
     public function __construct(
         private ClubifyCheckoutSDK $sdk
     ) {
-        if(!$this->initialized){
-            
-            $this->initialize($this->config, $this->logger);
-        }
+        
     }
 
     /**
@@ -57,7 +54,6 @@ class UserManagementModule implements ModuleInterface
         $this->logger = $logger;
         $this->initialized = true;
 
-        $this->sdk->initialize();
 
         $this->logger->info('User Management module initialized', [
             'module' => $this->getName(),

@@ -41,7 +41,12 @@ class UserManagementModule implements ModuleInterface
 
     public function __construct(
         private ClubifyCheckoutSDK $sdk
-    ) {}
+    ) {
+        if(!$this->initialized){
+            
+            $this->initialize($this->config, $this->logger);
+        }
+    }
 
     /**
      * Inicializa o módulo com configurações
@@ -51,6 +56,8 @@ class UserManagementModule implements ModuleInterface
         $this->config = $config;
         $this->logger = $logger;
         $this->initialized = true;
+
+        $this->sdk->initialize();
 
         $this->logger->info('User Management module initialized', [
             'module' => $this->getName(),
@@ -271,7 +278,6 @@ class UserManagementModule implements ModuleInterface
     private function getFactory(): UserServiceFactory
     {
         if ($this->factory === null) {
-            $this->requireInitialized();
             $this->factory = $this->sdk->createUserServiceFactory();
         }
         return $this->factory;

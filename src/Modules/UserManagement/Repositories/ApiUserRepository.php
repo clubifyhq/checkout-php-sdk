@@ -27,7 +27,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
      */
     protected function getEndpoint(): string
     {
-        return '/users';
+        return 'users';
     }
 
     /**
@@ -54,7 +54,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
         return $this->getCachedOrExecute(
             $this->getCacheKey("user:email:{$email}"),
             function () use ($email) {
-                $response = $this->httpClient->get("/users/search", ['email' => $email]);
+                $response = $this->httpClient->get("users/search", ['email' => $email]);
 
                 if (!$response->isSuccessful()) {
                     return null;
@@ -82,7 +82,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     public function updateProfile(string $userId, array $profileData): array
     {
         return $this->executeWithMetrics('update_user_profile', function () use ($userId, $profileData) {
-            $response = $this->httpClient->patch("/users/{$userId}/profile", $profileData);
+            $response = $this->httpClient->patch("users/{$userId}/profile", $profileData);
 
             if (!$response->isSuccessful()) {
                 throw new HttpException(
@@ -113,7 +113,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     public function changePassword(string $userId, string $newPassword): bool
     {
         return $this->executeWithMetrics('change_password', function () use ($userId, $newPassword) {
-            $response = $this->httpClient->patch("/users/{$userId}/password", [
+            $response = $this->httpClient->patch("users/{$userId}/password", [
                 'password' => $newPassword
             ]);
 
@@ -154,7 +154,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
         return $this->getCachedOrExecute(
             $this->getCacheKey("user_roles:{$userId}"),
             function () use ($userId) {
-                $response = $this->httpClient->get("/users/{$userId}/roles");
+                $response = $this->httpClient->get("users/{$userId}/roles");
 
                 if ($response->isSuccessful()) {
                     return $response->getData();
@@ -172,7 +172,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     public function assignRole(string $userId, string $role): bool
     {
         return $this->executeWithMetrics('assign_role', function () use ($userId, $role) {
-            $response = $this->httpClient->post("/users/{$userId}/roles", ['role' => $role]);
+            $response = $this->httpClient->post("users/{$userId}/roles", ['role' => $role]);
 
             if ($response->isSuccessful()) {
                 // Invalidate roles cache
@@ -197,7 +197,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     public function removeRole(string $userId, string $role): bool
     {
         return $this->executeWithMetrics('remove_role', function () use ($userId, $role) {
-            $response = $this->httpClient->delete("/users/{$userId}/roles/{$role}");
+            $response = $this->httpClient->delete("users/{$userId}/roles/{$role}");
 
             if ($response->isSuccessful()) {
                 // Invalidate roles cache
@@ -261,7 +261,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
                     $filters['tenant_id'] = $tenantId;
                 }
 
-                $response = $this->httpClient->get("/users/by-role?" . http_build_query($filters));
+                $response = $this->httpClient->get("users/by-role?" . http_build_query($filters));
                 return $response->isSuccessful() ? $response->getData() : [];
             },
             300 // 5 minutes cache
@@ -279,7 +279,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
             $cacheKey,
             function () use ($tenantId) {
                 $filters = $tenantId ? ['tenant_id' => $tenantId] : [];
-                $response = $this->httpClient->get("/users/stats?" . http_build_query($filters));
+                $response = $this->httpClient->get("users/stats?" . http_build_query($filters));
 
                 if ($response->isSuccessful()) {
                     return $response->getData();
@@ -302,7 +302,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     private function updateUserStatus(string $userId, string $status): bool
     {
         return $this->executeWithMetrics('update_user_status', function () use ($userId, $status) {
-            $response = $this->httpClient->patch("/users/{$userId}", ['status' => $status]);
+            $response = $this->httpClient->patch("users/{$userId}", ['status' => $status]);
 
             if ($response->isSuccessful()) {
                 // Invalidate user cache

@@ -271,6 +271,7 @@ class UserManagementModule implements ModuleInterface
     private function getFactory(): UserServiceFactory
     {
         if ($this->factory === null) {
+            $this->requireInitialized();
             $this->factory = $this->sdk->createUserServiceFactory();
         }
         return $this->factory;

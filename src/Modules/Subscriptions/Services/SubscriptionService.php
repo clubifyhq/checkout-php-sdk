@@ -25,8 +25,16 @@ class SubscriptionService
     public function createSubscription(array $subscriptionData): array
     {
         try {
+            $currentPeriodStart = new DateTime();
+            $currentPeriodEnd = (clone $currentPeriodStart)->modify('+1 month');
+
             $subscription = new SubscriptionData(array_merge($subscriptionData, [
                 'id' => uniqid('sub_'),
+                'current_period_amount' => $subscriptionData['current_period_amount'] ?? 29.90,
+                'current_period_start' => $currentPeriodStart,
+                'current_period_end' => $currentPeriodEnd,
+                'billing_cycle' => $subscriptionData['billing_cycle'] ?? 'monthly',
+                'currency' => $subscriptionData['currency'] ?? 'BRL',
                 'created_at' => new DateTime(),
                 'updated_at' => new DateTime(),
             ]));

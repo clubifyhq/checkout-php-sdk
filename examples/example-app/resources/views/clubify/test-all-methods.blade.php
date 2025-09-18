@@ -620,6 +620,261 @@
                     <p class="text-sm">Clique em "Testar" para verificar os métodos</p>
                 </div>
             </div>
+
+            <!-- Tracking Module -->
+            <div class="bg-white rounded-lg card-shadow p-6 module-card">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">📊</span>
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-800">Tracking Module</h3>
+                            <p class="text-sm text-gray-600">18 métodos disponíveis</p>
+                        </div>
+                    </div>
+                    <button
+                        @click="testModule('tracking')"
+                        :disabled="testing"
+                        class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm disabled:opacity-50"
+                    >
+                        Testar
+                    </button>
+                </div>
+                <div x-show="results.tracking && results.tracking.length > 0" class="space-y-2">
+                    <template x-for="result in results.tracking" :key="result.method">
+                        <div class="method-card border rounded-lg p-3 hover:bg-gray-50" x-data="{ expanded: false }">
+                            <div class="flex items-center justify-between mb-2">
+                                <code class="text-sm font-mono text-gray-700" x-text="result.method + '()'"></code>
+                                <div class="flex items-center gap-2">
+                                    <button x-show="result.success && result.detailed_info" @click="expanded = !expanded" class="text-blue-600 hover:text-blue-800 text-xs">
+                                        <span x-show="!expanded">📋 Details</span>
+                                        <span x-show="expanded">🔼 Hide</span>
+                                    </button>
+                                    <span x-show="result.success" class="text-green-600 text-lg">✅</span>
+                                    <span x-show="!result.success" class="text-red-600 text-lg">❌</span>
+                                </div>
+                            </div>
+                            <div x-show="result.success && result.result" class="text-xs text-gray-600 mt-1 mb-1" x-text="result.result"></div>
+                            <div x-show="result.error" class="text-xs text-red-600 mt-1 mb-1" x-text="result.error"></div>
+
+                            <!-- Detailed Info Section -->
+                            <div x-show="expanded && result.success && result.detailed_info" class="mt-2 p-2 bg-gray-50 rounded text-xs" x-transition>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <template x-if="result.detailed_info.id">
+                                        <div><strong>🆔 ID:</strong> <span x-text="result.detailed_info.id"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.data_id">
+                                        <div><strong>📦 Data ID:</strong> <span x-text="result.detailed_info.data_id"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.api_success">
+                                        <div><strong>✅ API Success:</strong> <span x-text="result.detailed_info.api_success"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.status">
+                                        <div><strong>📊 Status:</strong> <span x-text="result.detailed_info.status"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.operation">
+                                        <div><strong>⚙️ Operation:</strong> <span x-text="result.detailed_info.operation"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.return_type">
+                                        <div><strong>🔧 Type:</strong> <span x-text="result.detailed_info.return_type"></span></div>
+                                    </template>
+                                </div>
+                                <template x-if="result.detailed_info.message">
+                                    <div class="mt-1"><strong>💬 Message:</strong> <span x-text="result.detailed_info.message"></span></div>
+                                </template>
+                                <template x-if="result.detailed_info.keys && result.detailed_info.keys.length > 0">
+                                    <div class="mt-1"><strong>🔑 Keys:</strong> <span x-text="result.detailed_info.keys.join(', ')"></span></div>
+                                </template>
+                                <template x-if="result.detailed_info.class">
+                                    <div class="mt-1"><strong>🏗️ Class:</strong> <span x-text="result.detailed_info.class"></span></div>
+                                </template>
+
+                                <!-- Raw Result Display for Arrays -->
+                                <template x-if="result.raw_result && typeof result.raw_result === 'object' && result.raw_result !== null">
+                                    <div class="mt-3 pt-2 border-t border-gray-200">
+                                        <div class="mb-2"><strong>📋 Raw Response Data:</strong></div>
+                                        <div class="bg-gray-100 rounded p-2 font-mono text-xs overflow-x-auto">
+                                            <pre x-text="JSON.stringify(result.raw_result, null, 2)"></pre>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="!results.tracking || results.tracking.length === 0" class="text-center py-4 text-gray-500">
+                    <p class="text-sm">Clique em "Testar" para verificar os métodos</p>
+                </div>
+            </div>
+
+            <!-- User Management Module -->
+            <div class="bg-white rounded-lg card-shadow p-6 module-card">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">👥</span>
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-800">User Management Module</h3>
+                            <p class="text-sm text-gray-600">25 métodos disponíveis</p>
+                        </div>
+                    </div>
+                    <button
+                        @click="testModule('userManagement')"
+                        :disabled="testing"
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm disabled:opacity-50"
+                    >
+                        Testar
+                    </button>
+                </div>
+                <div x-show="results.userManagement && results.userManagement.length > 0" class="space-y-2">
+                    <template x-for="result in results.userManagement" :key="result.method">
+                        <div class="method-card border rounded-lg p-3 hover:bg-gray-50" x-data="{ expanded: false }">
+                            <div class="flex items-center justify-between mb-2">
+                                <code class="text-sm font-mono text-gray-700" x-text="result.method + '()'"></code>
+                                <div class="flex items-center gap-2">
+                                    <button x-show="result.success && result.detailed_info" @click="expanded = !expanded" class="text-blue-600 hover:text-blue-800 text-xs">
+                                        <span x-show="!expanded">📋 Details</span>
+                                        <span x-show="expanded">🔼 Hide</span>
+                                    </button>
+                                    <span x-show="result.success" class="text-green-600 text-lg">✅</span>
+                                    <span x-show="!result.success" class="text-red-600 text-lg">❌</span>
+                                </div>
+                            </div>
+                            <div x-show="result.success && result.result" class="text-xs text-gray-600 mt-1 mb-1" x-text="result.result"></div>
+                            <div x-show="result.error" class="text-xs text-red-600 mt-1 mb-1" x-text="result.error"></div>
+
+                            <!-- Detailed Info Section -->
+                            <div x-show="expanded && result.success && result.detailed_info" class="mt-2 p-2 bg-gray-50 rounded text-xs" x-transition>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <template x-if="result.detailed_info.id">
+                                        <div><strong>🆔 ID:</strong> <span x-text="result.detailed_info.id"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.data_id">
+                                        <div><strong>📦 Data ID:</strong> <span x-text="result.detailed_info.data_id"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.api_success">
+                                        <div><strong>✅ API Success:</strong> <span x-text="result.detailed_info.api_success"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.status">
+                                        <div><strong>📊 Status:</strong> <span x-text="result.detailed_info.status"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.operation">
+                                        <div><strong>⚙️ Operation:</strong> <span x-text="result.detailed_info.operation"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.return_type">
+                                        <div><strong>🔧 Type:</strong> <span x-text="result.detailed_info.return_type"></span></div>
+                                    </template>
+                                </div>
+                                <template x-if="result.detailed_info.message">
+                                    <div class="mt-1"><strong>💬 Message:</strong> <span x-text="result.detailed_info.message"></span></div>
+                                </template>
+                                <template x-if="result.detailed_info.keys && result.detailed_info.keys.length > 0">
+                                    <div class="mt-1"><strong>🔑 Keys:</strong> <span x-text="result.detailed_info.keys.join(', ')"></span></div>
+                                </template>
+                                <template x-if="result.detailed_info.class">
+                                    <div class="mt-1"><strong>🏗️ Class:</strong> <span x-text="result.detailed_info.class"></span></div>
+                                </template>
+
+                                <!-- Raw Result Display for Arrays -->
+                                <template x-if="result.raw_result && typeof result.raw_result === 'object' && result.raw_result !== null">
+                                    <div class="mt-3 pt-2 border-t border-gray-200">
+                                        <div class="mb-2"><strong>📋 Raw Response Data:</strong></div>
+                                        <div class="bg-gray-100 rounded p-2 font-mono text-xs overflow-x-auto">
+                                            <pre x-text="JSON.stringify(result.raw_result, null, 2)"></pre>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="!results.userManagement || results.userManagement.length === 0" class="text-center py-4 text-gray-500">
+                    <p class="text-sm">Clique em "Testar" para verificar os métodos</p>
+                </div>
+            </div>
+
+            <!-- Subscriptions Module -->
+            <div class="bg-white rounded-lg card-shadow p-6 module-card">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">🔄</span>
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-800">Subscriptions Module</h3>
+                            <p class="text-sm text-gray-600">22 métodos disponíveis</p>
+                        </div>
+                    </div>
+                    <button
+                        @click="testModule('subscriptions')"
+                        :disabled="testing"
+                        class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm disabled:opacity-50"
+                    >
+                        Testar
+                    </button>
+                </div>
+                <div x-show="results.subscriptions && results.subscriptions.length > 0" class="space-y-2">
+                    <template x-for="result in results.subscriptions" :key="result.method">
+                        <div class="method-card border rounded-lg p-3 hover:bg-gray-50" x-data="{ expanded: false }">
+                            <div class="flex items-center justify-between mb-2">
+                                <code class="text-sm font-mono text-gray-700" x-text="result.method + '()'"></code>
+                                <div class="flex items-center gap-2">
+                                    <button x-show="result.success && result.detailed_info" @click="expanded = !expanded" class="text-blue-600 hover:text-blue-800 text-xs">
+                                        <span x-show="!expanded">📋 Details</span>
+                                        <span x-show="expanded">🔼 Hide</span>
+                                    </button>
+                                    <span x-show="result.success" class="text-green-600 text-lg">✅</span>
+                                    <span x-show="!result.success" class="text-red-600 text-lg">❌</span>
+                                </div>
+                            </div>
+                            <div x-show="result.success && result.result" class="text-xs text-gray-600 mt-1 mb-1" x-text="result.result"></div>
+                            <div x-show="result.error" class="text-xs text-red-600 mt-1 mb-1" x-text="result.error"></div>
+
+                            <!-- Detailed Info Section -->
+                            <div x-show="expanded && result.success && result.detailed_info" class="mt-2 p-2 bg-gray-50 rounded text-xs" x-transition>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <template x-if="result.detailed_info.id">
+                                        <div><strong>🆔 ID:</strong> <span x-text="result.detailed_info.id"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.data_id">
+                                        <div><strong>📦 Data ID:</strong> <span x-text="result.detailed_info.data_id"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.api_success">
+                                        <div><strong>✅ API Success:</strong> <span x-text="result.detailed_info.api_success"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.status">
+                                        <div><strong>📊 Status:</strong> <span x-text="result.detailed_info.status"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.operation">
+                                        <div><strong>⚙️ Operation:</strong> <span x-text="result.detailed_info.operation"></span></div>
+                                    </template>
+                                    <template x-if="result.detailed_info.return_type">
+                                        <div><strong>🔧 Type:</strong> <span x-text="result.detailed_info.return_type"></span></div>
+                                    </template>
+                                </div>
+                                <template x-if="result.detailed_info.message">
+                                    <div class="mt-1"><strong>💬 Message:</strong> <span x-text="result.detailed_info.message"></span></div>
+                                </template>
+                                <template x-if="result.detailed_info.keys && result.detailed_info.keys.length > 0">
+                                    <div class="mt-1"><strong>🔑 Keys:</strong> <span x-text="result.detailed_info.keys.join(', ')"></span></div>
+                                </template>
+                                <template x-if="result.detailed_info.class">
+                                    <div class="mt-1"><strong>🏗️ Class:</strong> <span x-text="result.detailed_info.class"></span></div>
+                                </template>
+
+                                <!-- Raw Result Display for Arrays -->
+                                <template x-if="result.raw_result && typeof result.raw_result === 'object' && result.raw_result !== null">
+                                    <div class="mt-3 pt-2 border-t border-gray-200">
+                                        <div class="mb-2"><strong>📋 Raw Response Data:</strong></div>
+                                        <div class="bg-gray-100 rounded p-2 font-mono text-xs overflow-x-auto">
+                                            <pre x-text="JSON.stringify(result.raw_result, null, 2)"></pre>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="!results.subscriptions || results.subscriptions.length === 0" class="text-center py-4 text-gray-500">
+                    <p class="text-sm">Clique em "Testar" para verificar os métodos</p>
+                </div>
+            </div>
         </div>
 
         <!-- Error Report -->

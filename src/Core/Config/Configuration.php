@@ -69,10 +69,20 @@ class Configuration implements ConfigurationInterface
 
     public function getBaseUrl(): string
     {
-        $customUrl = $this->get('endpoints.base_url');
+        // Try multiple configuration paths for flexibility
+        $customUrl = $this->get('endpoints.base_url')
+                  ?? $this->get('api.base_url')
+                  ?? $this->get('base_url');
 
         if ($customUrl) {
-            return rtrim($customUrl, '/');
+            $normalizedUrl = rtrim($customUrl, '/');
+
+            // If custom URL doesn't include /api/v1, add it
+            if (!str_ends_with($normalizedUrl, '/api/v1')) {
+                $normalizedUrl .= '/api/v1';
+            }
+
+            return $normalizedUrl;
         }
 
         $environment = Environment::from($this->getEnvironment());

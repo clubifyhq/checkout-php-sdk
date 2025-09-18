@@ -289,7 +289,7 @@ class PasskeyService
             'challenge' => $challenge,
             'rp' => [
                 'name' => 'Clubify Checkout',
-                'id' => parse_url($this->config->get('base_url', 'localhost'), PHP_URL_HOST),
+                'id' => parse_url($this->config->getBaseUrl(), PHP_URL_HOST) ?: 'localhost',
             ],
             'user' => [
                 'id' => base64_encode($userId),

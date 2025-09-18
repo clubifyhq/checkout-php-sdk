@@ -8,17 +8,14 @@ use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
-
 // Services
 use Clubify\Checkout\Modules\Payments\Services\PaymentService;
 use Clubify\Checkout\Modules\Payments\Services\CardService;
 use Clubify\Checkout\Modules\Payments\Services\GatewayService;
 use Clubify\Checkout\Modules\Payments\Services\TokenizationService;
-
 // Repositories
 use Clubify\Checkout\Modules\Payments\Repositories\ApiPaymentRepository;
 use Clubify\Checkout\Modules\Payments\Repositories\ApiCardRepository;
-
 // Utils
 use ClubifyCheckout\Utils\Validators\CreditCardValidator;
 use ClubifyCheckout\Utils\Formatters\CurrencyFormatter;
@@ -86,7 +83,8 @@ class PaymentsServiceFactory implements FactoryInterface
         private Client $httpClient,
         private CacheManagerInterface $cache,
         private EventDispatcherInterface $eventDispatcher
-    ) {}
+    ) {
+    }
 
     /**
      * Create service by type with dependency injection

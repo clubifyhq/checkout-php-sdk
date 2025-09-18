@@ -85,13 +85,13 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
     /**
      * Find order by specific field
      */
-    public function findBy{Field}(string $fieldValue): ?array
+    public function findByEmail(string $fieldValue): ?array
     {
         return $this->getCachedOrExecute(
-            $this->getCacheKey("order:{field}:{$fieldValue}"),
+            $this->getCacheKey("order:email:{$fieldValue}"),
             function () use ($fieldValue) {
                 $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
-                    '{field}' => $fieldValue
+                    'email' => $fieldValue
                 ]);
 
                 if (!$response->isSuccessful()) {
@@ -99,7 +99,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find order by {field}: " . $response->getError(),
+                        "Failed to find order by email: " . $response->getError(),
                         $response->getStatusCode()
                     );
                 }

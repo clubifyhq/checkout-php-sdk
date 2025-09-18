@@ -49,7 +49,7 @@ interface OrderRepositoryInterface extends RepositoryInterface
      * @return array|null Order data or null if not found
      * @throws \Exception When search fails
      */
-    public function findBy{Field}(string $fieldValue): ?array;
+    public function findByEmail(string $fieldValue): ?array;
 
     /**
      * Find orders by tenant (multi-tenant pattern)

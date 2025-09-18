@@ -32,11 +32,6 @@ use Mockery\MockInterface;
 class ApiUserRepositoryTest extends TestCase
 {
     private ApiUserRepository $repository;
-    private MockInterface $config;
-    private MockInterface $logger;
-    private MockInterface $httpClient;
-    private MockInterface $cache;
-    private MockInterface $eventDispatcher;
 
     protected function setUp(): void
     {

@@ -30,7 +30,6 @@ use Mockery;
  */
 class OrdersIntegrationTest extends TestCase
 {
-    private ClubifyCheckoutSDK $sdk;
     private OrdersModule $ordersModule;
     private PaymentsModule $paymentsModule;
     private CustomersModule $customersModule;
@@ -248,7 +247,7 @@ class OrdersIntegrationTest extends TestCase
         $this->assertCount(2, $order['items']);
 
         // Verifica cálculos
-        $itemsTotal = array_sum(array_map(function($item) {
+        $itemsTotal = array_sum(array_map(function ($item) {
             return $item['price'] * $item['quantity'];
         }, $order['items']));
 

@@ -9,14 +9,12 @@ use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
 use Clubify\Checkout\ClubifyCheckoutSDK;
-
 // Services
 use Clubify\Checkout\Modules\Subscriptions\Services\SubscriptionService;
 use Clubify\Checkout\Modules\Subscriptions\Services\SubscriptionPlanService;
 use Clubify\Checkout\Modules\Subscriptions\Services\BillingService;
 use Clubify\Checkout\Modules\Subscriptions\Services\SubscriptionMetricsService;
 use Clubify\Checkout\Modules\Subscriptions\Services\SubscriptionLifecycleService;
-
 // Repositories
 use Clubify\Checkout\Modules\Subscriptions\Repositories\ApiSubscriptionRepository;
 
@@ -75,7 +73,8 @@ class SubscriptionsServiceFactory implements FactoryInterface
         private CacheManagerInterface $cache,
         private EventDispatcherInterface $eventDispatcher,
         private ClubifyCheckoutSDK $sdk
-    ) {}
+    ) {
+    }
 
     /**
      * Create service by type with dependency injection

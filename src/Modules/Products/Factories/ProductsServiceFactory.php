@@ -8,7 +8,6 @@ use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
-
 // Services
 use Clubify\Checkout\Modules\Products\Services\ProductService;
 use Clubify\Checkout\Modules\Products\Services\OfferService;
@@ -18,7 +17,6 @@ use Clubify\Checkout\Modules\Products\Services\ThemeService;
 use Clubify\Checkout\Modules\Products\Services\OrderBumpService;
 use Clubify\Checkout\Modules\Products\Services\PricingService;
 use Clubify\Checkout\Modules\Products\Services\UpsellService;
-
 // Repositories
 use Clubify\Checkout\Modules\Products\Repositories\ApiProductRepository;
 
@@ -79,7 +77,8 @@ class ProductsServiceFactory implements FactoryInterface
         private Client $httpClient,
         private CacheManagerInterface $cache,
         private EventDispatcherInterface $eventDispatcher
-    ) {}
+    ) {
+    }
 
     /**
      * Create service by type with dependency injection

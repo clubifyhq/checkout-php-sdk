@@ -27,7 +27,6 @@ use Clubify\Checkout\Modules\UserManagement\Exceptions\UserValidationException;
  */
 class UserManagementIntegrationTest extends TestCase
 {
-    private ClubifyCheckoutSDK $sdk;
     private UserManagementModule $userManagement;
 
     protected function setUp(): void

@@ -85,13 +85,13 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     /**
      * Find track by specific field
      */
-    public function findBy{Field}(string $fieldValue): ?array
+    public function findByEmail(string $fieldValue): ?array
     {
         return $this->getCachedOrExecute(
-            $this->getCacheKey("track:{field}:{$fieldValue}"),
+            $this->getCacheKey("track:email:{$fieldValue}"),
             function () use ($fieldValue) {
                 $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
-                    '{field}' => $fieldValue
+                    'email' => $fieldValue
                 ]);
 
                 if (!$response->isSuccessful()) {
@@ -99,7 +99,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find track by {field}: " . $response->getError(),
+                        "Failed to find track by email: " . $response->getError(),
                         $response->getStatusCode()
                     );
                 }

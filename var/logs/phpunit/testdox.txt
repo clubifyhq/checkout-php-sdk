@@ -1,0 +1,200 @@
+Api User Repository (Clubify\Checkout\Tests\Unit\UserManagement\Repositories\ApiUserRepository)
+ [ ] Implements user repository interface
+ [ ] Get endpoint
+ [ ] Get resource name
+ [ ] Find by email success
+ [ ] Find by email not found
+ [ ] Find by email uses cache
+ [ ] Find by tenant
+ [ ] Update profile success
+ [ ] Update profile http error
+ [ ] Change password success
+ [ ] Change password failure
+ [ ] Activate user
+ [ ] Deactivate user
+ [ ] Get user roles
+ [ ] Assign role
+ [ ] Remove role
+ [ ] Find active by tenant
+ [ ] Is email taken true
+ [ ] Is email taken false
+ [ ] Is email taken excluding user
+ [ ] Perform health check success
+ [ ] Perform health check failure
+
+Order Data (Clubify\Checkout\Tests\Unit\Orders\OrderData)
+ [ ] It can be created with valid data
+ [ ] It validates required fields
+ [ ] It validates status values
+ [ ] It validates minimum items
+ [ ] It validates total against items
+ [ ] It can be created from array
+ [ ] It converts to array correctly
+ [ ] It converts to safe array without sensitive data
+ [ ] It calculates total correctly
+ [ ] It checks status correctly
+ [ ] It validates business rules
+ [ ] It handles different currencies
+ [ ] It handles discount calculations
+ [ ] It formats currency display
+ [ ] It handles shipping calculations
+
+Order Service (Clubify\Checkout\Tests\Unit\Orders\OrderService)
+ [ ] It can be instantiated
+ [ ] It can create order successfully
+ [ ] It validates order data before creation
+ [ ] It can get order from cache
+ [ ] It can get order from api when not cached
+ [ ] It returns null when order not found
+ [ ] It can update order
+ [ ] It can delete order
+ [ ] It can list orders with filters
+ [ ] It can bulk update orders
+ [ ] It validates order data
+ [ ] It performs health check
+ [ ] It handles api errors gracefully
+ [ ] It calculates metrics correctly
+ [ ] It handles cache failures gracefully
+ [ ] It handles concurrent access properly
+
+Orders Module (Clubify\Checkout\Tests\Unit\Orders\OrdersModule)
+ [ ] It can be instantiated
+ [ ] It can be initialized
+ [ ] It returns correct dependencies
+ [ ] It returns module status
+ [ ] It throws exception when not initialized
+ [ ] It can create order
+ [ ] It can get order
+ [ ] It can update order
+ [ ] It can list orders
+ [ ] It can update order status
+ [ ] It can cancel order
+ [ ] It can get order history
+ [ ] It can process upsell
+ [ ] It can get analytics
+ [ ] It can get revenue statistics
+ [ ] It performs health check
+ [ ] It can bulk update orders
+ [ ] It can cleanup properly
+ [ ] It returns stats
+ [ ] It handles invalid operations gracefully
+ [ ] It validates order data
+
+Subscriptions Module (Clubify\Checkout\Tests\Unit\Subscriptions\SubscriptionsModule)
+ [ ] It can be instantiated
+ [ ] It can be initialized
+ [ ] It returns correct dependencies
+ [ ] It throws exception when not initialized
+ [ ] It can create subscription
+ [ ] It can get subscription
+ [ ] It can list subscriptions
+ [ ] It can pause subscription
+ [ ] It can resume subscription
+ [ ] It can cancel subscription
+ [ ] It can upgrade subscription
+ [ ] It can downgrade subscription
+ [ ] It can create subscription plan
+ [ ] It can get subscription plan
+ [ ] It can list subscription plans
+ [ ] It can process billing
+ [ ] It can retry failed billing
+ [ ] It can get subscription metrics
+ [ ] It can get churn analysis
+ [ ] It can get revenue forecast
+ [ ] It performs health check
+ [ ] It returns module status
+ [ ] It can cleanup properly
+ [ ] It handles bulk operations
+
+User Management Integration (Clubify\Checkout\Tests\Integration\UserManagementIntegration)
+ [ ] Full user lifecycle integration
+ [ ] Dependency injection integration
+ [ ] Module health and metrics
+ [ ] Error handling integration
+ [ ] Validation error integration
+ [ ] Cache integration flow
+ [ ] Lazy loading integration
+ [ ] Factory singleton behavior
+ [ ] Factory stats
+ [ ] Module cleanup integration
+ [ ] S d k user management integration
+
+User Management Module (Clubify\Checkout\Tests\Unit\UserManagement\UserManagementModule)
+ [ ] Implements module interface
+ [ ] Get name
+ [ ] Get version
+ [ ] Get dependencies
+ [ ] Is initialized before initialization
+ [ ] Initialize
+ [ ] Is available after initialization
+ [ ] Is available before initialization
+ [ ] Get status
+ [ ] Cleanup
+ [ ] Is healthy when initialized and service healthy
+ [ ] Is healthy when not initialized
+ [ ] Is healthy when service unhealthy
+ [ ] Is healthy with exception
+ [ ] Get stats
+ [ ] Create user
+ [ ] Create user requires initialization
+ [ ] Get user
+ [ ] Update user
+ [ ] Delete user
+ [ ] List users
+ [ ] Update user profile
+ [ ] Get user roles
+ [ ] Find user by email
+ [ ] Change password
+ [ ] Activate user
+ [ ] Deactivate user
+ [ ] Lazy loading of factory
+ [ ] Lazy loading of user service
+
+User Service (Clubify\Checkout\Tests\Unit\UserManagement\Services\UserService)
+ [ ] Implements service interface
+ [ ] Get name
+ [ ] Get version
+ [ ] Is healthy success
+ [ ] Is healthy failure
+ [ ] Get metrics
+ [ ] Create user success
+ [ ] Create user duplicate email
+ [ ] Create user validation error
+ [ ] Get user success
+ [ ] Get user not found
+ [ ] Update user success
+ [ ] Update user not found
+ [ ] Update user email taken
+ [ ] Delete user success
+ [ ] Delete user not found
+ [ ] List users success
+ [ ] Update user profile success
+ [ ] Get user roles success
+ [ ] Find user by email success
+ [ ] Find user by email not found
+ [ ] Change password success
+ [ ] Activate user success
+ [ ] Deactivate user success
+ [ ] Get config
+ [ ] Is available
+ [ ] Get status
+
+User Service Factory (Clubify\Checkout\Tests\Unit\UserManagement\Factories\UserServiceFactory)
+ [ ] Implements factory interface
+ [ ] Get supported types
+ [ ] Create user service success
+ [ ] Create user service singleton
+ [ ] Create user service with config
+ [ ] Create unsupported service type
+ [ ] Create invalid service type
+ [ ] Is type supported
+ [ ] Clear cache
+ [ ] Get stats
+ [ ] Get stats empty cache
+ [ ] Repository singleton
+ [ ] Create with dependency injection
+ [ ] Resolve repository class for user
+ [ ] Resolve repository class for unsupported type
+ [ ] Resolve repository class for invalid type
+ [ ] Create repository with all dependencies
+

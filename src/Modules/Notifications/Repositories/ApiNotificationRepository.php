@@ -85,13 +85,13 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
     /**
      * Find notification by specific field
      */
-    public function findBy{Field}(string $fieldValue): ?array
+    public function findByEmail(string $fieldValue): ?array
     {
         return $this->getCachedOrExecute(
-            $this->getCacheKey("notification:{field}:{$fieldValue}"),
+            $this->getCacheKey("notification:email:{$fieldValue}"),
             function () use ($fieldValue) {
                 $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
-                    '{field}' => $fieldValue
+                    'email' => $fieldValue
                 ]);
 
                 if (!$response->isSuccessful()) {
@@ -99,7 +99,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find notification by {field}: " . $response->getError(),
+                        "Failed to find notification by email: " . $response->getError(),
                         $response->getStatusCode()
                     );
                 }

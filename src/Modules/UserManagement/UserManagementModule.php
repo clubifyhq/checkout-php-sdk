@@ -42,7 +42,7 @@ class UserManagementModule implements ModuleInterface
     public function __construct(
         private ClubifyCheckoutSDK $sdk
     ) {
-        
+
     }
 
     /**

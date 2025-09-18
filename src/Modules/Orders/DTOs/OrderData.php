@@ -400,13 +400,6 @@ class OrderData extends BaseData
         return $this->status_history ?? [];
     }
 
-    /**
-     * Obtém metadados
-     */
-    public function getMetadata(): array
-    {
-        return $this->metadata ?? [];
-    }
 
     /**
      * Obtém metadado específico

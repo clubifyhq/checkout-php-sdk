@@ -85,13 +85,13 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     /**
      * Find customer by specific field
      */
-    public function findBy{Field}(string $fieldValue): ?array
+    public function findByEmail(string $fieldValue): ?array
     {
         return $this->getCachedOrExecute(
-            $this->getCacheKey("customer:{field}:{$fieldValue}"),
+            $this->getCacheKey("customer:email:{$fieldValue}"),
             function () use ($fieldValue) {
                 $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
-                    '{field}' => $fieldValue
+                    'email' => $fieldValue
                 ]);
 
                 if (!$response->isSuccessful()) {
@@ -99,7 +99,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find customer by {field}: " . $response->getError(),
+                        "Failed to find customer by email: " . $response->getError(),
                         $response->getStatusCode()
                     );
                 }

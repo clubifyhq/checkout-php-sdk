@@ -8,13 +8,11 @@ use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
-
 // Services
 use Clubify\Checkout\Modules\Orders\Services\OrderService;
 use Clubify\Checkout\Modules\Orders\Services\OrderStatusService;
 use Clubify\Checkout\Modules\Orders\Services\UpsellOrderService;
 use Clubify\Checkout\Modules\Orders\Services\OrderAnalyticsService;
-
 // Repositories
 use Clubify\Checkout\Modules\Orders\Repositories\ApiOrderRepository;
 
@@ -71,7 +69,8 @@ class OrdersServiceFactory implements FactoryInterface
         private Client $httpClient,
         private CacheManagerInterface $cache,
         private EventDispatcherInterface $eventDispatcher
-    ) {}
+    ) {
+    }
 
     /**
      * Create service by type with dependency injection

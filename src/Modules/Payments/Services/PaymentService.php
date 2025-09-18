@@ -733,13 +733,13 @@ class PaymentService extends BaseService implements ServiceInterface
             'version' => $this->getVersion(),
             'available_gateways' => count($this->gateways),
             'circuit_breaker_states' => array_map(
-                fn($cb) => $cb['state'],
+                fn ($cb) => $cb['state'],
                 $this->circuitBreaker
             ),
             'total_gateways' => count($this->gateways),
             'healthy_gateways' => count(array_filter(
                 array_keys($this->gateways),
-                fn($name) => $this->isGatewayAvailable($name)
+                fn ($name) => $this->isGatewayAvailable($name)
             )),
             'memory_usage' => memory_get_usage(true),
             'timestamp' => time()
@@ -755,7 +755,7 @@ class PaymentService extends BaseService implements ServiceInterface
             'retry_config' => $this->retryConfig,
             'registered_gateways' => array_keys($this->gateways),
             'circuit_breaker_config' => array_map(
-                fn($cb) => [
+                fn ($cb) => [
                     'state' => $cb['state'],
                     'threshold' => $cb['threshold'],
                     'timeout' => $cb['timeout'],

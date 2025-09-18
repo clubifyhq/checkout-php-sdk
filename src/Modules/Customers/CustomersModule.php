@@ -105,57 +105,9 @@ class CustomersModule implements ModuleInterface
         return $this->initialized;
     }
 
-    /**
-     * Obtém o status do módulo
-     */
-    public function getStatus(): array
-    {
-        return [
-            'name' => $this->getName(),
-            'version' => $this->getVersion(),
-            'initialized' => $this->initialized,
-            'available' => $this->isAvailable(),
-            'timestamp' => time()
-        ];
-    }
 
-    /**
-     * Cleanup do módulo
-     */
-    public function cleanup(): void
-    {
-        $this->initialized = false;
-        $this->logger?->info('Customers module cleaned up');
-    }
 
-    /**
-     * Verifica se o módulo está saudável
-     */
-    public function isHealthy(): bool
-    {
-        try {
-            return $this->initialized;
-        } catch (\Exception $e) {
-            $this->logger?->error('CustomersModule health check failed', [
-                'error' => $e->getMessage()
-            ]);
-            return false;
-        }
-    }
 
-    /**
-     * Obtém estatísticas do módulo
-     */
-    public function getStats(): array
-    {
-        return [
-            'module' => $this->getName(),
-            'version' => $this->getVersion(),
-            'initialized' => $this->initialized,
-            'healthy' => $this->isHealthy(),
-            'timestamp' => time()
-        ];
-    }
 
     /**
      * Cria um novo cliente

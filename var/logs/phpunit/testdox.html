@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <title>Test Documentation</title>
+        <style>
+            body {
+                text-rendering: optimizeLegibility;
+                font-family: Source SansSerif Pro, Arial, sans-serif;
+                font-variant-ligatures: common-ligatures;
+                font-kerning: normal;
+                margin-left: 2rem;
+                background-color: #fff;
+                color: #000;
+            }
+
+            body > ul > li {
+                font-size: larger;
+            }
+
+            h2 {
+                font-size: larger;
+                text-decoration-line: underline;
+                text-decoration-thickness: 2px;
+                margin: 0;
+                padding: 0.5rem 0;
+            }
+
+            ul {
+                list-style: none;
+                margin: 0 0 2rem;
+                padding: 0 0 0 1rem;
+                text-indent: -1rem;
+            }
+
+            .success:before {
+                color: #4e9a06;
+                content: '✓';
+                padding-right: 0.5rem;
+            }
+
+            .defect {
+                color: #a40000;
+            }
+
+            .defect:before {
+                color: #a40000;
+                content: '✗';
+                padding-right: 0.5rem;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>Api User Repository (Clubify\Checkout\Tests\Unit\UserManagement\Repositories\ApiUserRepository)</h2>
+        <ul>
+            <li class="defect">Implements user repository interface</li>
+            <li class="defect">Get endpoint</li>
+            <li class="defect">Get resource name</li>
+            <li class="defect">Find by email success</li>
+            <li class="defect">Find by email not found</li>
+            <li class="defect">Find by email uses cache</li>
+            <li class="defect">Find by tenant</li>
+            <li class="defect">Update profile success</li>
+            <li class="defect">Update profile http error</li>
+            <li class="defect">Change password success</li>
+            <li class="defect">Change password failure</li>
+            <li class="defect">Activate user</li>
+            <li class="defect">Deactivate user</li>
+            <li class="defect">Get user roles</li>
+            <li class="defect">Assign role</li>
+            <li class="defect">Remove role</li>
+            <li class="defect">Find active by tenant</li>
+            <li class="defect">Is email taken true</li>
+            <li class="defect">Is email taken false</li>
+            <li class="defect">Is email taken excluding user</li>
+            <li class="defect">Perform health check success</li>
+            <li class="defect">Perform health check failure</li>
+        </ul>
+        <h2>Order Data (Clubify\Checkout\Tests\Unit\Orders\OrderData)</h2>
+        <ul>
+            <li class="defect">It can be created with valid data</li>
+            <li class="defect">It validates required fields</li>
+            <li class="defect">It validates status values</li>
+            <li class="defect">It validates minimum items</li>
+            <li class="defect">It validates total against items</li>
+            <li class="defect">It can be created from array</li>
+            <li class="defect">It converts to array correctly</li>
+            <li class="defect">It converts to safe array without sensitive data</li>
+            <li class="defect">It calculates total correctly</li>
+            <li class="defect">It checks status correctly</li>
+            <li class="defect">It validates business rules</li>
+            <li class="defect">It handles different currencies</li>
+            <li class="defect">It handles discount calculations</li>
+            <li class="defect">It formats currency display</li>
+            <li class="defect">It handles shipping calculations</li>
+        </ul>
+        <h2>Order Service (Clubify\Checkout\Tests\Unit\Orders\OrderService)</h2>
+        <ul>
+            <li class="defect">It can be instantiated</li>
+            <li class="defect">It can create order successfully</li>
+            <li class="defect">It validates order data before creation</li>
+            <li class="defect">It can get order from cache</li>
+            <li class="defect">It can get order from api when not cached</li>
+            <li class="defect">It returns null when order not found</li>
+            <li class="defect">It can update order</li>
+            <li class="defect">It can delete order</li>
+            <li class="defect">It can list orders with filters</li>
+            <li class="defect">It can bulk update orders</li>
+            <li class="defect">It validates order data</li>
+            <li class="defect">It performs health check</li>
+            <li class="defect">It handles api errors gracefully</li>
+            <li class="defect">It calculates metrics correctly</li>
+            <li class="defect">It handles cache failures gracefully</li>
+            <li class="defect">It handles concurrent access properly</li>
+        </ul>
+        <h2>Orders Module (Clubify\Checkout\Tests\Unit\Orders\OrdersModule)</h2>
+        <ul>
+            <li class="defect">It can be instantiated</li>
+            <li class="defect">It can be initialized</li>
+            <li class="defect">It returns correct dependencies</li>
+            <li class="defect">It returns module status</li>
+            <li class="defect">It throws exception when not initialized</li>
+            <li class="defect">It can create order</li>
+            <li class="defect">It can get order</li>
+            <li class="defect">It can update order</li>
+            <li class="defect">It can list orders</li>
+            <li class="defect">It can update order status</li>
+            <li class="defect">It can cancel order</li>
+            <li class="defect">It can get order history</li>
+            <li class="defect">It can process upsell</li>
+            <li class="defect">It can get analytics</li>
+            <li class="defect">It can get revenue statistics</li>
+            <li class="defect">It performs health check</li>
+            <li class="defect">It can bulk update orders</li>
+            <li class="defect">It can cleanup properly</li>
+            <li class="defect">It returns stats</li>
+            <li class="defect">It handles invalid operations gracefully</li>
+            <li class="defect">It validates order data</li>
+        </ul>
+        <h2>Subscriptions Module (Clubify\Checkout\Tests\Unit\Subscriptions\SubscriptionsModule)</h2>
+        <ul>
+            <li class="defect">It can be instantiated</li>
+            <li class="defect">It can be initialized</li>
+            <li class="defect">It returns correct dependencies</li>
+            <li class="defect">It throws exception when not initialized</li>
+            <li class="defect">It can create subscription</li>
+            <li class="defect">It can get subscription</li>
+            <li class="defect">It can list subscriptions</li>
+            <li class="defect">It can pause subscription</li>
+            <li class="defect">It can resume subscription</li>
+            <li class="defect">It can cancel subscription</li>
+            <li class="defect">It can upgrade subscription</li>
+            <li class="defect">It can downgrade subscription</li>
+            <li class="defect">It can create subscription plan</li>
+            <li class="defect">It can get subscription plan</li>
+            <li class="defect">It can list subscription plans</li>
+            <li class="defect">It can process billing</li>
+            <li class="defect">It can retry failed billing</li>
+            <li class="defect">It can get subscription metrics</li>
+            <li class="defect">It can get churn analysis</li>
+            <li class="defect">It can get revenue forecast</li>
+            <li class="defect">It performs health check</li>
+            <li class="defect">It returns module status</li>
+            <li class="defect">It can cleanup properly</li>
+            <li class="defect">It handles bulk operations</li>
+        </ul>
+        <h2>User Management Integration (Clubify\Checkout\Tests\Integration\UserManagementIntegration)</h2>
+        <ul>
+            <li class="defect">Full user lifecycle integration</li>
+            <li class="defect">Dependency injection integration</li>
+            <li class="defect">Module health and metrics</li>
+            <li class="defect">Error handling integration</li>
+            <li class="defect">Validation error integration</li>
+            <li class="defect">Cache integration flow</li>
+            <li class="defect">Lazy loading integration</li>
+            <li class="defect">Factory singleton behavior</li>
+            <li class="defect">Factory stats</li>
+            <li class="defect">Module cleanup integration</li>
+            <li class="defect">S d k user management integration</li>
+        </ul>
+        <h2>User Management Module (Clubify\Checkout\Tests\Unit\UserManagement\UserManagementModule)</h2>
+        <ul>
+            <li class="defect">Implements module interface</li>
+            <li class="defect">Get name</li>
+            <li class="defect">Get version</li>
+            <li class="defect">Get dependencies</li>
+            <li class="defect">Is initialized before initialization</li>
+            <li class="defect">Initialize</li>
+            <li class="defect">Is available after initialization</li>
+            <li class="defect">Is available before initialization</li>
+            <li class="defect">Get status</li>
+            <li class="defect">Cleanup</li>
+            <li class="defect">Is healthy when initialized and service healthy</li>
+            <li class="defect">Is healthy when not initialized</li>
+            <li class="defect">Is healthy when service unhealthy</li>
+            <li class="defect">Is healthy with exception</li>
+            <li class="defect">Get stats</li>
+            <li class="defect">Create user</li>
+            <li class="defect">Create user requires initialization</li>
+            <li class="defect">Get user</li>
+            <li class="defect">Update user</li>
+            <li class="defect">Delete user</li>
+            <li class="defect">List users</li>
+            <li class="defect">Update user profile</li>
+            <li class="defect">Get user roles</li>
+            <li class="defect">Find user by email</li>
+            <li class="defect">Change password</li>
+            <li class="defect">Activate user</li>
+            <li class="defect">Deactivate user</li>
+            <li class="defect">Lazy loading of factory</li>
+            <li class="defect">Lazy loading of user service</li>
+        </ul>
+        <h2>User Service (Clubify\Checkout\Tests\Unit\UserManagement\Services\UserService)</h2>
+        <ul>
+            <li class="defect">Implements service interface</li>
+            <li class="defect">Get name</li>
+            <li class="defect">Get version</li>
+            <li class="defect">Is healthy success</li>
+            <li class="defect">Is healthy failure</li>
+            <li class="defect">Get metrics</li>
+            <li class="defect">Create user success</li>
+            <li class="defect">Create user duplicate email</li>
+            <li class="defect">Create user validation error</li>
+            <li class="defect">Get user success</li>
+            <li class="defect">Get user not found</li>
+            <li class="defect">Update user success</li>
+            <li class="defect">Update user not found</li>
+            <li class="defect">Update user email taken</li>
+            <li class="defect">Delete user success</li>
+            <li class="defect">Delete user not found</li>
+            <li class="defect">List users success</li>
+            <li class="defect">Update user profile success</li>
+            <li class="defect">Get user roles success</li>
+            <li class="defect">Find user by email success</li>
+            <li class="defect">Find user by email not found</li>
+            <li class="defect">Change password success</li>
+            <li class="defect">Activate user success</li>
+            <li class="defect">Deactivate user success</li>
+            <li class="defect">Get config</li>
+            <li class="defect">Is available</li>
+            <li class="defect">Get status</li>
+        </ul>
+        <h2>User Service Factory (Clubify\Checkout\Tests\Unit\UserManagement\Factories\UserServiceFactory)</h2>
+        <ul>
+            <li class="defect">Implements factory interface</li>
+            <li class="defect">Get supported types</li>
+            <li class="defect">Create user service success</li>
+            <li class="defect">Create user service singleton</li>
+            <li class="defect">Create user service with config</li>
+            <li class="defect">Create unsupported service type</li>
+            <li class="defect">Create invalid service type</li>
+            <li class="defect">Is type supported</li>
+            <li class="defect">Clear cache</li>
+            <li class="defect">Get stats</li>
+            <li class="defect">Get stats empty cache</li>
+            <li class="defect">Repository singleton</li>
+            <li class="defect">Create with dependency injection</li>
+            <li class="defect">Resolve repository class for user</li>
+            <li class="defect">Resolve repository class for unsupported type</li>
+            <li class="defect">Resolve repository class for invalid type</li>
+            <li class="defect">Create repository with all dependencies</li>
+        </ul>
+    </body>
+</html>

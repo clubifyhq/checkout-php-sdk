@@ -85,13 +85,13 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
     /**
      * Find product by specific field
      */
-    public function findBy{Field}(string $fieldValue): ?array
+    public function findByEmail(string $fieldValue): ?array
     {
         return $this->getCachedOrExecute(
-            $this->getCacheKey("product:{field}:{$fieldValue}"),
+            $this->getCacheKey("product:email:{$fieldValue}"),
             function () use ($fieldValue) {
                 $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
-                    '{field}' => $fieldValue
+                    'email' => $fieldValue
                 ]);
 
                 if (!$response->isSuccessful()) {
@@ -99,7 +99,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find product by {field}: " . $response->getError(),
+                        "Failed to find product by email: " . $response->getError(),
                         $response->getStatusCode()
                     );
                 }

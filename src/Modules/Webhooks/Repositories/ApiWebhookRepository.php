@@ -85,13 +85,13 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     /**
      * Find webhook by specific field
      */
-    public function findBy{Field}(string $fieldValue): ?array
+    public function findByEmail(string $fieldValue): ?array
     {
         return $this->getCachedOrExecute(
-            $this->getCacheKey("webhook:{field}:{$fieldValue}"),
+            $this->getCacheKey("webhook:email:{$fieldValue}"),
             function () use ($fieldValue) {
                 $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
-                    '{field}' => $fieldValue
+                    'email' => $fieldValue
                 ]);
 
                 if (!$response->isSuccessful()) {
@@ -99,7 +99,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find webhook by {field}: " . $response->getError(),
+                        "Failed to find webhook by email: " . $response->getError(),
                         $response->getStatusCode()
                     );
                 }

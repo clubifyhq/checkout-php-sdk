@@ -26,7 +26,8 @@ class UserService implements ServiceInterface
     public function __construct(
         private UserRepositoryInterface $repository,
         private Logger $logger
-    ) {}
+    ) {
+    }
 
     /**
      * Obtém o nome do serviço

@@ -8,14 +8,12 @@ use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
-
 // Services
 use Clubify\Checkout\Modules\Webhooks\Services\WebhookService;
 use Clubify\Checkout\Modules\Webhooks\Services\ConfigService;
 use Clubify\Checkout\Modules\Webhooks\Services\DeliveryService;
 use Clubify\Checkout\Modules\Webhooks\Services\RetryService;
 use Clubify\Checkout\Modules\Webhooks\Services\TestingService;
-
 // Repositories
 use Clubify\Checkout\Modules\Webhooks\Repositories\ApiWebhookRepository;
 
@@ -73,7 +71,8 @@ class WebhooksServiceFactory implements FactoryInterface
         private Client $httpClient,
         private CacheManagerInterface $cache,
         private EventDispatcherInterface $eventDispatcher
-    ) {}
+    ) {
+    }
 
     /**
      * Create service by type with dependency injection

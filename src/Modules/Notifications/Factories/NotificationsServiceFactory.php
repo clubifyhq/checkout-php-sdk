@@ -9,7 +9,6 @@ use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
 use Clubify\Checkout\ClubifyCheckoutSDK;
-
 // Services
 use Clubify\Checkout\Modules\Notifications\Services\NotificationService;
 use Clubify\Checkout\Modules\Notifications\Services\NotificationLogService;
@@ -67,7 +66,8 @@ class NotificationsServiceFactory implements FactoryInterface
         private CacheManagerInterface $cache,
         private EventDispatcherInterface $eventDispatcher,
         private ClubifyCheckoutSDK $sdk
-    ) {}
+    ) {
+    }
 
     /**
      * Create service by type with dependency injection

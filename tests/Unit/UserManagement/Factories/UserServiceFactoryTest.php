@@ -33,11 +33,6 @@ use Mockery\MockInterface;
 class UserServiceFactoryTest extends TestCase
 {
     private UserServiceFactory $factory;
-    private MockInterface $config;
-    private MockInterface $logger;
-    private MockInterface $httpClient;
-    private MockInterface $cache;
-    private MockInterface $eventDispatcher;
 
     protected function setUp(): void
     {

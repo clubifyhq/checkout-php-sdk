@@ -8,11 +8,9 @@ use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
-
 // Services
 use Clubify\Checkout\Modules\Customers\Services\CustomerService;
 use Clubify\Checkout\Modules\Customers\Services\MatchingService;
-
 // Repositories
 use Clubify\Checkout\Modules\Customers\Repositories\ApiCustomerRepository;
 
@@ -67,7 +65,8 @@ class CustomersServiceFactory implements FactoryInterface
         private Client $httpClient,
         private CacheManagerInterface $cache,
         private EventDispatcherInterface $eventDispatcher
-    ) {}
+    ) {
+    }
 
     /**
      * Create service by type with dependency injection

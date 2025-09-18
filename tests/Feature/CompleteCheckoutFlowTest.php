@@ -28,8 +28,6 @@ use Clubify\Checkout\ClubifyCheckoutSDK;
  */
 class CompleteCheckoutFlowTest extends TestCase
 {
-    private ClubifyCheckoutSDK $sdk;
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -322,7 +320,7 @@ class CompleteCheckoutFlowTest extends TestCase
                 'order_id' => $order['id'],
                 'value' => $order['total'],
                 'currency' => 'BRL',
-                'products' => array_map(function($item) {
+                'products' => array_map(function ($item) {
                     return [
                         'product_id' => $item['product_id'],
                         'name' => $item['name'],
@@ -441,7 +439,7 @@ class CompleteCheckoutFlowTest extends TestCase
      */
     private function generateOrderConfirmationEmail(array $order, array $customer): string
     {
-        $itemsList = implode("\n", array_map(function($item) {
+        $itemsList = implode("\n", array_map(function ($item) {
             return "- {$item['name']} - R$ " . number_format($item['price'] / 100, 2, ',', '.');
         }, $order['items']));
 

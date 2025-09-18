@@ -32,9 +32,6 @@ use Mockery\MockInterface;
 class UserManagementModuleTest extends TestCase
 {
     private UserManagementModule $module;
-    private MockInterface $sdk;
-    private MockInterface $config;
-    private MockInterface $logger;
     private MockInterface $factory;
     private MockInterface $userService;
 

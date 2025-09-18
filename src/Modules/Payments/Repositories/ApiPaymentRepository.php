@@ -85,13 +85,13 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
     /**
      * Find payment by specific field
      */
-    public function findBy{Field}(string $fieldValue): ?array
+    public function findByEmail(string $fieldValue): ?array
     {
         return $this->getCachedOrExecute(
-            $this->getCacheKey("payment:{field}:{$fieldValue}"),
+            $this->getCacheKey("payment:email:{$fieldValue}"),
             function () use ($fieldValue) {
                 $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
-                    '{field}' => $fieldValue
+                    'email' => $fieldValue
                 ]);
 
                 if (!$response->isSuccessful()) {
@@ -99,7 +99,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find payment by {field}: " . $response->getError(),
+                        "Failed to find payment by email: " . $response->getError(),
                         $response->getStatusCode()
                     );
                 }

@@ -660,7 +660,7 @@ class GatewayService extends BaseService implements ServiceInterface
             // Verifica se há pelo menos um gateway saudável
             $healthyGateways = array_filter(
                 array_keys($this->gatewayConfigs),
-                fn($name) => $this->isGatewayHealthy($name)
+                fn ($name) => $this->isGatewayHealthy($name)
             );
 
             return !empty($healthyGateways);
@@ -683,11 +683,11 @@ class GatewayService extends BaseService implements ServiceInterface
             'total_gateways' => count($this->gatewayConfigs),
             'enabled_gateways' => count(array_filter(
                 $this->gatewayConfigs,
-                fn($config) => $config['enabled']
+                fn ($config) => $config['enabled']
             )),
             'healthy_gateways' => count(array_filter(
                 array_keys($this->gatewayConfigs),
-                fn($name) => $this->isGatewayHealthy($name)
+                fn ($name) => $this->isGatewayHealthy($name)
             )),
             'cached_instances' => count($this->gatewayInstances),
             'load_balancing_strategy' => $this->loadBalancingConfig['strategy'],
@@ -705,7 +705,7 @@ class GatewayService extends BaseService implements ServiceInterface
         return [
             'load_balancing_config' => $this->loadBalancingConfig,
             'gateway_configs' => array_map(
-                fn($config) => [
+                fn ($config) => [
                     'enabled' => $config['enabled'],
                     'priority' => $config['priority'],
                     'weight' => $config['weight'],

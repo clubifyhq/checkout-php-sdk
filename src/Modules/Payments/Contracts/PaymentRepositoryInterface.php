@@ -49,7 +49,7 @@ interface PaymentRepositoryInterface extends RepositoryInterface
      * @return array|null Payment data or null if not found
      * @throws \Exception When search fails
      */
-    public function findBy{Field}(string $fieldValue): ?array;
+    public function findByEmail(string $fieldValue): ?array;
 
     /**
      * Find payments by tenant (multi-tenant pattern)

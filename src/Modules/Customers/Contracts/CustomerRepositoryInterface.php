@@ -49,7 +49,7 @@ interface CustomerRepositoryInterface extends RepositoryInterface
      * @return array|null Customer data or null if not found
      * @throws \Exception When search fails
      */
-    public function findBy{Field}(string $fieldValue): ?array;
+    public function findByEmail(string $fieldValue): ?array;
 
     /**
      * Find customers by tenant (multi-tenant pattern)

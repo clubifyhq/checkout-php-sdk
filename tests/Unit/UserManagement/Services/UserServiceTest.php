@@ -32,7 +32,6 @@ class UserServiceTest extends TestCase
 {
     private UserService $userService;
     private MockInterface $repository;
-    private MockInterface $logger;
 
     protected function setUp(): void
     {

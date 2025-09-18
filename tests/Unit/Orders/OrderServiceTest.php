@@ -34,9 +34,6 @@ use Mockery\MockInterface;
 class OrderServiceTest extends TestCase
 {
     private OrderService $orderService;
-    private MockInterface $httpClientMock;
-    private MockInterface $cacheMock;
-    private MockInterface $eventsMock;
 
     protected function setUp(): void
     {

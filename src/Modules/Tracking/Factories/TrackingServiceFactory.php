@@ -9,13 +9,11 @@ use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
 use Clubify\Checkout\ClubifyCheckoutSDK;
-
 // Services
 use Clubify\Checkout\Modules\Tracking\Services\BatchEventService;
 use Clubify\Checkout\Modules\Tracking\Services\BeaconService;
 use Clubify\Checkout\Modules\Tracking\Services\EventAnalyticsService;
 use Clubify\Checkout\Modules\Tracking\Services\EventTrackingService;
-
 // Repositories
 use Clubify\Checkout\Modules\Tracking\Repositories\ApiTrackRepository;
 
@@ -73,7 +71,8 @@ class TrackingServiceFactory implements FactoryInterface
         private CacheManagerInterface $cache,
         private EventDispatcherInterface $eventDispatcher,
         private ClubifyCheckoutSDK $sdk
-    ) {}
+    ) {
+    }
 
     /**
      * Create service by type with dependency injection

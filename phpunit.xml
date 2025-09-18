@@ -38,27 +38,24 @@
         <!-- Module-specific test suites -->
         <testsuite name="Orders Module">
             <directory>tests/Unit/Orders</directory>
-            <directory>tests/Integration/OrdersIntegrationTest.php</directory>
+            <file>tests/Integration/OrdersIntegrationTest.php</file>
         </testsuite>
 
         <testsuite name="Subscriptions Module">
             <directory>tests/Unit/Subscriptions</directory>
-            <directory>tests/Integration/SubscriptionsIntegrationTest.php</directory>
         </testsuite>
 
         <testsuite name="Tracking Module">
             <directory>tests/Unit/Tracking</directory>
-            <directory>tests/Integration/TrackingIntegrationTest.php</directory>
         </testsuite>
 
         <testsuite name="UserManagement Module">
             <directory>tests/Unit/UserManagement</directory>
-            <directory>tests/Integration/UserManagementIntegrationTest.php</directory>
+            <file>tests/Integration/UserManagementIntegrationTest.php</file>
         </testsuite>
 
         <testsuite name="Notifications Module">
             <directory>tests/Unit/Notifications</directory>
-            <directory>tests/Integration/NotificationsIntegrationTest.php</directory>
         </testsuite>
 
         <!-- Core functionality tests -->
@@ -69,7 +66,6 @@
         <!-- Laravel Integration Tests -->
         <testsuite name="Laravel Integration">
             <directory>tests/Unit/Laravel</directory>
-            <directory>tests/Feature/LaravelIntegrationTest.php</directory>
         </testsuite>
     </testsuites>
 

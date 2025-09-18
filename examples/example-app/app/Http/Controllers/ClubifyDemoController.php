@@ -554,9 +554,8 @@ class ClubifyDemoController extends Controller
         $results = [];
         $sdk = ClubifySDKHelper::getInstance();
 
-        // Debug: verificar se o SDK está inicializado
+        // Garantir que o SDK está inicializado
         if (!$sdk->isInitialized()) {
-            error_log("SDK not initialized for module: {$moduleName}");
             ClubifySDKHelper::initializeForTesting();
         }
 
@@ -602,9 +601,7 @@ class ClubifyDemoController extends Controller
                 break;
 
             case 'subscriptions':
-                error_log("Getting subscriptions module...");
                 $module = $sdk->subscriptions();
-                error_log("Subscriptions module obtained, checking initialization: " . ($module->isInitialized() ? 'true' : 'false'));
                 $results = $this->testSubscriptionsModule($module);
                 break;
 

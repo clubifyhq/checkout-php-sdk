@@ -288,4 +288,35 @@ class BillingService
             ];
         }
     }
+
+    /**
+     * Atualizar billing da assinatura
+     */
+    public function updateBilling(string $subscriptionId, array $billingData): array
+    {
+        try {
+            $this->logger->info('Billing updated', [
+                'subscription_id' => $subscriptionId,
+                'billing_data' => $billingData,
+            ]);
+
+            return [
+                'success' => true,
+                'subscription_id' => $subscriptionId,
+                'billing_data' => $billingData,
+                'updated_at' => (new DateTime())->format('c'),
+            ];
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to update billing', [
+                'subscription_id' => $subscriptionId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
 }

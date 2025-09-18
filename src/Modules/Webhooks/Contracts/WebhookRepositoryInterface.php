@@ -101,12 +101,14 @@ interface WebhookRepositoryInterface extends RepositoryInterface
     /**
      * Search webhooks with advanced criteria (search pattern)
      *
-     * @param array $criteria Search criteria
-     * @param array $options Search options (sort, limit, offset)
+     * @param array $filters Search filters
+     * @param array $sort Sorting criteria
+     * @param int $limit Maximum number of results
+     * @param int $offset Number of results to skip
      * @return array Search results with pagination
      * @throws \Exception When search fails
      */
-    public function search(array $criteria, array $options = []): array;
+    public function search(array $filters, array $sort = [], int $limit = 100, int $offset = 0): array;
 
     /**
      * Archive webhook (soft delete pattern)

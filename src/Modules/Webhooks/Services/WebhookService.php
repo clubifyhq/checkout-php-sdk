@@ -6,7 +6,7 @@ namespace Clubify\Checkout\Modules\Webhooks\Services;
 
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
-use Clubify\Checkout\Modules\Webhooks\Repositories\WebhookRepositoryInterface;
+use Clubify\Checkout\Modules\Webhooks\Repositories\ApiWebhookRepository;
 use Clubify\Checkout\Modules\Webhooks\DTOs\WebhookData;
 use Clubify\Checkout\Modules\Webhooks\Exceptions\WebhookNotFoundException;
 use Clubify\Checkout\Modules\Webhooks\Exceptions\InvalidWebhookException;
@@ -63,7 +63,7 @@ class WebhookService extends BaseService implements ServiceInterface
     ];
 
     public function __construct(
-        private WebhookRepositoryInterface $repository
+        private ApiWebhookRepository $repository
     ) {
         // Parent constructor will be called by Factory with proper dependencies
     }

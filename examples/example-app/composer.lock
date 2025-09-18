@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9e5b83f6b15e795d575eb477b7e97400",
+    "content-hash": "dc00dc3c63036afa8bd686c84ffcfd63",
     "packages": [
         {
             "name": "brick/math",
@@ -138,16 +138,10 @@
         {
             "name": "clubify/checkout-sdk-php",
             "version": "dev-main",
-            "source": {
-                "type": "git",
-                "url": "git@github.com:clubifyhq/checkout-php-sdk.git",
-                "reference": "78223d26313e78dfab8146e7359ffb3530058910"
-            },
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/clubifyhq/checkout-php-sdk/zipball/78223d26313e78dfab8146e7359ffb3530058910",
-                "reference": "78223d26313e78dfab8146e7359ffb3530058910",
-                "shasum": ""
+                "type": "path",
+                "url": "../..",
+                "reference": "350c2e3f8e467987732a4e050659812cc97fab3d"
             },
             "require": {
                 "ext-curl": "*",
@@ -195,7 +189,6 @@
                 "spatie/laravel-enum": "For better enum support",
                 "spatie/laravel-webhook-client": "For webhook handling"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
@@ -296,7 +289,10 @@
                 "source": "https://github.com/clubify/checkout-sdk-php",
                 "docs": "https://docs.clubify.com/sdk/php"
             },
-            "time": "2025-09-18T17:41:00+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "dflydev/dot-access-data",

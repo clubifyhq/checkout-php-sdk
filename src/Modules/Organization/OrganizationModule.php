@@ -266,7 +266,7 @@ class OrganizationModule implements ModuleInterface
     private function ensureDependenciesInitialized(): void
     {
         if (!isset($this->httpClient)) {
-            $this->httpClient = new \Clubify\Checkout\Core\Http\Client($this->config);
+            $this->httpClient = new \Clubify\Checkout\Core\Http\Client($this->config, $this->logger);
         }
 
         if (!isset($this->cache)) {

@@ -193,7 +193,7 @@ class Client
             'timeout' => $this->config->getTimeout() / 1000, // Guzzle espera segundos
             'connect_timeout' => $this->config->getHttpConfig()['connect_timeout'] ?? 10,
             'verify' => $this->config->getHttpConfig()['verify_ssl'] ?? true,
-            'headers' => $this->config->getRequestHeaders(),
+            'headers' => $this->config->getDefaultHeaders(),
             'handler' => $stack,
         ]);
     }

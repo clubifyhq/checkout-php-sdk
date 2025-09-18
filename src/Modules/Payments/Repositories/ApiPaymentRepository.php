@@ -244,14 +244,19 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
     /**
      * Search payments with advanced criteria
      */
-    public function search(array $criteria, array $options = []): array
+    public function search(array $filters, array $sort = [], int $limit = 100, int $offset = 0): array
     {
-        $cacheKey = $this->getCacheKey("payment:search:" . md5(serialize($criteria + $options)));
+        $cacheKey = $this->getCacheKey("payment:search:" . md5(serialize($filters + $sort + [$limit, $offset])));
 
         return $this->getCachedOrExecute(
             $cacheKey,
-            function () use ($criteria, $options) {
-                $payload = array_merge(['criteria' => $criteria], $options);
+            function () use ($filters, $sort, $limit, $offset) {
+                $payload = [
+                    'filters' => $filters,
+                    'sort' => $sort,
+                    'limit' => $limit,
+                    'offset' => $offset
+                ];
                 $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
 
                 if (!$response->isSuccessful()) {

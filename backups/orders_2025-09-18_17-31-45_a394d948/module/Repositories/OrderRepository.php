@@ -1,0 +1,479 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Clubify\Checkout\Modules\Orders\Repositories;
+
+use ClubifyCheckout\Repositories\BaseRepository;
+use Clubify\Checkout\Modules\Orders\Contracts\OrderRepositoryInterface;
+use ClubifyCheckout\Exceptions\ValidationException;
+use ClubifyCheckout\Exceptions\HttpException;
+
+/**
+ * Repositório de pedidos
+ *
+ * Implementa operações de persistência para pedidos:
+ * - CRUD básico
+ * - Busca e filtros avançados
+ * - Operações de status
+ * - Gestão de itens e upsells
+ * - Estatísticas e relatórios
+ *
+ * Segue os princípios SOLID:
+ * - S: Single Responsibility - Gerencia apenas persistência de pedidos
+ * - O: Open/Closed - Extensível via herança
+ * - L: Liskov Substitution - Implementa OrderRepositoryInterface
+ * - I: Interface Segregation - Implementa interface específica
+ * - D: Dependency Inversion - Depende de abstrações
+ */
+class OrderRepository extends BaseRepository implements OrderRepositoryInterface
+{
+    /**
+     * Obtém o nome da entidade
+     */
+    protected function getEntityName(): string
+    {
+        return 'order';
+    }
+
+    /**
+     * Obtém o endpoint base
+     */
+    protected function getEndpoint(): string
+    {
+        return '/orders';
+    }
+
+    /**
+     * Cria um novo pedido
+     */
+    public function create(array $orderData): array
+    {
+        return $this->executeWithMetrics('create_order', function () use ($orderData) {
+            $response = $this->httpClient->post($this->getEndpoint(), $orderData);
+            $order = $response->getData();
+
+            // Cache do pedido
+            $this->cacheEntity($order['id'], $order);
+
+            return $order;
+        });
+    }
+
+    /**
+     * Obtém pedido por ID
+     */
+    public function findById(string $orderId): ?array
+    {
+        return $this->getCachedOrExecute(
+            $orderId,
+            fn () => $this->fetchById($orderId)
+        );
+    }
+
+    /**
+     * Obtém pedido por número
+     */
+    public function findByNumber(string $orderNumber): ?array
+    {
+        return $this->getCachedOrExecute(
+            "number:{$orderNumber}",
+            fn () => $this->fetchByField('number', $orderNumber)
+        );
+    }
+
+    /**
+     * Lista pedidos com filtros
+     */
+    public function findMany(array $filters = [], int $page = 1, int $limit = 20): array
+    {
+        $queryParams = array_merge($filters, [
+            'page' => $page,
+            'limit' => $limit
+        ]);
+
+        $response = $this->httpClient->get($this->getEndpoint(), [
+            'query' => $queryParams
+        ]);
+
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Atualiza pedido
+     */
+    public function update(string $orderId, array $data): array
+    {
+        return $this->executeWithMetrics('update_order', function () use ($orderId, $data) {
+            $response = $this->httpClient->put("{$this->getEndpoint()}/{$orderId}", $data);
+            $order = $response->getData();
+
+            // Atualizar cache
+            $this->cacheEntity($orderId, $order);
+
+            return $order;
+        });
+    }
+
+    /**
+     * Remove pedido
+     */
+    public function delete(string $orderId): bool
+    {
+        return $this->executeWithMetrics('delete_order', function () use ($orderId) {
+            try {
+                $response = $this->httpClient->delete("{$this->getEndpoint()}/{$orderId}");
+
+                // Invalidar cache
+                $this->invalidateCache($orderId);
+
+                return $response->getStatusCode() === 204;
+            } catch (HttpException $e) {
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Busca pedidos por texto
+     */
+    public function search(string $query, array $filters = []): array
+    {
+        $queryParams = array_merge($filters, ['q' => $query]);
+
+        $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+            'query' => $queryParams
+        ]);
+
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Obtém pedidos por cliente
+     */
+    public function findByCustomer(string $customerId, array $filters = []): array
+    {
+        $queryParams = array_merge($filters, ['customer_id' => $customerId]);
+
+        $response = $this->httpClient->get($this->getEndpoint(), [
+            'query' => $queryParams
+        ]);
+
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Obtém pedidos por produto
+     */
+    public function findByProduct(string $productId, array $filters = []): array
+    {
+        $queryParams = array_merge($filters, ['product_id' => $productId]);
+
+        $response = $this->httpClient->get($this->getEndpoint(), [
+            'query' => $queryParams
+        ]);
+
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Obtém pedidos por status
+     */
+    public function findByStatus(string $status, array $filters = []): array
+    {
+        $queryParams = array_merge($filters, ['status' => $status]);
+
+        $response = $this->httpClient->get($this->getEndpoint(), [
+            'query' => $queryParams
+        ]);
+
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Obtém pedidos por período
+     */
+    public function findByDateRange(string $startDate, string $endDate, array $filters = []): array
+    {
+        $queryParams = array_merge($filters, [
+            'start_date' => $startDate,
+            'end_date' => $endDate
+        ]);
+
+        $response = $this->httpClient->get($this->getEndpoint(), [
+            'query' => $queryParams
+        ]);
+
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Conta total de pedidos
+     */
+    public function count(array $filters = []): int
+    {
+        try {
+            $response = $this->httpClient->get("{$this->getEndpoint()}/count", [
+                'query' => $filters
+            ]);
+            $data = $response->getData();
+            return $data['count'] ?? 0;
+        } catch (HttpException $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Obtém estatísticas de pedidos
+     */
+    public function getStatistics(array $filters = []): array
+    {
+        $response = $this->httpClient->get("{$this->getEndpoint()}/statistics", [
+            'query' => $filters
+        ]);
+
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Obtém estatísticas de receita
+     */
+    public function getRevenueStats(array $dateRange = []): array
+    {
+        $response = $this->httpClient->get("{$this->getEndpoint()}/revenue-stats", [
+            'query' => $dateRange
+        ]);
+
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Atualiza status do pedido
+     */
+    public function updateStatus(string $orderId, string $status, array $metadata = []): bool
+    {
+        return $this->executeWithMetrics('update_order_status', function () use ($orderId, $status, $metadata) {
+            try {
+                $data = array_merge($metadata, ['status' => $status]);
+                $response = $this->httpClient->put("{$this->getEndpoint()}/{$orderId}/status", $data);
+
+                // Invalidar cache do pedido
+                $this->invalidateCache($orderId);
+
+                return $response->getStatusCode() === 200;
+            } catch (HttpException $e) {
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Obtém histórico de status
+     */
+    public function getStatusHistory(string $orderId): array
+    {
+        $response = $this->httpClient->get("{$this->getEndpoint()}/{$orderId}/status-history");
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Cancela pedido
+     */
+    public function cancel(string $orderId, array $cancelData = []): bool
+    {
+        return $this->executeWithMetrics('cancel_order', function () use ($orderId, $cancelData) {
+            try {
+                $response = $this->httpClient->post("{$this->getEndpoint()}/{$orderId}/cancel", $cancelData);
+
+                // Invalidar cache do pedido
+                $this->invalidateCache($orderId);
+
+                return $response->getStatusCode() === 200;
+            } catch (HttpException $e) {
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Adiciona item ao pedido
+     */
+    public function addItem(string $orderId, array $itemData): array
+    {
+        return $this->executeWithMetrics('add_order_item', function () use ($orderId, $itemData) {
+            $response = $this->httpClient->post("{$this->getEndpoint()}/{$orderId}/items", $itemData);
+            $item = $response->getData();
+
+            // Invalidar cache do pedido
+            $this->invalidateCache($orderId);
+
+            return $item;
+        });
+    }
+
+    /**
+     * Remove item do pedido
+     */
+    public function removeItem(string $orderId, string $itemId): bool
+    {
+        return $this->executeWithMetrics('remove_order_item', function () use ($orderId, $itemId) {
+            try {
+                $response = $this->httpClient->delete("{$this->getEndpoint()}/{$orderId}/items/{$itemId}");
+
+                // Invalidar cache do pedido
+                $this->invalidateCache($orderId);
+
+                return $response->getStatusCode() === 204;
+            } catch (HttpException $e) {
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Atualiza item do pedido
+     */
+    public function updateItem(string $orderId, string $itemId, array $itemData): array
+    {
+        return $this->executeWithMetrics('update_order_item', function () use ($orderId, $itemId, $itemData) {
+            $response = $this->httpClient->put("{$this->getEndpoint()}/{$orderId}/items/{$itemId}", $itemData);
+            $item = $response->getData();
+
+            // Invalidar cache do pedido
+            $this->invalidateCache($orderId);
+
+            return $item;
+        });
+    }
+
+    /**
+     * Obtém itens do pedido
+     */
+    public function getItems(string $orderId): array
+    {
+        $response = $this->httpClient->get("{$this->getEndpoint()}/{$orderId}/items");
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Adiciona upsell ao pedido
+     */
+    public function addUpsell(string $orderId, array $upsellData): array
+    {
+        return $this->executeWithMetrics('add_order_upsell', function () use ($orderId, $upsellData) {
+            $response = $this->httpClient->post("{$this->getEndpoint()}/{$orderId}/upsells", $upsellData);
+            $upsell = $response->getData();
+
+            // Invalidar cache do pedido
+            $this->invalidateCache($orderId);
+
+            return $upsell;
+        });
+    }
+
+    /**
+     * Remove upsell do pedido
+     */
+    public function removeUpsell(string $orderId, string $upsellId): bool
+    {
+        return $this->executeWithMetrics('remove_order_upsell', function () use ($orderId, $upsellId) {
+            try {
+                $response = $this->httpClient->delete("{$this->getEndpoint()}/{$orderId}/upsells/{$upsellId}");
+
+                // Invalidar cache do pedido
+                $this->invalidateCache($orderId);
+
+                return $response->getStatusCode() === 204;
+            } catch (HttpException $e) {
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Obtém upsells do pedido
+     */
+    public function getUpsells(string $orderId): array
+    {
+        $response = $this->httpClient->get("{$this->getEndpoint()}/{$orderId}/upsells");
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Verifica se pedido existe
+     */
+    public function exists(string $orderId): bool
+    {
+        try {
+            $order = $this->findById($orderId);
+            return $order !== null;
+        } catch (HttpException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Obtém top clientes
+     */
+    public function getTopCustomers(int $limit = 10): array
+    {
+        $response = $this->httpClient->get("{$this->getEndpoint()}/top-customers", [
+            'query' => ['limit' => $limit]
+        ]);
+
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Obtém top produtos
+     */
+    public function getTopProducts(int $limit = 10): array
+    {
+        $response = $this->httpClient->get("{$this->getEndpoint()}/top-products", [
+            'query' => ['limit' => $limit]
+        ]);
+
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Obtém métricas de conversão
+     */
+    public function getConversionMetrics(): array
+    {
+        $response = $this->httpClient->get("{$this->getEndpoint()}/conversion-metrics");
+        return $response->getData() ?? [];
+    }
+
+    /**
+     * Busca entidade por campo específico
+     */
+    private function fetchByField(string $field, string $value): ?array
+    {
+        try {
+            $response = $this->httpClient->get("{$this->getEndpoint()}/{$field}/{$value}");
+            return $response->getData();
+        } catch (HttpException $e) {
+            if ($e->getStatusCode() === 404) {
+                return null;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Busca entidade por ID
+     */
+    private function fetchById(string $id): ?array
+    {
+        try {
+            $response = $this->httpClient->get("{$this->getEndpoint()}/{$id}");
+            return $response->getData();
+        } catch (HttpException $e) {
+            if ($e->getStatusCode() === 404) {
+                return null;
+            }
+            throw $e;
+        }
+    }
+}

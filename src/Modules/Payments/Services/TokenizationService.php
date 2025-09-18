@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Modules\Payments\Services;
 
 use Clubify\Checkout\Core\BaseService;
+use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Modules\Payments\Contracts\GatewayInterface;
 use Clubify\Checkout\Modules\Payments\Contracts\CardRepositoryInterface;
 use Clubify\Checkout\Modules\Payments\Exceptions\TokenizationException;
@@ -38,7 +39,7 @@ use InvalidArgumentException;
  * - I: Interface Segregation - Interface específica
  * - D: Dependency Inversion - Depende de abstrações
  */
-class TokenizationService extends BaseService
+class TokenizationService extends BaseService implements ServiceInterface
 {
     private array $tokenConfig = [
         'rotation_interval' => 2592000, // 30 dias em segundos
@@ -723,5 +724,128 @@ class TokenizationService extends BaseService
     {
         // Implementar busca de tokenizações recentes
         return [];
+    }
+
+    // ===============================================
+    // ServiceInterface Implementation
+    // ===============================================
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getName(): string
+    {
+        return 'tokenization';
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            // Verifica conectividade com repositório de cartões
+            if (!$this->cardRepository) {
+                return false;
+            }
+
+            // Verifica validador de cartões
+            if (!$this->cardValidator) {
+                return false;
+            }
+
+            // Verifica sistema de encriptação
+            if (!$this->encryption) {
+                return false;
+            }
+
+            // Verifica sistema de assinatura HMAC
+            if (!$this->hmacSignature) {
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            $this->logger->error('TokenizationService health check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getMetrics(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'token_config' => $this->tokenConfig,
+            'security_rules' => $this->securityRules,
+            'security_features' => [
+                'encryption' => true,
+                'hmac_signature' => true,
+                'rotation_enabled' => true,
+                'verification_required' => $this->tokenConfig['verification_required'],
+                'audit_enabled' => $this->tokenConfig['audit_enabled']
+            ],
+            'memory_usage' => memory_get_usage(true),
+            'timestamp' => time()
+        ];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getConfig(): array
+    {
+        return [
+            'token_config' => $this->tokenConfig,
+            'security_rules' => $this->securityRules,
+            'supported_operations' => [
+                'tokenize_card',
+                'detokenize_card',
+                'rotate_token',
+                'verify_token',
+                'revoke_token'
+            ]
+        ];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function isAvailable(): bool
+    {
+        try {
+            return $this->isHealthy();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getStatus(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'available' => $this->isAvailable(),
+            'metrics' => $this->getMetrics(),
+            'config' => $this->getConfig(),
+            'timestamp' => time()
+        ];
     }
 }

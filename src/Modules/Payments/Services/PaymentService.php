@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Modules\Payments\Services;
 
 use Clubify\Checkout\Core\BaseService;
+use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Modules\Payments\Contracts\GatewayInterface;
 use Clubify\Checkout\Modules\Payments\Contracts\PaymentRepositoryInterface;
 use Clubify\Checkout\Modules\Payments\Exceptions\PaymentException;
@@ -34,7 +35,7 @@ use InvalidArgumentException;
  * - I: Interface Segregation - Separação de responsabilidades
  * - D: Dependency Inversion - Depende de abstrações
  */
-class PaymentService extends BaseService
+class PaymentService extends BaseService implements ServiceInterface
 {
     private array $gateways = [];
     private array $retryConfig = [
@@ -674,5 +675,122 @@ class PaymentService extends BaseService
     private function generatePaymentId(): string
     {
         return 'pay_' . uniqid() . '_' . bin2hex(random_bytes(8));
+    }
+
+    // ===============================================
+    // ServiceInterface Implementation
+    // ===============================================
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getName(): string
+    {
+        return 'payment';
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            // Verifica se há gateways disponíveis
+            $availableGateways = $this->getAvailableGateways();
+            if (empty($availableGateways)) {
+                return false;
+            }
+
+            // Verifica conectividade básica com repositório
+            if (!$this->repository) {
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            $this->logger->error('PaymentService health check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getMetrics(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'available_gateways' => count($this->gateways),
+            'circuit_breaker_states' => array_map(
+                fn($cb) => $cb['state'],
+                $this->circuitBreaker
+            ),
+            'total_gateways' => count($this->gateways),
+            'healthy_gateways' => count(array_filter(
+                array_keys($this->gateways),
+                fn($name) => $this->isGatewayAvailable($name)
+            )),
+            'memory_usage' => memory_get_usage(true),
+            'timestamp' => time()
+        ];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getConfig(): array
+    {
+        return [
+            'retry_config' => $this->retryConfig,
+            'registered_gateways' => array_keys($this->gateways),
+            'circuit_breaker_config' => array_map(
+                fn($cb) => [
+                    'state' => $cb['state'],
+                    'threshold' => $cb['threshold'],
+                    'timeout' => $cb['timeout'],
+                    'failures' => $cb['failures']
+                ],
+                $this->circuitBreaker
+            )
+        ];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function isAvailable(): bool
+    {
+        try {
+            return $this->isHealthy() && !empty($this->getAvailableGateways());
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getStatus(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'available' => $this->isAvailable(),
+            'metrics' => $this->getMetrics(),
+            'config' => $this->getConfig(),
+            'timestamp' => time()
+        ];
     }
 }

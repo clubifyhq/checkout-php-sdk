@@ -156,6 +156,8 @@ class Configuration implements ConfigurationInterface
             $headers['X-Tenant-ID'] = $tenantId;
         }
 
+        
+
         return $headers;
     }
 

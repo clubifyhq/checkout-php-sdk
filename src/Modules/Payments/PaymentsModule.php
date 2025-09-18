@@ -8,6 +8,7 @@ use Clubify\Checkout\Contracts\ModuleInterface;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
+use Clubify\Checkout\Modules\Payments\Factories\PaymentsServiceFactory;
 
 /**
  * Módulo de Pagamentos
@@ -27,6 +28,7 @@ class PaymentsModule implements ModuleInterface
     private Configuration $config;
     private Logger $logger;
     private bool $initialized = false;
+    private ?PaymentsServiceFactory $serviceFactory = null;
 
     public function __construct(
         private ClubifyCheckoutSDK $sdk
@@ -42,9 +44,13 @@ class PaymentsModule implements ModuleInterface
         $this->logger = $logger;
         $this->initialized = true;
 
+        // Inicializa factory de serviços de forma lazy
+        $this->serviceFactory = $this->sdk->createPaymentsServiceFactory();
+
         $this->logger->info('Payments module initialized', [
             'module' => $this->getName(),
-            'version' => $this->getVersion()
+            'version' => $this->getVersion(),
+            'factory_initialized' => $this->serviceFactory !== null
         ]);
     }
 
@@ -107,6 +113,8 @@ class PaymentsModule implements ModuleInterface
      */
     public function cleanup(): void
     {
+        $this->serviceFactory?->clearCache();
+        $this->serviceFactory = null;
         $this->initialized = false;
         $this->logger?->info('Payments module cleaned up');
     }
@@ -131,13 +139,20 @@ class PaymentsModule implements ModuleInterface
      */
     public function getStats(): array
     {
-        return [
+        $stats = [
             'module' => $this->getName(),
             'version' => $this->getVersion(),
             'initialized' => $this->initialized,
             'healthy' => $this->isHealthy(),
             'timestamp' => time()
         ];
+
+        // Adiciona estatísticas da factory se disponível
+        if ($this->serviceFactory) {
+            $stats['factory_stats'] = $this->serviceFactory->getStats();
+        }
+
+        return $stats;
     }
 
     /**
@@ -145,18 +160,29 @@ class PaymentsModule implements ModuleInterface
      */
     public function processPayment(array $paymentData): array
     {
-        $this->logger?->info('Processing payment', $paymentData);
+        $this->ensureInitialized();
 
-        $transactionId = uniqid('txn_');
+        $this->logger?->info('Processing payment using PaymentService', $paymentData);
 
-        // Implementação básica - será expandida conforme necessário
-        return [
-            'success' => true,
-            'payment_id' => uniqid('payment_'),
-            'transaction_id' => $transactionId,
-            'data' => $paymentData,
-            'processed_at' => time()
-        ];
+        try {
+            $paymentService = $this->serviceFactory->create('payment');
+            return $paymentService->processPayment($paymentData);
+        } catch (\Throwable $e) {
+            $this->logger?->error('Payment processing failed', [
+                'error' => $e->getMessage(),
+                'data' => $paymentData
+            ]);
+
+            // Fallback para implementação básica
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'payment_id' => uniqid('payment_'),
+                'transaction_id' => uniqid('txn_'),
+                'data' => $paymentData,
+                'processed_at' => time()
+            ];
+        }
     }
 
     /**
@@ -196,14 +222,107 @@ class PaymentsModule implements ModuleInterface
      */
     public function tokenizeCard(array $cardData): array
     {
-        $this->logger?->info('Tokenizing card');
+        $this->ensureInitialized();
 
-        return [
-            'success' => true,
-            'token' => 'card_' . uniqid(),
-            'last_four' => substr($cardData['number'] ?? '0000', -4),
-            'brand' => $cardData['brand'] ?? 'unknown',
-            'created_at' => time()
-        ];
+        $this->logger?->info('Tokenizing card using CardService');
+
+        try {
+            $cardService = $this->serviceFactory->create('card');
+            // Precisa de um gateway e customerId - usando valores padrão para compatibilidade
+            $gatewayService = $this->serviceFactory->create('gateway');
+
+            // Para compatibilidade, usa implementação básica se não tiver os dados necessários
+            if (!isset($cardData['customer_id'])) {
+                return [
+                    'success' => true,
+                    'token' => 'card_' . uniqid(),
+                    'last_four' => substr($cardData['number'] ?? '0000', -4),
+                    'brand' => $cardData['brand'] ?? 'unknown',
+                    'created_at' => time()
+                ];
+            }
+
+            // Se tiver customerId, usa o serviço real
+            $defaultGateway = $gatewayService->getRecommendedGateway();
+            return $cardService->tokenizeCard($cardData, $cardData['customer_id'], $defaultGateway);
+
+        } catch (\Throwable $e) {
+            $this->logger?->error('Card tokenization failed', [
+                'error' => $e->getMessage()
+            ]);
+
+            // Fallback para implementação básica
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'token' => 'card_' . uniqid(),
+                'last_four' => substr($cardData['number'] ?? '0000', -4),
+                'brand' => $cardData['brand'] ?? 'unknown',
+                'created_at' => time()
+            ];
+        }
+    }
+
+    // ==============================================
+    // SERVICE ACCESS METHODS
+    // ==============================================
+
+    /**
+     * Obtém serviço de pagamentos
+     */
+    public function getPaymentService(): object
+    {
+        $this->ensureInitialized();
+        return $this->serviceFactory->create('payment');
+    }
+
+    /**
+     * Obtém serviço de cartões
+     */
+    public function getCardService(): object
+    {
+        $this->ensureInitialized();
+        return $this->serviceFactory->create('card');
+    }
+
+    /**
+     * Obtém serviço de gateways
+     */
+    public function getGatewayService(): object
+    {
+        $this->ensureInitialized();
+        return $this->serviceFactory->create('gateway');
+    }
+
+    /**
+     * Obtém serviço de tokenização
+     */
+    public function getTokenizationService(): object
+    {
+        $this->ensureInitialized();
+        return $this->serviceFactory->create('tokenization');
+    }
+
+    /**
+     * Obtém factory de serviços
+     */
+    public function getServiceFactory(): PaymentsServiceFactory
+    {
+        $this->ensureInitialized();
+        return $this->serviceFactory;
+    }
+
+    // ==============================================
+    // PRIVATE METHODS
+    // ==============================================
+
+    /**
+     * Garante que o módulo está inicializado
+     */
+    private function ensureInitialized(): void
+    {
+        if (!$this->initialized || !$this->serviceFactory) {
+            throw new \RuntimeException('Payments module not initialized');
+        }
     }
 }

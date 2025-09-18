@@ -8,6 +8,7 @@ use Clubify\Checkout\Core\Config\ConfigurationInterface;
 use Clubify\Checkout\Core\Http\Interceptor\InterceptorInterface;
 use Clubify\Checkout\Core\Http\Retry\RetryStrategy;
 use Clubify\Checkout\Core\Auth\AuthManagerInterface;
+use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Enums\HttpMethod;
 use Clubify\Checkout\Exceptions\HttpException;
 use GuzzleHttp\Client as GuzzleClient;
@@ -31,11 +32,13 @@ class Client
     private RetryStrategy $retryStrategy;
     private array $interceptors = [];
     private ?AuthManagerInterface $authManager = null;
+    private Logger $logger;
 
-    public function __construct(ConfigurationInterface $config, ?AuthManagerInterface $authManager = null)
+    public function __construct(ConfigurationInterface $config, Logger $logger, ?AuthManagerInterface $authManager = null)
     {
         $this->config = $config;
         $this->authManager = $authManager;
+        $this->logger = $logger;
         $this->retryStrategy = new RetryStrategy(
             $config->getMaxRetries(),
             $config->getRetryConfig()['delay'] ?? 1000,
@@ -138,6 +141,15 @@ class Client
         return $this;
     }
 
+
+    public function getRequestHeaders(): array
+    {
+        $headers = $this->config->getDefaultHeaders();
+        $this->logger->log("debug", "Default Headers", ['headers' => $headers]);
+        return $headers;
+    }
+
+
     /**
      * Obter cliente Guzzle interno (para casos avançados)
      */
@@ -181,7 +193,7 @@ class Client
             'timeout' => $this->config->getTimeout() / 1000, // Guzzle espera segundos
             'connect_timeout' => $this->config->getHttpConfig()['connect_timeout'] ?? 10,
             'verify' => $this->config->getHttpConfig()['verify_ssl'] ?? true,
-            'headers' => $this->config->getDefaultHeaders() ?? $this->defaultHeaders,
+            'headers' => $this->config->getRequestHeaders(),
             'handler' => $stack,
         ]);
     }

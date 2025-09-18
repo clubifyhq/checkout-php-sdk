@@ -24,7 +24,11 @@ use Clubify\Checkout\Modules\Customers\Factories\CustomersServiceFactory;
 use Clubify\Checkout\Modules\Products\Factories\ProductsServiceFactory;
 use Clubify\Checkout\Modules\Webhooks\Factories\WebhooksServiceFactory;
 use Clubify\Checkout\Modules\Notifications\Factories\NotificationsServiceFactory;
+use Clubify\Checkout\Modules\Tracking\Factories\TrackingServiceFactory;
 use Clubify\Checkout\Modules\Subscriptions\SubscriptionsModule;
+use Clubify\Checkout\Modules\Subscriptions\Factories\SubscriptionsServiceFactory;
+use Clubify\Checkout\Modules\Orders\Factories\OrdersServiceFactory;
+use Clubify\Checkout\Modules\Payments\Factories\PaymentsServiceFactory;
 use Clubify\Checkout\Enums\Environment;
 use Clubify\Checkout\Exceptions\ConfigurationException;
 use Clubify\Checkout\Exceptions\SDKException;
@@ -424,7 +428,7 @@ class ClubifyCheckoutSDK
     private function initializeCoreComponents(): void
     {
         if ($this->httpClient === null) {
-            $this->httpClient = new Client($this->config);
+            $this->httpClient = new Client($this->config, $this->getLogger());
         }
 
         if ($this->authManager === null) {
@@ -450,7 +454,7 @@ class ClubifyCheckoutSDK
     private function getHttpClient(): Client
     {
         if ($this->httpClient === null) {
-            $this->httpClient = new Client($this->config);
+            $this->httpClient = new Client($this->config, $this->getLogger());
         }
         return $this->httpClient;
     }
@@ -623,6 +627,78 @@ class ClubifyCheckoutSDK
             $this->getCache(),
             $this->getEventDispatcher(),
             $this
+        );
+    }
+
+    /**
+     * Cria uma factory para gerenciar services do Tracking
+     * com todas as dependências necessárias injetadas.
+     *
+     * @return TrackingServiceFactory Factory configurada
+     */
+    public function createTrackingServiceFactory(): TrackingServiceFactory
+    {
+        return new TrackingServiceFactory(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher(),
+            $this
+        );
+    }
+
+    /**
+     * Cria uma factory para gerenciar services do Subscriptions
+     * com todas as dependências necessárias injetadas.
+     *
+     * @return SubscriptionsServiceFactory Factory configurada
+     */
+    public function createSubscriptionsServiceFactory(): SubscriptionsServiceFactory
+    {
+        return new SubscriptionsServiceFactory(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher(),
+            $this
+        );
+    }
+
+    /**
+     * Cria uma factory para gerenciar services do Orders
+     * com todas as dependências necessárias injetadas.
+     *
+     * @return OrdersServiceFactory Factory configurada
+     */
+    public function createOrdersServiceFactory(): OrdersServiceFactory
+    {
+        return new OrdersServiceFactory(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher()
+        );
+    }
+
+    /**
+     * Criar Payments Service Factory
+     *
+     * Cria uma factory para gerenciar services do Payments
+     * com todas as dependências necessárias injetadas.
+     *
+     * @return PaymentsServiceFactory Factory configurada
+     */
+    public function createPaymentsServiceFactory(): PaymentsServiceFactory
+    {
+        return new PaymentsServiceFactory(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher()
         );
     }
 

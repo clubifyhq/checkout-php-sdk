@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Modules\Payments\Services;
 
 use Clubify\Checkout\Core\BaseService;
+use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Modules\Payments\Contracts\GatewayInterface;
 use Clubify\Checkout\Modules\Payments\Gateways\PagarMeGateway;
 use Clubify\Checkout\Modules\Payments\Gateways\StripeGateway;
@@ -36,7 +37,7 @@ use InvalidArgumentException;
  * - I: Interface Segregation - Interface específica
  * - D: Dependency Inversion - Depende de abstrações
  */
-class GatewayService extends BaseService
+class GatewayService extends BaseService implements ServiceInterface
 {
     private array $gatewayInstances = [];
     private array $gatewayConfigs = [];
@@ -623,5 +624,126 @@ class GatewayService extends BaseService
         }
 
         // Validações adicionais podem ser adicionadas aqui
+    }
+
+    // ===============================================
+    // ServiceInterface Implementation
+    // ===============================================
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getName(): string
+    {
+        return 'gateway';
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            // Verifica se há pelo menos um gateway configurado
+            if (empty($this->gatewayConfigs)) {
+                return false;
+            }
+
+            // Verifica se há pelo menos um gateway saudável
+            $healthyGateways = array_filter(
+                array_keys($this->gatewayConfigs),
+                fn($name) => $this->isGatewayHealthy($name)
+            );
+
+            return !empty($healthyGateways);
+        } catch (\Throwable $e) {
+            $this->logger->error('GatewayService health check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getMetrics(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'total_gateways' => count($this->gatewayConfigs),
+            'enabled_gateways' => count(array_filter(
+                $this->gatewayConfigs,
+                fn($config) => $config['enabled']
+            )),
+            'healthy_gateways' => count(array_filter(
+                array_keys($this->gatewayConfigs),
+                fn($name) => $this->isGatewayHealthy($name)
+            )),
+            'cached_instances' => count($this->gatewayInstances),
+            'load_balancing_strategy' => $this->loadBalancingConfig['strategy'],
+            'supported_gateways' => ['stripe', 'pagarme'],
+            'memory_usage' => memory_get_usage(true),
+            'timestamp' => time()
+        ];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getConfig(): array
+    {
+        return [
+            'load_balancing_config' => $this->loadBalancingConfig,
+            'gateway_configs' => array_map(
+                fn($config) => [
+                    'enabled' => $config['enabled'],
+                    'priority' => $config['priority'],
+                    'weight' => $config['weight'],
+                    'timeout' => $config['timeout'],
+                    'health_check_enabled' => $config['health_check_enabled']
+                ],
+                $this->gatewayConfigs
+            ),
+            'health_status' => $this->healthStatus,
+            'performance_metrics' => $this->performanceMetrics
+        ];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function isAvailable(): bool
+    {
+        try {
+            return $this->isHealthy() && !empty($this->getAvailableGateways());
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getStatus(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'available' => $this->isAvailable(),
+            'metrics' => $this->getMetrics(),
+            'config' => $this->getConfig(),
+            'timestamp' => time()
+        ];
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Modules\Payments\Services;
 
 use Clubify\Checkout\Core\BaseService;
+use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Modules\Payments\Contracts\CardRepositoryInterface;
 use Clubify\Checkout\Modules\Payments\Contracts\GatewayInterface;
 use Clubify\Checkout\Modules\Payments\Exceptions\CardException;
@@ -36,7 +37,7 @@ use InvalidArgumentException;
  * - I: Interface Segregation - Interface específica
  * - D: Dependency Inversion - Depende de abstrações
  */
-class CardService extends BaseService
+class CardService extends BaseService implements ServiceInterface
 {
     private array $fraudRules = [
         'max_attempts_per_hour' => 10,
@@ -656,5 +657,116 @@ class CardService extends BaseService
     private function generateCardId(): string
     {
         return 'card_' . uniqid() . '_' . bin2hex(random_bytes(8));
+    }
+
+    // ===============================================
+    // ServiceInterface Implementation
+    // ===============================================
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getName(): string
+    {
+        return 'card';
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            // Verifica conectividade com repositório
+            if (!$this->repository) {
+                return false;
+            }
+
+            // Verifica conectividade com validador
+            if (!$this->cardValidator) {
+                return false;
+            }
+
+            // Verifica conectividade com encriptação
+            if (!$this->encryption) {
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            $this->logger->error('CardService health check failed', [
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getMetrics(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'fraud_rules' => $this->fraudRules,
+            'supported_brands' => ['visa', 'mastercard', 'amex', 'discover', 'diners', 'jcb', 'elo', 'hipercard'],
+            'memory_usage' => memory_get_usage(true),
+            'timestamp' => time()
+        ];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getConfig(): array
+    {
+        return [
+            'fraud_rules' => $this->fraudRules,
+            'security_features' => [
+                'tokenization' => true,
+                'encryption' => true,
+                'fraud_detection' => true,
+                'fingerprinting' => true,
+                'expiry_validation' => true,
+                'cvv_validation' => true
+            ]
+        ];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function isAvailable(): bool
+    {
+        try {
+            return $this->isHealthy();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getStatus(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'available' => $this->isAvailable(),
+            'metrics' => $this->getMetrics(),
+            'config' => $this->getConfig(),
+            'timestamp' => time()
+        ];
     }
 }

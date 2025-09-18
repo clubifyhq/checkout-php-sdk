@@ -29,4 +29,6 @@ interface ConfigurationInterface
     public function getMaxRetries(): int;
 
     public function isDebugEnabled(): bool;
+
+    public function getDefaultHeaders(): array;
 }

@@ -1,348 +1,205 @@
 <?php
 
-declare(strict_types=1);
+/**
+ * Template para Repository Interface - Clubify Checkout SDK
+ *
+ * Este template define o contrato que todos os repositories de Payment devem seguir.
+ * Estende RepositoryInterface para ter os métodos CRUD básicos.
+ *
+ * INSTRUÇÕES DE USO:
+ * 1. Substitua Payment pelo nome da entidade (ex: Order)
+ * 2. Substitua payment pela versão lowercase (ex: order)
+ * 3. Adicione métodos específicos do domínio
+ * 4. Documente todos os métodos com @param, @return e @throws
+ *
+ * EXEMPLO:
+ * - Payment = Order
+ * - payment = order
+ */
 
 namespace Clubify\Checkout\Modules\Payments\Contracts;
 
 use Clubify\Checkout\Contracts\RepositoryInterface;
 
 /**
- * Interface para Repository de Pagamentos
+ * Payment Repository Interface
  *
- * Especializa o RepositoryInterface para operações
- * específicas de pagamentos e transações.
+ * Define o contrato para repositories que gerenciam Payments.
+ * Estende RepositoryInterface para incluir métodos CRUD básicos:
+ * - create(), findById(), update(), delete()
+ * - findAll(), count(), exists()
  *
- * Segue os princípios SOLID:
- * - S: Single Responsibility - Define apenas operações de pagamento
- * - O: Open/Closed - Extensível via implementações
- * - L: Liskov Substitution - Pode substituir RepositoryInterface
- * - I: Interface Segregation - Interface específica para pagamentos
- * - D: Dependency Inversion - Abstração para implementações
+ * Adiciona métodos específicos para operações de Payment:
+ *
+ * @package Clubify\Checkout\Modules\Payments\Contracts
+ * @version 2.0.0
+ * @author Clubify Checkout Team
  */
 interface PaymentRepositoryInterface extends RepositoryInterface
 {
-    /**
-     * Busca pagamentos por organização
-     */
-    public function findByOrganization(string $organizationId, array $filters = []): array;
-
-    /**
-     * Busca pagamentos por cliente
-     */
-    public function findByCustomer(string $customerId, array $filters = []): array;
-
-    /**
-     * Busca pagamentos por sessão
-     */
-    public function findBySession(string $sessionId): array;
-
-    /**
-     * Busca pagamentos por pedido
-     */
-    public function findByOrder(string $orderId): array;
-
-    /**
-     * Busca pagamentos por gateway
-     */
-    public function findByGateway(string $gateway, array $filters = []): array;
-
-    /**
-     * Busca pagamentos por status
-     */
-    public function findByStatus(string $status, array $filters = []): array;
-
-    /**
-     * Busca pagamentos por método
-     */
-    public function findByMethod(string $method, array $filters = []): array;
-
-    /**
-     * Busca pagamentos por período
-     */
-    public function findByDateRange(string $startDate, string $endDate, array $filters = []): array;
-
-    /**
-     * Busca pagamentos pendentes
-     */
-    public function findPending(array $filters = []): array;
-
-    /**
-     * Busca pagamentos processando
-     */
-    public function findProcessing(array $filters = []): array;
-
-    /**
-     * Busca pagamentos autorizados
-     */
-    public function findAuthorized(array $filters = []): array;
-
-    /**
-     * Busca pagamentos capturados
-     */
-    public function findCaptured(array $filters = []): array;
-
-    /**
-     * Busca pagamentos falharam
-     */
-    public function findFailed(array $filters = []): array;
-
-    /**
-     * Busca pagamentos cancelados
-     */
-    public function findCancelled(array $filters = []): array;
-
-    /**
-     * Busca pagamentos estornados
-     */
-    public function findRefunded(array $filters = []): array;
-
-    /**
-     * Busca pagamentos disputados
-     */
-    public function findDisputed(array $filters = []): array;
-
-    /**
-     * Atualiza status do pagamento
-     */
-    public function updateStatus(string $id, string $status, array $data = []): array;
-
-    /**
-     * Atualiza dados do gateway
-     */
-    public function updateGatewayData(string $id, array $gatewayData): array;
-
-    /**
-     * Adiciona tentativa de pagamento
-     */
-    public function addAttempt(string $id, array $attemptData): array;
-
-    /**
-     * Obtém tentativas de pagamento
-     */
-    public function getAttempts(string $id): array;
-
-    /**
-     * Adiciona evento ao pagamento
-     */
-    public function addEvent(string $id, array $event): array;
-
-    /**
-     * Obtém eventos do pagamento
-     */
-    public function getEvents(string $id): array;
-
-    /**
-     * Marca pagamento como processando
-     */
-    public function markAsProcessing(string $id): array;
-
-    /**
-     * Marca pagamento como autorizado
-     */
-    public function markAsAuthorized(string $id, array $authData): array;
-
-    /**
-     * Marca pagamento como capturado
-     */
-    public function markAsCaptured(string $id, array $captureData): array;
-
-    /**
-     * Marca pagamento como falhou
-     */
-    public function markAsFailed(string $id, string $reason, array $errorData = []): array;
-
-    /**
-     * Marca pagamento como cancelado
-     */
-    public function markAsCancelled(string $id, string $reason): array;
-
-    /**
-     * Marca pagamento como estornado
-     */
-    public function markAsRefunded(string $id, float $amount, string $reason): array;
-
-    /**
-     * Marca pagamento como disputado
-     */
-    public function markAsDisputed(string $id, array $disputeData): array;
-
-    /**
-     * Adiciona refund ao pagamento
-     */
-    public function addRefund(string $id, array $refundData): array;
-
-    /**
-     * Obtém refunds do pagamento
-     */
-    public function getRefunds(string $id): array;
-
-    /**
-     * Calcula total de refunds
-     */
-    public function getTotalRefunded(string $id): float;
-
-    /**
-     * Verifica se pagamento pode ser estornado
-     */
-    public function canBeRefunded(string $id): bool;
-
-    /**
-     * Obtém valor disponível para estorno
-     */
-    public function getRefundableAmount(string $id): float;
-
-    /**
-     * Adiciona chargeback ao pagamento
-     */
-    public function addChargeback(string $id, array $chargebackData): array;
-
-    /**
-     * Obtém chargebacks do pagamento
-     */
-    public function getChargebacks(string $id): array;
-
-    /**
-     * Atualiza dados de risco
-     */
-    public function updateRiskData(string $id, array $riskData): array;
-
-    /**
-     * Obtém dados de risco
-     */
-    public function getRiskData(string $id): array;
-
-    /**
-     * Atualiza dados de antifraude
-     */
-    public function updateAntiFraudData(string $id, array $antiFraudData): array;
-
-    /**
-     * Obtém dados de antifraude
-     */
-    public function getAntiFraudData(string $id): array;
-
-    /**
-     * Busca pagamentos suspeitos
-     */
-    public function findSuspicious(array $filters = []): array;
-
-    /**
-     * Busca pagamentos com alto risco
-     */
-    public function findHighRisk(array $filters = []): array;
-
-    /**
-     * Atualiza dados de parcelamento
-     */
-    public function updateInstallmentData(string $id, array $installmentData): array;
-
-    /**
-     * Obtém dados de parcelamento
-     */
-    public function getInstallmentData(string $id): array;
-
-    /**
-     * Obtém estatísticas de pagamentos
-     */
-    public function getStatistics(array $filters = []): array;
-
-    /**
-     * Obtém estatísticas por gateway
-     */
-    public function getGatewayStatistics(array $filters = []): array;
-
-    /**
-     * Obtém estatísticas por método
-     */
-    public function getMethodStatistics(array $filters = []): array;
+    // ==============================================
+    // DOMAIN-SPECIFIC METHODS
+    // Customize these methods for your entity
+    // ==============================================
 
     /**
-     * Conta pagamentos por status
+     * Find payment by specific field (common pattern)
+     *
+     * @param string $fieldValue The value to search for
+     * @return array|null Payment data or null if not found
+     * @throws \Exception When search fails
      */
-    public function countByStatus(array $filters = []): array;
+    public function findBy{Field}(string $fieldValue): ?array;
 
     /**
-     * Conta pagamentos por período
+     * Find payments by tenant (multi-tenant pattern)
+     *
+     * @param string $tenantId Tenant ID
+     * @param array $filters Additional filters
+     * @return array Array of payments
+     * @throws \Exception When search fails
      */
-    public function countByPeriod(string $period = 'day', array $filters = []): array;
+    public function findByTenant(string $tenantId, array $filters = []): array;
 
     /**
-     * Obtém volume financeiro
+     * Update payment status (common pattern)
+     *
+     * @param string $paymentId Payment ID
+     * @param string $status New status
+     * @return bool True if updated successfully
+     * @throws \Exception When update fails
      */
-    public function getVolumeByPeriod(string $period = 'day', array $filters = []): array;
+    public function updateStatus(string $paymentId, string $status): bool;
 
     /**
-     * Obtém taxa de sucesso
+     * Get payment statistics (analytics pattern)
+     *
+     * @param array $filters Optional filters
+     * @return array Statistics data
+     * @throws \Exception When calculation fails
      */
-    public function getSuccessRate(array $filters = []): float;
+    public function getStats(array $filters = []): array;
 
     /**
-     * Obtém taxa de falha
+     * Bulk create payments (performance pattern)
+     *
+     * @param array $paymentsData Array of payment data
+     * @return array Result with created payments
+     * @throws \Exception When bulk creation fails
      */
-    public function getFailureRate(array $filters = []): float;
+    public function bulkCreate(array $paymentsData): array;
 
     /**
-     * Obtém valor médio de transação
+     * Bulk update payments (performance pattern)
+     *
+     * @param array $updates Array of updates with paymentId => data
+     * @return array Result with updated payments
+     * @throws \Exception When bulk update fails
      */
-    public function getAverageTicket(array $filters = []): float;
+    public function bulkUpdate(array $updates): array;
 
     /**
-     * Obtém relatório de transações
+     * Search payments with advanced criteria (search pattern)
+     *
+     * @param array $criteria Search criteria
+     * @param array $options Search options (sort, limit, offset)
+     * @return array Search results with pagination
+     * @throws \Exception When search fails
      */
-    public function getTransactionReport(array $filters = []): array;
+    public function search(array $criteria, array $options = []): array;
 
     /**
-     * Obtém relatório de reconciliação
+     * Archive payment (soft delete pattern)
+     *
+     * @param string $paymentId Payment ID
+     * @return bool True if archived successfully
+     * @throws \Exception When archiving fails
      */
-    public function getReconciliationReport(string $date): array;
+    public function archive(string $paymentId): bool;
 
     /**
-     * Busca transações para reconciliação
+     * Restore archived payment (soft delete pattern)
+     *
+     * @param string $paymentId Payment ID
+     * @return bool True if restored successfully
+     * @throws \Exception When restore fails
      */
-    public function findForReconciliation(string $gateway, string $date): array;
+    public function restore(string $paymentId): bool;
 
     /**
-     * Marca transação como reconciliada
+     * Get payment history/audit trail (audit pattern)
+     *
+     * @param string $paymentId Payment ID
+     * @param array $options History options
+     * @return array History records
+     * @throws \Exception When history retrieval fails
      */
-    public function markAsReconciled(string $id, array $reconciliationData): array;
+    public function getHistory(string $paymentId, array $options = []): array;
 
-    /**
-     * Obtém pagamentos não reconciliados
-     */
-    public function findUnreconciled(string $gateway, int $daysAgo = 1): array;
+    // ==============================================
+    // RELATIONSHIP METHODS
+    // Add methods for managing relationships
+    // ==============================================
 
     /**
-     * Limpa dados antigos de pagamentos
+     * Get related entities (relationship pattern)
+     *
+     * @param string $paymentId Payment ID
+     * @param string $relationType Type of relationship
+     * @param array $options Relationship options
+     * @return array Related entities
+     * @throws \Exception When relationship retrieval fails
      */
-    public function cleanupOldData(int $daysAgo = 90): int;
+    public function getRelated(string $paymentId, string $relationType, array $options = []): array;
 
     /**
-     * Arquiva pagamentos antigos
+     * Add relationship (relationship pattern)
+     *
+     * @param string $paymentId Payment ID
+     * @param string $relatedId Related entity ID
+     * @param string $relationType Type of relationship
+     * @param array $metadata Optional relationship metadata
+     * @return bool True if relationship created successfully
+     * @throws \Exception When relationship creation fails
      */
-    public function archiveOldPayments(int $daysAgo = 365): int;
+    public function addRelationship(string $paymentId, string $relatedId, string $relationType, array $metadata = []): bool;
 
     /**
-     * Obtém pagamentos para retry
+     * Remove relationship (relationship pattern)
+     *
+     * @param string $paymentId Payment ID
+     * @param string $relatedId Related entity ID
+     * @param string $relationType Type of relationship
+     * @return bool True if relationship removed successfully
+     * @throws \Exception When relationship removal fails
      */
-    public function findForRetry(array $filters = []): array;
+    public function removeRelationship(string $paymentId, string $relatedId, string $relationType): bool;
 
-    /**
-     * Marca pagamento para retry
-     */
-    public function markForRetry(string $id, string $reason): array;
+    // ==============================================
+    // CACHING METHODS
+    // Methods for cache management
+    // ==============================================
 
     /**
-     * Obtém próximo pagamento para processamento
+     * Invalidate payment cache
+     *
+     * @param string $paymentId Payment ID
+     * @return void
      */
-    public function getNextForProcessing(): ?array;
+    public function invalidateCache(string $paymentId): void;
 
     /**
-     * Bloqueia pagamento para processamento
+     * Warm up cache for payment
+     *
+     * @param string $paymentId Payment ID
+     * @return void
      */
-    public function lockForProcessing(string $id): bool;
+    public function warmCache(string $paymentId): void;
 
     /**
-     * Libera lock de processamento
+     * Clear all payment caches
+     *
+     * @return void
      */
-    public function releaseLock(string $id): bool;
+    public function clearAllCache(): void;
 }

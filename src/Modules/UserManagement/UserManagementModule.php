@@ -385,7 +385,13 @@ class UserManagementModule implements ModuleInterface
     private function getUserService(): UserService
     {
         if ($this->userService === null) {
-            $this->userService = new UserService($this->sdk, $this->config, $this->logger);
+            $this->userService = new UserService(
+                $this->config,
+                $this->logger,
+                $this->sdk->getHttpClient(),
+                $this->sdk->getCacheManager(),
+                $this->sdk->getEventDispatcher()
+            );
         }
         return $this->userService;
     }

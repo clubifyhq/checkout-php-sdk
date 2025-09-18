@@ -8,31 +8,23 @@ use Clubify\Checkout\Contracts\ModuleInterface;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
+use Clubify\Checkout\Modules\UserManagement\Factories\UserServiceFactory;
 use Clubify\Checkout\Modules\UserManagement\Services\UserService;
-use Clubify\Checkout\Modules\UserManagement\Services\TenantService;
-use Clubify\Checkout\Modules\UserManagement\Services\PasskeyService;
-use Clubify\Checkout\Modules\UserManagement\Services\AuthService;
-use Clubify\Checkout\Modules\UserManagement\Services\ApiKeyService;
-use Clubify\Checkout\Modules\UserManagement\Services\DomainService;
-use Clubify\Checkout\Modules\UserManagement\Services\RoleService;
-use Clubify\Checkout\Modules\UserManagement\Services\SessionService;
 
 /**
- * Módulo de gestão de usuários enterprise
+ * Módulo de gestão de usuários refatorado
  *
- * Responsável pela gestão completa de usuários e autenticação:
- * - CRUD de usuários
- * - Sistema completo de Passkeys/WebAuthn
- * - Gestão de tenants
- * - Gestão de roles e permissões
- * - Gestão de chaves API
- * - Configuração de domínios customizados
- * - Re-autenticação para operações sensíveis
- * - Verificação de suporte de browser WebAuthn
+ * Implementa a nova arquitetura usando Factory Pattern e Repository Pattern.
+ * Responsável pela gestão completa de usuários:
+ * - CRUD de usuários via Repository Pattern
+ * - Business logic via Services
+ * - Dependency injection via Factory Pattern
+ * - Lazy loading de services
+ * - Health checks e métricas
  *
  * Segue os princípios SOLID:
  * - S: Single Responsibility - Gerencia apenas operações de usuário
- * - O: Open/Closed - Extensível via novos tipos de autenticação
+ * - O: Open/Closed - Extensível via Factory Pattern
  * - L: Liskov Substitution - Implementa ModuleInterface
  * - I: Interface Segregation - Métodos específicos de user management
  * - D: Dependency Inversion - Depende de abstrações
@@ -42,21 +34,14 @@ class UserManagementModule implements ModuleInterface
     private Configuration $config;
     private Logger $logger;
     private bool $initialized = false;
+    private ?UserServiceFactory $factory = null;
 
     // Services (lazy loading)
     private ?UserService $userService = null;
-    private ?TenantService $tenantService = null;
-    private ?PasskeyService $passkeyService = null;
-    private ?AuthService $authService = null;
-    private ?ApiKeyService $apiKeyService = null;
-    private ?DomainService $domainService = null;
-    private ?RoleService $roleService = null;
-    private ?SessionService $sessionService = null;
 
     public function __construct(
         private ClubifyCheckoutSDK $sdk
-    ) {
-    }
+    ) {}
 
     /**
      * Inicializa o módulo com configurações
@@ -95,11 +80,11 @@ class UserManagementModule implements ModuleInterface
      */
     public function getVersion(): string
     {
-        return '1.0.0';
+        return '2.0.0';
     }
 
     /**
-     * Obtém as dependências do módulo
+     * Obtém dependências do módulo
      */
     public function getDependencies(): array
     {
@@ -115,7 +100,7 @@ class UserManagementModule implements ModuleInterface
     }
 
     /**
-     * Obtém o status do módulo
+     * Obtém status do módulo
      */
     public function getStatus(): array
     {
@@ -126,14 +111,8 @@ class UserManagementModule implements ModuleInterface
             'available' => $this->isAvailable(),
             'services_loaded' => [
                 'user' => $this->userService !== null,
-                'tenant' => $this->tenantService !== null,
-                'passkey' => $this->passkeyService !== null,
-                'auth' => $this->authService !== null,
-                'api_key' => $this->apiKeyService !== null,
-                'domain' => $this->domainService !== null,
-                'role' => $this->roleService !== null,
-                'session' => $this->sessionService !== null,
             ],
+            'factory_loaded' => $this->factory !== null,
             'timestamp' => time()
         ];
     }
@@ -144,13 +123,7 @@ class UserManagementModule implements ModuleInterface
     public function cleanup(): void
     {
         $this->userService = null;
-        $this->tenantService = null;
-        $this->passkeyService = null;
-        $this->authService = null;
-        $this->apiKeyService = null;
-        $this->domainService = null;
-        $this->roleService = null;
-        $this->sessionService = null;
+        $this->factory = null;
         $this->initialized = false;
         $this->logger?->info('User Management module cleaned up');
     }
@@ -161,7 +134,8 @@ class UserManagementModule implements ModuleInterface
     public function isHealthy(): bool
     {
         try {
-            return $this->initialized;
+            return $this->initialized &&
+                   ($this->userService === null || $this->userService->isHealthy());
         } catch (\Exception $e) {
             $this->logger?->error('UserManagementModule health check failed', [
                 'error' => $e->getMessage()
@@ -180,12 +154,18 @@ class UserManagementModule implements ModuleInterface
             'version' => $this->getVersion(),
             'initialized' => $this->initialized,
             'healthy' => $this->isHealthy(),
+            'services' => [
+                'user' => $this->userService?->getMetrics(),
+            ],
+            'factory_stats' => $this->factory?->getStats(),
             'timestamp' => time()
         ];
     }
 
+    // === USER MANAGEMENT METHODS ===
+
     /**
-     * CRUD de usuários
+     * Cria um novo usuário
      */
     public function createUser(array $userData): array
     {
@@ -193,24 +173,36 @@ class UserManagementModule implements ModuleInterface
         return $this->getUserService()->createUser($userData);
     }
 
+    /**
+     * Obtém um usuário por ID
+     */
     public function getUser(string $userId): array
     {
         $this->requireInitialized();
         return $this->getUserService()->getUser($userId);
     }
 
+    /**
+     * Atualiza um usuário
+     */
     public function updateUser(string $userId, array $userData): array
     {
         $this->requireInitialized();
         return $this->getUserService()->updateUser($userId, $userData);
     }
 
+    /**
+     * Exclui um usuário
+     */
     public function deleteUser(string $userId): array
     {
         $this->requireInitialized();
         return $this->getUserService()->deleteUser($userId);
     }
 
+    /**
+     * Lista usuários com filtros
+     */
     public function listUsers(array $filters = []): array
     {
         $this->requireInitialized();
@@ -218,25 +210,7 @@ class UserManagementModule implements ModuleInterface
     }
 
     /**
-     * Autenticar usuário
-     */
-    public function authenticateUser(string $email, string $password): array
-    {
-        $this->requireInitialized();
-        return $this->getAuthService()->authenticateUser($email, $password);
-    }
-
-    /**
-     * Obter roles do usuário
-     */
-    public function getUserRoles(string $userId): array
-    {
-        $this->requireInitialized();
-        return $this->getRoleService()->getUserRoles($userId);
-    }
-
-    /**
-     * Atualizar perfil do usuário
+     * Atualiza perfil do usuário
      */
     public function updateUserProfile(string $userId, array $profileData): array
     {
@@ -245,215 +219,76 @@ class UserManagementModule implements ModuleInterface
     }
 
     /**
-     * Passkeys/WebAuthn
+     * Obtém roles do usuário
      */
-    public function registerPasskeyBegin(string $userId): array
+    public function getUserRoles(string $userId): array
     {
         $this->requireInitialized();
-        return $this->getPasskeyService()->registerBegin($userId);
-    }
-
-    public function registerPasskeyComplete(string $userId, array $credential): array
-    {
-        $this->requireInitialized();
-        return $this->getPasskeyService()->registerComplete($userId, $credential);
-    }
-
-    public function authenticatePasskeyBegin(string $userId): array
-    {
-        $this->requireInitialized();
-        return $this->getPasskeyService()->authenticateBegin($userId);
-    }
-
-    public function authenticatePasskeyComplete(string $userId, array $assertion): array
-    {
-        $this->requireInitialized();
-        return $this->getPasskeyService()->authenticateComplete($userId, $assertion);
-    }
-
-    public function checkWebAuthnSupport(): array
-    {
-        $this->requireInitialized();
-        return $this->getPasskeyService()->checkBrowserSupport();
+        return $this->getUserService()->getUserRoles($userId);
     }
 
     /**
-     * Gestão de tenants
+     * Busca usuário por email
      */
-    public function createTenant(array $tenantData): array
+    public function findUserByEmail(string $email): array
     {
         $this->requireInitialized();
-        return $this->getTenantService()->createTenant($tenantData);
-    }
-
-    public function getTenant(string $tenantId): array
-    {
-        $this->requireInitialized();
-        return $this->getTenantService()->getTenant($tenantId);
-    }
-
-    public function updateTenant(string $tenantId, array $tenantData): array
-    {
-        $this->requireInitialized();
-        return $this->getTenantService()->updateTenant($tenantId, $tenantData);
+        return $this->getUserService()->findUserByEmail($email);
     }
 
     /**
-     * Gestão de domínios
+     * Altera senha do usuário
      */
-    public function configureDomain(string $tenantId, array $domainData): array
+    public function changePassword(string $userId, string $newPassword): array
     {
         $this->requireInitialized();
-        return $this->getDomainService()->configureDomain($tenantId, $domainData);
-    }
-
-    public function verifyDomain(string $domainId): array
-    {
-        $this->requireInitialized();
-        return $this->getDomainService()->verifyDomain($domainId);
+        return $this->getUserService()->changePassword($userId, $newPassword);
     }
 
     /**
-     * Gestão de API Keys
+     * Ativa usuário
      */
-    public function createApiKey(string $userId, array $keyData): array
+    public function activateUser(string $userId): array
     {
         $this->requireInitialized();
-        return $this->getApiKeyService()->createApiKey($userId, $keyData);
-    }
-
-    public function revokeApiKey(string $keyId): array
-    {
-        $this->requireInitialized();
-        return $this->getApiKeyService()->revokeApiKey($keyId);
+        return $this->getUserService()->activateUser($userId);
     }
 
     /**
-     * Gestão de roles
+     * Desativa usuário
      */
-    public function assignRole(string $userId, string $role): array
+    public function deactivateUser(string $userId): array
     {
         $this->requireInitialized();
-        return $this->getRoleService()->assignRole($userId, $role);
+        return $this->getUserService()->deactivateUser($userId);
     }
 
-    public function checkPermission(string $userId, string $permission): array
+    // === FACTORY AND SERVICE CREATION ===
+
+    /**
+     * Obtém a factory de services
+     */
+    private function getFactory(): UserServiceFactory
     {
-        $this->requireInitialized();
-        return $this->getRoleService()->checkPermission($userId, $permission);
+        if ($this->factory === null) {
+            $this->factory = $this->sdk->createUserServiceFactory();
+        }
+        return $this->factory;
     }
 
     /**
-     * Re-autenticação
-     */
-    public function requestReAuth(string $userId, string $operation): array
-    {
-        $this->requireInitialized();
-        return $this->getAuthService()->requestReAuthentication($userId, $operation);
-    }
-
-    public function verifyReAuth(string $userId, string $token): array
-    {
-        $this->requireInitialized();
-        return $this->getAuthService()->verifyReAuthentication($userId, $token);
-    }
-
-    /**
-     * Sessões
-     */
-    public function createSession(string $userId, array $sessionData): array
-    {
-        $this->requireInitialized();
-        return $this->getSessionService()->createSession($userId, $sessionData);
-    }
-
-    public function validateSession(string $sessionId): array
-    {
-        $this->requireInitialized();
-        return $this->getSessionService()->validateSession($sessionId);
-    }
-
-    public function revokeSession(string $sessionId): array
-    {
-        $this->requireInitialized();
-        return $this->getSessionService()->revokeSession($sessionId);
-    }
-
-    /**
-     * Lazy loading dos services
+     * Obtém o UserService (lazy loading)
      */
     private function getUserService(): UserService
     {
         if ($this->userService === null) {
-            $this->userService = new UserService(
-                $this->config,
-                $this->logger,
-                $this->sdk->getHttpClient(),
-                $this->sdk->getCacheManager(),
-                $this->sdk->getEventDispatcher()
-            );
+            $this->userService = $this->getFactory()->create('user');
         }
         return $this->userService;
     }
 
-    private function getTenantService(): TenantService
-    {
-        if ($this->tenantService === null) {
-            $this->tenantService = new TenantService($this->sdk, $this->config, $this->logger);
-        }
-        return $this->tenantService;
-    }
-
-    private function getPasskeyService(): PasskeyService
-    {
-        if ($this->passkeyService === null) {
-            $this->passkeyService = new PasskeyService($this->sdk, $this->config, $this->logger);
-        }
-        return $this->passkeyService;
-    }
-
-    private function getAuthService(): AuthService
-    {
-        if ($this->authService === null) {
-            $this->authService = new AuthService($this->sdk, $this->config, $this->logger);
-        }
-        return $this->authService;
-    }
-
-    private function getApiKeyService(): ApiKeyService
-    {
-        if ($this->apiKeyService === null) {
-            $this->apiKeyService = new ApiKeyService($this->sdk, $this->config, $this->logger);
-        }
-        return $this->apiKeyService;
-    }
-
-    private function getDomainService(): DomainService
-    {
-        if ($this->domainService === null) {
-            $this->domainService = new DomainService($this->sdk, $this->config, $this->logger);
-        }
-        return $this->domainService;
-    }
-
-    private function getRoleService(): RoleService
-    {
-        if ($this->roleService === null) {
-            $this->roleService = new RoleService($this->sdk, $this->config, $this->logger);
-        }
-        return $this->roleService;
-    }
-
-    private function getSessionService(): SessionService
-    {
-        if ($this->sessionService === null) {
-            $this->sessionService = new SessionService($this->sdk, $this->config, $this->logger);
-        }
-        return $this->sessionService;
-    }
-
     /**
-     * Verifica se o módulo está inicializado
+     * Verifica se o módulo está inicializado antes de executar operações
      */
     private function requireInitialized(): void
     {

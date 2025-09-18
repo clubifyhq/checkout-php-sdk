@@ -52,6 +52,30 @@ abstract class BaseService implements ServiceInterface
     }
 
     /**
+     * Obtém o nome do serviço
+     */
+    public function getName(): string
+    {
+        return $this->getServiceName();
+    }
+
+    /**
+     * Obtém a versão do serviço
+     */
+    public function getVersion(): string
+    {
+        return $this->getServiceVersion();
+    }
+
+    /**
+     * Verifica se o serviço está saudável (health check)
+     */
+    public function isHealthy(): bool
+    {
+        return $this->initialized && $this->performHealthCheck();
+    }
+
+    /**
      * Obtém configurações específicas do serviço
      */
     public function getConfig(): array
@@ -217,10 +241,23 @@ abstract class BaseService implements ServiceInterface
     abstract protected function getServiceName(): string;
 
     /**
+     * Obtém a versão do serviço
+     */
+    abstract protected function getServiceVersion(): string;
+
+    /**
      * Verifica disponibilidade específica do serviço
      */
     protected function checkAvailability(): bool
     {
         return true;
+    }
+
+    /**
+     * Realiza health check específico do serviço
+     */
+    protected function performHealthCheck(): bool
+    {
+        return $this->checkAvailability();
     }
 }

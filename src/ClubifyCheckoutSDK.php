@@ -19,6 +19,7 @@ use Clubify\Checkout\Modules\Customers\CustomersModule;
 use Clubify\Checkout\Modules\Webhooks\WebhooksModule;
 use Clubify\Checkout\Modules\Tracking\TrackingModule;
 use Clubify\Checkout\Modules\UserManagement\UserManagementModule;
+use Clubify\Checkout\Modules\UserManagement\Factories\UserServiceFactory;
 use Clubify\Checkout\Modules\Subscriptions\SubscriptionsModule;
 use Clubify\Checkout\Enums\Environment;
 use Clubify\Checkout\Exceptions\ConfigurationException;
@@ -527,6 +528,27 @@ class ClubifyCheckoutSDK
     {
         $this->config->set('debug', $enabled);
         $this->logger?->setDebugMode($enabled);
+    }
+
+    /**
+     * Criar User Service Factory
+     *
+     * Cria uma factory para gerenciar services do UserManagement
+     * com todas as dependências necessárias injetadas.
+     *
+     * @return UserServiceFactory Factory configurada
+     */
+    public function createUserServiceFactory(): UserServiceFactory
+    {
+        $this->requireInitialized('createUserServiceFactory');
+
+        return new UserServiceFactory(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher()
+        );
     }
 
     /**

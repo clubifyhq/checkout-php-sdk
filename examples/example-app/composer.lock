@@ -141,12 +141,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:clubifyhq/checkout-php-sdk.git",
-                "reference": "439c203bee8b2c0e4ad8efe6188393e90e8779d2"
+                "reference": "a2570dcf35d9a79f21b1fbb85e962f486c3bff92"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/clubifyhq/checkout-php-sdk/zipball/439c203bee8b2c0e4ad8efe6188393e90e8779d2",
-                "reference": "439c203bee8b2c0e4ad8efe6188393e90e8779d2",
+                "url": "https://api.github.com/repos/clubifyhq/checkout-php-sdk/zipball/a2570dcf35d9a79f21b1fbb85e962f486c3bff92",
+                "reference": "a2570dcf35d9a79f21b1fbb85e962f486c3bff92",
                 "shasum": ""
             },
             "require": {
@@ -296,7 +296,7 @@
                 "source": "https://github.com/clubify/checkout-sdk-php",
                 "docs": "https://docs.clubify.com/sdk/php"
             },
-            "time": "2025-09-18T12:29:33+00:00"
+            "time": "2025-09-18T12:48:09+00:00"
         },
         {
             "name": "dflydev/dot-access-data",

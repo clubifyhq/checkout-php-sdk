@@ -16,6 +16,26 @@ namespace Clubify\Checkout\Contracts;
 interface ServiceInterface
 {
     /**
+     * Obtém o nome do serviço
+     */
+    public function getName(): string;
+
+    /**
+     * Obtém a versão do serviço
+     */
+    public function getVersion(): string;
+
+    /**
+     * Verifica se o serviço está saudável (health check)
+     */
+    public function isHealthy(): bool;
+
+    /**
+     * Obtém métricas do serviço
+     */
+    public function getMetrics(): array;
+
+    /**
      * Obtém configurações específicas do serviço
      */
     public function getConfig(): array;
@@ -29,9 +49,4 @@ interface ServiceInterface
      * Obtém o status do serviço
      */
     public function getStatus(): array;
-
-    /**
-     * Obtém métricas do serviço
-     */
-    public function getMetrics(): array;
 }

@@ -663,7 +663,7 @@ class ClubifyDemoController extends Controller
         $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
-        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
+        // Removido cleanup pois desinicializa o módulo
 
         // Métodos específicos do ProductsModule
         $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
@@ -696,7 +696,7 @@ class ClubifyDemoController extends Controller
         $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
-        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
+        // Removido cleanup pois desinicializa o módulo
 
         // Métodos específicos do CheckoutModule
         $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
@@ -737,7 +737,7 @@ class ClubifyDemoController extends Controller
         $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
-        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
+        // Removido cleanup pois desinicializa o módulo
 
         // Métodos específicos do PaymentsModule
         $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
@@ -781,7 +781,7 @@ class ClubifyDemoController extends Controller
         $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
-        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
+        // Removido cleanup pois desinicializa o módulo
 
         // Métodos específicos do CustomersModule
         $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
@@ -823,7 +823,7 @@ class ClubifyDemoController extends Controller
         $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
-        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
+        // Removido cleanup pois desinicializa o módulo
 
         // Métodos específicos do WebhooksModule
         $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
@@ -857,7 +857,7 @@ class ClubifyDemoController extends Controller
         $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
-        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
+        // Removido cleanup pois desinicializa o módulo
 
         // Métodos específicos do TrackingModule
         $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
@@ -895,7 +895,7 @@ class ClubifyDemoController extends Controller
         $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
-        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
+        // Removido cleanup pois desinicializa o módulo
 
         // Métodos específicos do UserManagementModule
         $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');
@@ -927,6 +927,7 @@ class ClubifyDemoController extends Controller
     {
         $results = [];
 
+
         // Métodos da Interface ModuleInterface
         $results[] = ModuleTestHelper::testMethod($module, 'getName', [], 'string');
         $results[] = ModuleTestHelper::testMethod($module, 'getVersion', [], 'string');
@@ -934,7 +935,7 @@ class ClubifyDemoController extends Controller
         $results[] = ModuleTestHelper::testMethod($module, 'isInitialized', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'isAvailable', [], 'boolean');
         $results[] = ModuleTestHelper::testMethod($module, 'getStatus', [], 'array');
-        $results[] = ModuleTestHelper::testMethod($module, 'cleanup', [], 'void');
+        // Removido cleanup pois desinicializa o módulo
 
         // Métodos específicos do SubscriptionsModule
         $results[] = ModuleTestHelper::testMethod($module, 'isHealthy', [], 'boolean');

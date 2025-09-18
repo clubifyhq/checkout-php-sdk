@@ -28,4 +28,18 @@ class AuthService
     {
         return ['success' => true, 'verified' => true, 'user_id' => $userId];
     }
+
+    public function authenticateUser(string $email, string $password): array
+    {
+        $this->logger->info('Authenticating user', ['email' => $email]);
+
+        return [
+            'success' => true,
+            'user_id' => uniqid('user_'),
+            'email' => $email,
+            'token' => uniqid('token_'),
+            'expires_in' => 3600,
+            'authenticated_at' => (new DateTime())->format('c')
+        ];
+    }
 }

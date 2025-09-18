@@ -16,6 +16,7 @@ class ModuleTestHelper
     public static function testMethod($object, string $methodName, array $params = [], string $expectedType = 'mixed'): array
     {
         try {
+
             $result = call_user_func_array([$object, $methodName], $params);
 
             // Verificar tipo de retorno

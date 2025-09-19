@@ -36,6 +36,14 @@ class TenantService extends BaseService
     }
 
     /**
+     * Obtém a versão do serviço
+     */
+    protected function getServiceVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
      * Cria um novo tenant para uma organização
      */
     public function createTenant(string $organizationId, array $tenantData): array

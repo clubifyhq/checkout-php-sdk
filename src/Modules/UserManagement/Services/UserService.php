@@ -381,6 +381,56 @@ class UserService implements ServiceInterface
     }
 
     /**
+     * Autentica um usuário
+     */
+    public function authenticateUser(string $email, string $password): array
+    {
+        try {
+            $this->logger->info('Authenticating user', ['email' => $email]);
+
+            $user = $this->repository->findByEmail($email);
+
+            if (!$user) {
+                throw new UserNotFoundException("User with email {$email} not found");
+            }
+
+            // Verify password (assuming repository has this method)
+            $isValid = $this->repository->verifyPassword($email, $password);
+
+            if (!$isValid) {
+                throw new UserValidationException("Invalid credentials");
+            }
+
+            $this->logger->info('User authenticated successfully', [
+                'user_id' => $user['id'],
+                'email' => $email
+            ]);
+
+            return [
+                'success' => true,
+                'user_id' => $user['id'],
+                'user' => $user,
+                'authenticated' => true,
+                'authenticated_at' => date('c')
+            ];
+
+        } catch (UserNotFoundException | UserValidationException $e) {
+            $this->logger->warning('User authentication failed', [
+                'email' => $email,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to authenticate user', [
+                'email' => $email,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Altera senha do usuário
      */
     public function changePassword(string $userId, string $newPassword): array

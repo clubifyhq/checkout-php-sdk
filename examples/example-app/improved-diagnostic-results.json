@@ -1,0 +1,3377 @@
+{
+    "diagnostic_info": {
+        "script_version": "2.0_improved",
+        "timestamp": "2025-09-19 00:00:04",
+        "total_time": 6.5,
+        "sdk_version": "1.0.0",
+        "environment": "sandbox"
+    },
+    "statistics": {
+        "total_tests": 81,
+        "successful_tests": 16,
+        "failed_tests": 5,
+        "mock_data_detected": 0,
+        "success_rate": 19.75,
+        "mock_rate": 0
+    },
+    "discovered_modules": {
+        "organization": {
+            "name": "organization",
+            "version": "1.0.0",
+            "class": "Clubify\\Checkout\\Modules\\Organization\\OrganizationModule",
+            "initialized": true,
+            "available": true,
+            "discovered_methods": [
+                {
+                    "name": "initialize",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "setDependencies",
+                    "parameters": 3,
+                    "required_params": 3,
+                    "static": false
+                },
+                {
+                    "name": "isInitialized",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getName",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getVersion",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getDependencies",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isAvailable",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStatus",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "cleanup",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getRepository",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "tenant",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "admin",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "apiKey",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "domain",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "setupOrganization",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "setupComplete",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                }
+            ],
+            "total_methods": 16
+        },
+        "products": {
+            "name": "products",
+            "version": "1.0.0",
+            "class": "Clubify\\Checkout\\Modules\\Products\\ProductsModule",
+            "initialized": true,
+            "available": true,
+            "discovered_methods": [
+                {
+                    "name": "initialize",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "isInitialized",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getName",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getVersion",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getDependencies",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isAvailable",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStatus",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "cleanup",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isHealthy",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStats",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "setupComplete",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "createComplete",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "createTheme",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getTheme",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "updateTheme",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "listThemes",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "activateTheme",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "generateThemeCSS",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getThemePresets",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "customizeTheme",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "createLayout",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getLayout",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "updateLayout",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "listLayouts",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "addLayoutSection",
+                    "parameters": 3,
+                    "required_params": 3,
+                    "static": false
+                },
+                {
+                    "name": "removeLayoutSection",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "reorderLayoutSections",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "generateLayoutHTML",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getLayoutTemplates",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "optimizeLayout",
+                    "parameters": 2,
+                    "required_params": 1,
+                    "static": false
+                }
+            ],
+            "total_methods": 30
+        },
+        "checkout": {
+            "name": "checkout",
+            "version": "1.0.0",
+            "class": "Clubify\\Checkout\\Modules\\Checkout\\CheckoutModule",
+            "initialized": true,
+            "available": true,
+            "discovered_methods": [
+                {
+                    "name": "initialize",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "isInitialized",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getName",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getVersion",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getDependencies",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isAvailable",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStatus",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "cleanup",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isHealthy",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStats",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "createSession",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "setupComplete",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "createComplete",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "oneClick",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                }
+            ],
+            "total_methods": 14
+        },
+        "payments": {
+            "name": "payments",
+            "version": "1.0.0",
+            "class": "Clubify\\Checkout\\Modules\\Payments\\PaymentsModule",
+            "initialized": true,
+            "available": true,
+            "discovered_methods": [
+                {
+                    "name": "initialize",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "isInitialized",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getName",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getVersion",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getDependencies",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isAvailable",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStatus",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "cleanup",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isHealthy",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStats",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "processPayment",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "setupComplete",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "createComplete",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "tokenizeCard",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getPaymentService",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getCardService",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getGatewayService",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getTokenizationService",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getServiceFactory",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                }
+            ],
+            "total_methods": 19
+        },
+        "customers": {
+            "name": "customers",
+            "version": "1.0.0",
+            "class": "Clubify\\Checkout\\Modules\\Customers\\CustomersModule",
+            "initialized": true,
+            "available": true,
+            "discovered_methods": [
+                {
+                    "name": "initialize",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "isInitialized",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getName",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getVersion",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getDependencies",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isAvailable",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "createCustomer",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "setupComplete",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "createComplete",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "findByEmail",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "updateProfile",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "cleanup",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStatus",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStats",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isHealthy",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                }
+            ],
+            "total_methods": 15
+        },
+        "webhooks": {
+            "name": "webhooks",
+            "version": "1.0.0",
+            "class": "Clubify\\Checkout\\Modules\\Webhooks\\WebhooksModule",
+            "initialized": true,
+            "available": true,
+            "discovered_methods": [
+                {
+                    "name": "initialize",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "isInitialized",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getName",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getVersion",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getDependencies",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isAvailable",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStatus",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "cleanup",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isHealthy",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStats",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "createWebhook",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getWebhook",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "updateWebhook",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "deleteWebhook",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "listWebhooks",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "activateWebhook",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "deactivateWebhook",
+                    "parameters": 2,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "sendEvent",
+                    "parameters": 3,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "getConfig",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "updateConfig",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "testWebhook",
+                    "parameters": 2,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "testUrl",
+                    "parameters": 2,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "retryWebhook",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "getRetryStatus",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getWebhookStats",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getSupportedEvents",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                }
+            ],
+            "total_methods": 26
+        },
+        "tracking": {
+            "name": "tracking",
+            "version": "1.0.0",
+            "class": "Clubify\\Checkout\\Modules\\Tracking\\TrackingModule",
+            "initialized": true,
+            "available": true,
+            "discovered_methods": [
+                {
+                    "name": "initialize",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "isInitialized",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getName",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getVersion",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getDependencies",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isAvailable",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStatus",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "cleanup",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isHealthy",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStats",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "trackEvent",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "trackBatch",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "trackBeacon",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getAnalytics",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getUserSegmentation",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getConversionFunnel",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "trackConversion",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                }
+            ],
+            "total_methods": 17
+        },
+        "userManagement": {
+            "name": "user_management",
+            "version": "2.0.0",
+            "class": "Clubify\\Checkout\\Modules\\UserManagement\\UserManagementModule",
+            "initialized": true,
+            "available": true,
+            "discovered_methods": [
+                {
+                    "name": "initialize",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "isInitialized",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getName",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getVersion",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getDependencies",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isAvailable",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStatus",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "cleanup",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isHealthy",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStats",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "createUser",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getUser",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "updateUser",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "deleteUser",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "listUsers",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "updateUserProfile",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "getUserRoles",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "findUserByEmail",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "changePassword",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "activateUser",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "deactivateUser",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                }
+            ],
+            "total_methods": 21
+        },
+        "subscriptions": {
+            "name": "subscriptions",
+            "version": "1.0.0",
+            "class": "Clubify\\Checkout\\Modules\\Subscriptions\\SubscriptionsModule",
+            "initialized": true,
+            "available": true,
+            "discovered_methods": [
+                {
+                    "name": "initialize",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "isInitialized",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getName",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getVersion",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getDependencies",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isAvailable",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStatus",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "cleanup",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "isHealthy",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getStats",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "createSubscription",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getSubscription",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "updateSubscription",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "listSubscriptions",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "pauseSubscription",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "resumeSubscription",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "cancelSubscription",
+                    "parameters": 2,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "upgradeSubscription",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "downgradeSubscription",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "createPlan",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getPlan",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "updatePlan",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "listPlans",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "processManualBilling",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getUpcomingInvoice",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "getInvoiceHistory",
+                    "parameters": 1,
+                    "required_params": 1,
+                    "static": false
+                },
+                {
+                    "name": "updatePaymentMethod",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "updateBilling",
+                    "parameters": 2,
+                    "required_params": 2,
+                    "static": false
+                },
+                {
+                    "name": "getSubscriptionMetrics",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getChurnAnalysis",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getRevenueMetrics",
+                    "parameters": 1,
+                    "required_params": 0,
+                    "static": false
+                },
+                {
+                    "name": "getSubscriptionHealth",
+                    "parameters": 0,
+                    "required_params": 0,
+                    "static": false
+                }
+            ],
+            "total_methods": 32
+        }
+    },
+    "detailed_results": [
+        {
+            "test": "SDK_INITIALIZATION",
+            "status": "SUCCESS",
+            "message": "SDK inicializado com sucesso",
+            "data": {
+                "tenant_id": "68c05e15ad...",
+                "environment": "sandbox",
+                "base_url": "https:\/\/checkout.svelve.com\/api\/v1",
+                "initialization_result": {
+                    "success": true,
+                    "authenticated": true,
+                    "tenant_id": "68c05e15ad23f0f6aaa1ae51",
+                    "environment": "sandbox",
+                    "auth_result": true,
+                    "connectivity": true,
+                    "timestamp": "2025-09-18T23:59:58+00:00"
+                }
+            },
+            "timestamp": "2025-09-18 23:59:58"
+        },
+        {
+            "test": "HTTP_CONNECTIVITY_ADVANCED",
+            "status": "SUCCESS",
+            "message": "Conectividade HTTP OK",
+            "data": {
+                "base_url": "https:\/\/checkout.svelve.com\/api\/v1",
+                "response_time": "814.26ms",
+                "response_size": "99 bytes"
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SDK_STATS_ADVANCED",
+            "status": "SUCCESS",
+            "message": "Estatísticas do SDK obtidas",
+            "data": {
+                "initialized": true,
+                "authenticated": true,
+                "environment": "sandbox",
+                "tenant_id": "68c05e15ad23f0f6aaa1ae51",
+                "modules_loaded": {
+                    "organization": false,
+                    "products": false,
+                    "checkout": false,
+                    "payments": false,
+                    "customers": false,
+                    "webhooks": false,
+                    "tracking": false,
+                    "user_management": false,
+                    "subscriptions": false
+                },
+                "memory_usage": 10485760,
+                "peak_memory": 10485760
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SDK_VERSION_ADVANCED",
+            "status": "SUCCESS",
+            "message": "Versão: 1.0.0",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SDK_INITIALIZED_ADVANCED",
+            "status": "SUCCESS",
+            "message": "Status de inicialização: Inicializado",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_DISCOVERED_ORGANIZATION",
+            "status": "SUCCESS",
+            "message": "Módulo organization descoberto com 16 métodos públicos",
+            "data": {
+                "name": "organization",
+                "version": "1.0.0",
+                "class": "Clubify\\Checkout\\Modules\\Organization\\OrganizationModule",
+                "initialized": true,
+                "available": true,
+                "discovered_methods": [
+                    {
+                        "name": "initialize",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "setDependencies",
+                        "parameters": 3,
+                        "required_params": 3,
+                        "static": false
+                    },
+                    {
+                        "name": "isInitialized",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getName",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getVersion",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getDependencies",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isAvailable",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStatus",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "cleanup",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getRepository",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "tenant",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "admin",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "apiKey",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "domain",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "setupOrganization",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "setupComplete",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    }
+                ],
+                "total_methods": 16
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_DISCOVERED_PRODUCTS",
+            "status": "SUCCESS",
+            "message": "Módulo products descoberto com 30 métodos públicos",
+            "data": {
+                "name": "products",
+                "version": "1.0.0",
+                "class": "Clubify\\Checkout\\Modules\\Products\\ProductsModule",
+                "initialized": true,
+                "available": true,
+                "discovered_methods": [
+                    {
+                        "name": "initialize",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "isInitialized",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getName",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getVersion",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getDependencies",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isAvailable",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStatus",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "cleanup",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isHealthy",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStats",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "setupComplete",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "createComplete",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "createTheme",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getTheme",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "updateTheme",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "listThemes",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "activateTheme",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "generateThemeCSS",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getThemePresets",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "customizeTheme",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "createLayout",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getLayout",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "updateLayout",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "listLayouts",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "addLayoutSection",
+                        "parameters": 3,
+                        "required_params": 3,
+                        "static": false
+                    },
+                    {
+                        "name": "removeLayoutSection",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "reorderLayoutSections",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "generateLayoutHTML",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getLayoutTemplates",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "optimizeLayout",
+                        "parameters": 2,
+                        "required_params": 1,
+                        "static": false
+                    }
+                ],
+                "total_methods": 30
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_DISCOVERED_CHECKOUT",
+            "status": "SUCCESS",
+            "message": "Módulo checkout descoberto com 14 métodos públicos",
+            "data": {
+                "name": "checkout",
+                "version": "1.0.0",
+                "class": "Clubify\\Checkout\\Modules\\Checkout\\CheckoutModule",
+                "initialized": true,
+                "available": true,
+                "discovered_methods": [
+                    {
+                        "name": "initialize",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "isInitialized",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getName",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getVersion",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getDependencies",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isAvailable",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStatus",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "cleanup",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isHealthy",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStats",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "createSession",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "setupComplete",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "createComplete",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "oneClick",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    }
+                ],
+                "total_methods": 14
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_DISCOVERED_PAYMENTS",
+            "status": "SUCCESS",
+            "message": "Módulo payments descoberto com 19 métodos públicos",
+            "data": {
+                "name": "payments",
+                "version": "1.0.0",
+                "class": "Clubify\\Checkout\\Modules\\Payments\\PaymentsModule",
+                "initialized": true,
+                "available": true,
+                "discovered_methods": [
+                    {
+                        "name": "initialize",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "isInitialized",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getName",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getVersion",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getDependencies",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isAvailable",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStatus",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "cleanup",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isHealthy",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStats",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "processPayment",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "setupComplete",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "createComplete",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "tokenizeCard",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getPaymentService",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getCardService",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getGatewayService",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getTokenizationService",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getServiceFactory",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    }
+                ],
+                "total_methods": 19
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_DISCOVERED_CUSTOMERS",
+            "status": "SUCCESS",
+            "message": "Módulo customers descoberto com 15 métodos públicos",
+            "data": {
+                "name": "customers",
+                "version": "1.0.0",
+                "class": "Clubify\\Checkout\\Modules\\Customers\\CustomersModule",
+                "initialized": true,
+                "available": true,
+                "discovered_methods": [
+                    {
+                        "name": "initialize",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "isInitialized",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getName",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getVersion",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getDependencies",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isAvailable",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "createCustomer",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "setupComplete",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "createComplete",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "findByEmail",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "updateProfile",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "cleanup",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStatus",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStats",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isHealthy",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    }
+                ],
+                "total_methods": 15
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_DISCOVERED_WEBHOOKS",
+            "status": "SUCCESS",
+            "message": "Módulo webhooks descoberto com 26 métodos públicos",
+            "data": {
+                "name": "webhooks",
+                "version": "1.0.0",
+                "class": "Clubify\\Checkout\\Modules\\Webhooks\\WebhooksModule",
+                "initialized": true,
+                "available": true,
+                "discovered_methods": [
+                    {
+                        "name": "initialize",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "isInitialized",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getName",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getVersion",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getDependencies",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isAvailable",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStatus",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "cleanup",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isHealthy",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStats",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "createWebhook",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getWebhook",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "updateWebhook",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "deleteWebhook",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "listWebhooks",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "activateWebhook",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "deactivateWebhook",
+                        "parameters": 2,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "sendEvent",
+                        "parameters": 3,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "getConfig",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "updateConfig",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "testWebhook",
+                        "parameters": 2,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "testUrl",
+                        "parameters": 2,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "retryWebhook",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "getRetryStatus",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getWebhookStats",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getSupportedEvents",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    }
+                ],
+                "total_methods": 26
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_DISCOVERED_TRACKING",
+            "status": "SUCCESS",
+            "message": "Módulo tracking descoberto com 17 métodos públicos",
+            "data": {
+                "name": "tracking",
+                "version": "1.0.0",
+                "class": "Clubify\\Checkout\\Modules\\Tracking\\TrackingModule",
+                "initialized": true,
+                "available": true,
+                "discovered_methods": [
+                    {
+                        "name": "initialize",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "isInitialized",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getName",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getVersion",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getDependencies",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isAvailable",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStatus",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "cleanup",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isHealthy",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStats",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "trackEvent",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "trackBatch",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "trackBeacon",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getAnalytics",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getUserSegmentation",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getConversionFunnel",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "trackConversion",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    }
+                ],
+                "total_methods": 17
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_DISCOVERED_USERMANAGEMENT",
+            "status": "SUCCESS",
+            "message": "Módulo userManagement descoberto com 21 métodos públicos",
+            "data": {
+                "name": "user_management",
+                "version": "2.0.0",
+                "class": "Clubify\\Checkout\\Modules\\UserManagement\\UserManagementModule",
+                "initialized": true,
+                "available": true,
+                "discovered_methods": [
+                    {
+                        "name": "initialize",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "isInitialized",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getName",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getVersion",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getDependencies",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isAvailable",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStatus",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "cleanup",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isHealthy",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStats",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "createUser",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getUser",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "updateUser",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "deleteUser",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "listUsers",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "updateUserProfile",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "getUserRoles",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "findUserByEmail",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "changePassword",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "activateUser",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "deactivateUser",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    }
+                ],
+                "total_methods": 21
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_DISCOVERED_SUBSCRIPTIONS",
+            "status": "SUCCESS",
+            "message": "Módulo subscriptions descoberto com 32 métodos públicos",
+            "data": {
+                "name": "subscriptions",
+                "version": "1.0.0",
+                "class": "Clubify\\Checkout\\Modules\\Subscriptions\\SubscriptionsModule",
+                "initialized": true,
+                "available": true,
+                "discovered_methods": [
+                    {
+                        "name": "initialize",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "isInitialized",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getName",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getVersion",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getDependencies",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isAvailable",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStatus",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "cleanup",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "isHealthy",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getStats",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "createSubscription",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getSubscription",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "updateSubscription",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "listSubscriptions",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "pauseSubscription",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "resumeSubscription",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "cancelSubscription",
+                        "parameters": 2,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "upgradeSubscription",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "downgradeSubscription",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "createPlan",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getPlan",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "updatePlan",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "listPlans",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "processManualBilling",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getUpcomingInvoice",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "getInvoiceHistory",
+                        "parameters": 1,
+                        "required_params": 1,
+                        "static": false
+                    },
+                    {
+                        "name": "updatePaymentMethod",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "updateBilling",
+                        "parameters": 2,
+                        "required_params": 2,
+                        "static": false
+                    },
+                    {
+                        "name": "getSubscriptionMetrics",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getChurnAnalysis",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getRevenueMetrics",
+                        "parameters": 1,
+                        "required_params": 0,
+                        "static": false
+                    },
+                    {
+                        "name": "getSubscriptionHealth",
+                        "parameters": 0,
+                        "required_params": 0,
+                        "static": false
+                    }
+                ],
+                "total_methods": 32
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_DISCOVERY_SUMMARY",
+            "status": "INFO",
+            "message": "Descobertos 9 módulos funcionais",
+            "data": {
+                "discovered_modules": [
+                    "organization",
+                    "products",
+                    "checkout",
+                    "payments",
+                    "customers",
+                    "webhooks",
+                    "tracking",
+                    "userManagement",
+                    "subscriptions"
+                ],
+                "total_methods_found": 190
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "ORGANIZATION_METHOD_CLEANUP",
+            "status": "NULL_RESULT",
+            "message": "Método cleanup retornou null",
+            "data": {
+                "module": "organization",
+                "method": "cleanup",
+                "parameters_used": [],
+                "response_type": "NULL",
+                "response_size": "n\/a"
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "ORGANIZATION_METHOD_TENANT",
+            "status": "WARNING",
+            "message": "Módulo organization não inicializado - pulando método tenant",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "ORGANIZATION_METHOD_ADMIN",
+            "status": "WARNING",
+            "message": "Módulo organization não inicializado - pulando método admin",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "ORGANIZATION_METHOD_APIKEY",
+            "status": "WARNING",
+            "message": "Módulo organization não inicializado - pulando método apiKey",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "ORGANIZATION_METHOD_DOMAIN",
+            "status": "WARNING",
+            "message": "Módulo organization não inicializado - pulando método domain",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PRODUCTS_METHOD_CLEANUP",
+            "status": "NULL_RESULT",
+            "message": "Método cleanup retornou null",
+            "data": {
+                "module": "products",
+                "method": "cleanup",
+                "parameters_used": [],
+                "response_type": "NULL",
+                "response_size": "n\/a"
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PRODUCTS_METHOD_LISTTHEMES",
+            "status": "WARNING",
+            "message": "Módulo products não inicializado - pulando método listThemes",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PRODUCTS_METHOD_ACTIVATETHEME",
+            "status": "WARNING",
+            "message": "Módulo products não inicializado - pulando método activateTheme",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PRODUCTS_METHOD_GENERATETHEMECSS",
+            "status": "WARNING",
+            "message": "Módulo products não inicializado - pulando método generateThemeCSS",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PRODUCTS_METHOD_CUSTOMIZETHEME",
+            "status": "WARNING",
+            "message": "Módulo products não inicializado - pulando método customizeTheme",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PRODUCTS_METHOD_LISTLAYOUTS",
+            "status": "WARNING",
+            "message": "Módulo products não inicializado - pulando método listLayouts",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PRODUCTS_METHOD_ADDLAYOUTSECTION",
+            "status": "WARNING",
+            "message": "Módulo products não inicializado - pulando método addLayoutSection",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PRODUCTS_METHOD_REORDERLAYOUTSECTIONS",
+            "status": "WARNING",
+            "message": "Módulo products não inicializado - pulando método reorderLayoutSections",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PRODUCTS_METHOD_GENERATELAYOUTHTML",
+            "status": "WARNING",
+            "message": "Módulo products não inicializado - pulando método generateLayoutHTML",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PRODUCTS_METHOD_OPTIMIZELAYOUT",
+            "status": "WARNING",
+            "message": "Módulo products não inicializado - pulando método optimizeLayout",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "CHECKOUT_METHOD_CLEANUP",
+            "status": "NULL_RESULT",
+            "message": "Método cleanup retornou null",
+            "data": {
+                "module": "checkout",
+                "method": "cleanup",
+                "parameters_used": [],
+                "response_type": "NULL",
+                "response_size": "n\/a"
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "CHECKOUT_METHOD_ONECLICK",
+            "status": "WARNING",
+            "message": "Módulo checkout não inicializado - pulando método oneClick",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PAYMENTS_METHOD_CLEANUP",
+            "status": "NULL_RESULT",
+            "message": "Método cleanup retornou null",
+            "data": {
+                "module": "payments",
+                "method": "cleanup",
+                "parameters_used": [],
+                "response_type": "NULL",
+                "response_size": "n\/a"
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PAYMENTS_METHOD_PROCESSPAYMENT",
+            "status": "WARNING",
+            "message": "Módulo payments não inicializado - pulando método processPayment",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "PAYMENTS_METHOD_TOKENIZECARD",
+            "status": "WARNING",
+            "message": "Módulo payments não inicializado - pulando método tokenizeCard",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "CUSTOMERS_METHOD_FINDBYEMAIL",
+            "status": "REAL_DATA",
+            "message": "Método findByEmail retornou dados reais da API",
+            "data": {
+                "module": "customers",
+                "method": "findByEmail",
+                "parameters_used": [
+                    "test@diagnostic.com"
+                ],
+                "response_type": "array",
+                "response_size": 3,
+                "is_mock": false,
+                "mock_indicators": [],
+                "has_success_key": true,
+                "has_data_key": false,
+                "has_error_key": false,
+                "array_keys": [
+                    "success",
+                    "message",
+                    "data"
+                ]
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "CUSTOMERS_METHOD_CLEANUP",
+            "status": "NULL_RESULT",
+            "message": "Método cleanup retornou null",
+            "data": {
+                "module": "customers",
+                "method": "cleanup",
+                "parameters_used": [],
+                "response_type": "NULL",
+                "response_size": "n\/a"
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "WEBHOOKS_METHOD_CLEANUP",
+            "status": "NULL_RESULT",
+            "message": "Método cleanup retornou null",
+            "data": {
+                "module": "webhooks",
+                "method": "cleanup",
+                "parameters_used": [],
+                "response_type": "NULL",
+                "response_size": "n\/a"
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "WEBHOOKS_METHOD_LISTWEBHOOKS",
+            "status": "WARNING",
+            "message": "Módulo webhooks não inicializado - pulando método listWebhooks",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "WEBHOOKS_METHOD_ACTIVATEWEBHOOK",
+            "status": "WARNING",
+            "message": "Módulo webhooks não inicializado - pulando método activateWebhook",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "WEBHOOKS_METHOD_DEACTIVATEWEBHOOK",
+            "status": "WARNING",
+            "message": "Módulo webhooks não inicializado - pulando método deactivateWebhook",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "WEBHOOKS_METHOD_SENDEVENT",
+            "status": "WARNING",
+            "message": "Módulo webhooks não inicializado - pulando método sendEvent",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "WEBHOOKS_METHOD_TESTWEBHOOK",
+            "status": "WARNING",
+            "message": "Módulo webhooks não inicializado - pulando método testWebhook",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "WEBHOOKS_METHOD_TESTURL",
+            "status": "WARNING",
+            "message": "Módulo webhooks não inicializado - pulando método testUrl",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "WEBHOOKS_METHOD_RETRYWEBHOOK",
+            "status": "WARNING",
+            "message": "Módulo webhooks não inicializado - pulando método retryWebhook",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "TRACKING_METHOD_CLEANUP",
+            "status": "NULL_RESULT",
+            "message": "Método cleanup retornou null",
+            "data": {
+                "module": "tracking",
+                "method": "cleanup",
+                "parameters_used": [],
+                "response_type": "NULL",
+                "response_size": "n\/a"
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "TRACKING_METHOD_TRACKEVENT",
+            "status": "WARNING",
+            "message": "Módulo tracking não inicializado - pulando método trackEvent",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "TRACKING_METHOD_TRACKBATCH",
+            "status": "WARNING",
+            "message": "Módulo tracking não inicializado - pulando método trackBatch",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "TRACKING_METHOD_TRACKBEACON",
+            "status": "WARNING",
+            "message": "Módulo tracking não inicializado - pulando método trackBeacon",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "TRACKING_METHOD_TRACKCONVERSION",
+            "status": "WARNING",
+            "message": "Módulo tracking não inicializado - pulando método trackConversion",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "USERMANAGEMENT_METHOD_CLEANUP",
+            "status": "NULL_RESULT",
+            "message": "Método cleanup retornou null",
+            "data": {
+                "module": "userManagement",
+                "method": "cleanup",
+                "parameters_used": [],
+                "response_type": "NULL",
+                "response_size": "n\/a"
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "USERMANAGEMENT_METHOD_LISTUSERS",
+            "status": "WARNING",
+            "message": "Módulo userManagement não inicializado - pulando método listUsers",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "USERMANAGEMENT_METHOD_FINDUSERBYEMAIL",
+            "status": "WARNING",
+            "message": "Módulo userManagement não inicializado - pulando método findUserByEmail",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "USERMANAGEMENT_METHOD_CHANGEPASSWORD",
+            "status": "WARNING",
+            "message": "Módulo userManagement não inicializado - pulando método changePassword",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "USERMANAGEMENT_METHOD_ACTIVATEUSER",
+            "status": "WARNING",
+            "message": "Módulo userManagement não inicializado - pulando método activateUser",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "USERMANAGEMENT_METHOD_DEACTIVATEUSER",
+            "status": "WARNING",
+            "message": "Módulo userManagement não inicializado - pulando método deactivateUser",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SUBSCRIPTIONS_METHOD_CLEANUP",
+            "status": "NULL_RESULT",
+            "message": "Método cleanup retornou null",
+            "data": {
+                "module": "subscriptions",
+                "method": "cleanup",
+                "parameters_used": [],
+                "response_type": "NULL",
+                "response_size": "n\/a"
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SUBSCRIPTIONS_METHOD_LISTSUBSCRIPTIONS",
+            "status": "WARNING",
+            "message": "Módulo subscriptions não inicializado - pulando método listSubscriptions",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SUBSCRIPTIONS_METHOD_PAUSESUBSCRIPTION",
+            "status": "WARNING",
+            "message": "Módulo subscriptions não inicializado - pulando método pauseSubscription",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SUBSCRIPTIONS_METHOD_RESUMESUBSCRIPTION",
+            "status": "WARNING",
+            "message": "Módulo subscriptions não inicializado - pulando método resumeSubscription",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SUBSCRIPTIONS_METHOD_CANCELSUBSCRIPTION",
+            "status": "WARNING",
+            "message": "Módulo subscriptions não inicializado - pulando método cancelSubscription",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SUBSCRIPTIONS_METHOD_UPGRADESUBSCRIPTION",
+            "status": "WARNING",
+            "message": "Módulo subscriptions não inicializado - pulando método upgradeSubscription",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SUBSCRIPTIONS_METHOD_DOWNGRADESUBSCRIPTION",
+            "status": "WARNING",
+            "message": "Módulo subscriptions não inicializado - pulando método downgradeSubscription",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SUBSCRIPTIONS_METHOD_LISTPLANS",
+            "status": "WARNING",
+            "message": "Módulo subscriptions não inicializado - pulando método listPlans",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "SUBSCRIPTIONS_METHOD_PROCESSMANUALBILLING",
+            "status": "WARNING",
+            "message": "Módulo subscriptions não inicializado - pulando método processManualBilling",
+            "data": [],
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_ANALYSIS_ORGANIZATION",
+            "status": "INFO",
+            "message": "Módulo organization: 0% dados reais",
+            "data": {
+                "total_methods_tested": 0,
+                "mock_methods": 0,
+                "real_methods": 0,
+                "real_percentage": 0
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_ANALYSIS_PRODUCTS",
+            "status": "INFO",
+            "message": "Módulo products: 0% dados reais",
+            "data": {
+                "total_methods_tested": 0,
+                "mock_methods": 0,
+                "real_methods": 0,
+                "real_percentage": 0
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_ANALYSIS_CHECKOUT",
+            "status": "INFO",
+            "message": "Módulo checkout: 0% dados reais",
+            "data": {
+                "total_methods_tested": 0,
+                "mock_methods": 0,
+                "real_methods": 0,
+                "real_percentage": 0
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_ANALYSIS_PAYMENTS",
+            "status": "INFO",
+            "message": "Módulo payments: 0% dados reais",
+            "data": {
+                "total_methods_tested": 0,
+                "mock_methods": 0,
+                "real_methods": 0,
+                "real_percentage": 0
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_ANALYSIS_CUSTOMERS",
+            "status": "INFO",
+            "message": "Módulo customers: 100% dados reais",
+            "data": {
+                "total_methods_tested": 1,
+                "mock_methods": 0,
+                "real_methods": 1,
+                "real_percentage": 100
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_ANALYSIS_WEBHOOKS",
+            "status": "INFO",
+            "message": "Módulo webhooks: 0% dados reais",
+            "data": {
+                "total_methods_tested": 0,
+                "mock_methods": 0,
+                "real_methods": 0,
+                "real_percentage": 0
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_ANALYSIS_TRACKING",
+            "status": "INFO",
+            "message": "Módulo tracking: 0% dados reais",
+            "data": {
+                "total_methods_tested": 0,
+                "mock_methods": 0,
+                "real_methods": 0,
+                "real_percentage": 0
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_ANALYSIS_USERMANAGEMENT",
+            "status": "INFO",
+            "message": "Módulo userManagement: 0% dados reais",
+            "data": {
+                "total_methods_tested": 0,
+                "mock_methods": 0,
+                "real_methods": 0,
+                "real_percentage": 0
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "MODULE_ANALYSIS_SUBSCRIPTIONS",
+            "status": "INFO",
+            "message": "Módulo subscriptions: 0% dados reais",
+            "data": {
+                "total_methods_tested": 0,
+                "mock_methods": 0,
+                "real_methods": 0,
+                "real_percentage": 0
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "ADVANCED_MOCK_ANALYSIS",
+            "status": "INFO",
+            "message": "Análise completa: 100% de dados reais detectados",
+            "data": {
+                "total_methods_with_data": 1,
+                "mock_methods": 0,
+                "real_methods": 1,
+                "overall_real_percentage": 100,
+                "module_breakdown": {
+                    "organization": {
+                        "total_methods_tested": 0,
+                        "mock_methods": 0,
+                        "real_methods": 0,
+                        "real_percentage": 0
+                    },
+                    "products": {
+                        "total_methods_tested": 0,
+                        "mock_methods": 0,
+                        "real_methods": 0,
+                        "real_percentage": 0
+                    },
+                    "checkout": {
+                        "total_methods_tested": 0,
+                        "mock_methods": 0,
+                        "real_methods": 0,
+                        "real_percentage": 0
+                    },
+                    "payments": {
+                        "total_methods_tested": 0,
+                        "mock_methods": 0,
+                        "real_methods": 0,
+                        "real_percentage": 0
+                    },
+                    "customers": {
+                        "total_methods_tested": 1,
+                        "mock_methods": 0,
+                        "real_methods": 1,
+                        "real_percentage": 100
+                    },
+                    "webhooks": {
+                        "total_methods_tested": 0,
+                        "mock_methods": 0,
+                        "real_methods": 0,
+                        "real_percentage": 0
+                    },
+                    "tracking": {
+                        "total_methods_tested": 0,
+                        "mock_methods": 0,
+                        "real_methods": 0,
+                        "real_percentage": 0
+                    },
+                    "userManagement": {
+                        "total_methods_tested": 0,
+                        "mock_methods": 0,
+                        "real_methods": 0,
+                        "real_percentage": 0
+                    },
+                    "subscriptions": {
+                        "total_methods_tested": 0,
+                        "mock_methods": 0,
+                        "real_methods": 0,
+                        "real_percentage": 0
+                    }
+                }
+            },
+            "timestamp": "2025-09-18 23:59:59"
+        },
+        {
+            "test": "ENDPOINT_DIRECT_HEALTH",
+            "status": "SUCCESS",
+            "message": "Endpoint \/health respondeu diretamente",
+            "data": {
+                "url": "https:\/\/checkout.svelve.com\/api\/v1\/health",
+                "response_time": "692.88ms",
+                "response_size": "99 bytes",
+                "valid_json": true,
+                "response_preview": "{\"status\":\"ok\",\"info\":{\"mongodb\":{\"status\":\"up\"}},\"error\":{},\"details\":{\"mongodb\":{\"status\":\"up\"}}}..."
+            },
+            "timestamp": "2025-09-19 00:00:00"
+        },
+        {
+            "test": "ENDPOINT_DIRECT_ORGANIZATIONS",
+            "status": "ERROR",
+            "message": "Endpoint \/organizations não respondeu diretamente",
+            "data": {
+                "url": "https:\/\/checkout.svelve.com\/api\/v1\/organizations",
+                "attempted_time": "867.05ms",
+                "headers": [
+                    "HTTP\/1.1 404 Not Found",
+                    "Server: openresty\/1.21.4.3",
+                    "Date: Fri, 19 Sep 2025 00:00:00 GMT",
+                    "Content-Type: text\/html; charset=utf-8",
+                    "Connection: close",
+                    "Vary: Accept-Encoding",
+                    "Cache-Control: no-store, must-revalidate",
+                    "Vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Accept-Encoding",
+                    "Strict-Transport-Security: max-age=31536000; includeSubDomains",
+                    "X-Frame-Options: DENY",
+                    "X-Content-Type-Options: nosniff",
+                    "X-XSS-Protection: 1; mode=block",
+                    "Referrer-Policy: strict-origin-when-cross-origin"
+                ]
+            },
+            "timestamp": "2025-09-19 00:00:00"
+        },
+        {
+            "test": "ENDPOINT_DIRECT_PRODUCTS",
+            "status": "ERROR",
+            "message": "Endpoint \/products não respondeu diretamente",
+            "data": {
+                "url": "https:\/\/checkout.svelve.com\/api\/v1\/products",
+                "attempted_time": "641.99ms",
+                "headers": [
+                    "HTTP\/1.1 401 Unauthorized",
+                    "Server: openresty\/1.21.4.3",
+                    "Date: Fri, 19 Sep 2025 00:00:01 GMT",
+                    "Content-Type: application\/json; charset=utf-8",
+                    "Content-Length: 74",
+                    "Connection: close",
+                    "X-Powered-By: Express",
+                    "Vary: Origin",
+                    "Access-Control-Allow-Credentials: true",
+                    "ETag: W\/\"4a-byhh+FjbAQjDnGy+DOO6HaSsIMo\"",
+                    "Strict-Transport-Security: max-age=31536000; includeSubDomains",
+                    "X-Frame-Options: DENY",
+                    "X-Content-Type-Options: nosniff",
+                    "X-XSS-Protection: 1; mode=block",
+                    "Referrer-Policy: strict-origin-when-cross-origin"
+                ]
+            },
+            "timestamp": "2025-09-19 00:00:01"
+        },
+        {
+            "test": "ENDPOINT_DIRECT_PAYMENTS",
+            "status": "ERROR",
+            "message": "Endpoint \/payments não respondeu diretamente",
+            "data": {
+                "url": "https:\/\/checkout.svelve.com\/api\/v1\/payments",
+                "attempted_time": "995.65ms",
+                "headers": [
+                    "HTTP\/1.1 404 Not Found",
+                    "Server: openresty\/1.21.4.3",
+                    "Date: Fri, 19 Sep 2025 00:00:02 GMT",
+                    "Content-Type: application\/json; charset=utf-8",
+                    "Content-Length: 78",
+                    "Connection: close",
+                    "Cross-Origin-Opener-Policy: same-origin-allow-popups",
+                    "Cross-Origin-Resource-Policy: same-origin",
+                    "Origin-Agent-Cluster: ?1",
+                    "Referrer-Policy: strict-origin-when-cross-origin",
+                    "X-Content-Type-Options: nosniff",
+                    "X-DNS-Prefetch-Control: off",
+                    "X-Download-Options: noopen",
+                    "X-Frame-Options: DENY",
+                    "X-Permitted-Cross-Domain-Policies: none",
+                    "X-XSS-Protection: 1; mode=block",
+                    "Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https:\/\/js.stripe.com https:\/\/checkout.stripe.com; style-src 'self' 'unsafe-inline' https:\/\/fonts.googleapis.com; font-src 'self' https:\/\/fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:\/\/api.stripe.com https:\/\/checkout.stripe.com https:\/\/*.pagarme.com.br; frame-src 'self' https:\/\/js.stripe.com https:\/\/hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
+                    "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
+                    "Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(self), usb=(), bluetooth=()",
+                    "Cross-Origin-Embedder-Policy: unsafe-none",
+                    "X-Security-Version: v1.0",
+                    "Vary: Origin",
+                    "Access-Control-Allow-Credentials: true",
+                    "ETag: W\/\"4e-NI2D9cvtSNsHVEe1QLU6AMiVjRc\"",
+                    "Strict-Transport-Security: max-age=31536000; includeSubDomains",
+                    "X-Frame-Options: DENY",
+                    "X-Content-Type-Options: nosniff",
+                    "X-XSS-Protection: 1; mode=block",
+                    "Referrer-Policy: strict-origin-when-cross-origin"
+                ]
+            },
+            "timestamp": "2025-09-19 00:00:02"
+        },
+        {
+            "test": "ENDPOINT_DIRECT_CUSTOMERS",
+            "status": "ERROR",
+            "message": "Endpoint \/customers não respondeu diretamente",
+            "data": {
+                "url": "https:\/\/checkout.svelve.com\/api\/v1\/customers",
+                "attempted_time": "1029.11ms",
+                "headers": [
+                    "HTTP\/1.1 401 Unauthorized",
+                    "Server: openresty\/1.21.4.3",
+                    "Date: Fri, 19 Sep 2025 00:00:03 GMT",
+                    "Content-Type: application\/json; charset=utf-8",
+                    "Content-Length: 78",
+                    "Connection: close",
+                    "X-Powered-By: Express",
+                    "Vary: Origin",
+                    "ETag: W\/\"4e-bCtcmgfHD0YzzyKTlGcLAj+Xg4w\"",
+                    "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS",
+                    "Access-Control-Allow-Headers: Content-Type, Authorization, X-Tenant-ID, X-Correlation-ID",
+                    "Access-Control-Allow-Credentials: true"
+                ]
+            },
+            "timestamp": "2025-09-19 00:00:03"
+        },
+        {
+            "test": "ENDPOINT_DIRECT_ORDERS",
+            "status": "ERROR",
+            "message": "Endpoint \/orders não respondeu diretamente",
+            "data": {
+                "url": "https:\/\/checkout.svelve.com\/api\/v1\/orders",
+                "attempted_time": "816.5ms",
+                "headers": [
+                    "HTTP\/1.1 401 Unauthorized",
+                    "Server: openresty\/1.21.4.3",
+                    "Date: Fri, 19 Sep 2025 00:00:04 GMT",
+                    "Content-Type: application\/json; charset=utf-8",
+                    "Content-Length: 74",
+                    "Connection: close",
+                    "X-Powered-By: Express",
+                    "Vary: Origin",
+                    "ETag: W\/\"4a-AyyD\/e9ZOl777\/BwzC+PLLBpmY0\"",
+                    "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS",
+                    "Access-Control-Allow-Headers: Content-Type, Authorization, X-Tenant-ID, X-Correlation-ID",
+                    "Access-Control-Allow-Credentials: true"
+                ]
+            },
+            "timestamp": "2025-09-19 00:00:04"
+        }
+    ]
+}

@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Payments\Services;
 
-use Clubify\Checkout\Core\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Modules\Payments\Contracts\GatewayInterface;
 use Clubify\Checkout\Modules\Payments\Contracts\PaymentRepositoryInterface;
 use Clubify\Checkout\Modules\Payments\Exceptions\PaymentException;
 use Clubify\Checkout\Modules\Payments\Exceptions\GatewayException;
-use ClubifyCheckout\Utils\Validators\CreditCardValidator;
-use ClubifyCheckout\Utils\Formatters\CurrencyFormatter;
-use Psr\Log\LoggerInterface;
+use Clubify\Checkout\Utils\Validators\CreditCardValidator;
+use Clubify\Checkout\Utils\Formatters\CurrencyFormatter;
+use Clubify\Checkout\Core\Logger\Logger;
 use Psr\Cache\CacheItemPoolInterface;
 use InvalidArgumentException;
 
@@ -35,7 +34,7 @@ use InvalidArgumentException;
  * - I: Interface Segregation - Separação de responsabilidades
  * - D: Dependency Inversion - Depende de abstrações
  */
-class PaymentService extends BaseService implements ServiceInterface
+class PaymentService implements ServiceInterface
 {
     private array $gateways = [];
     private array $retryConfig = [
@@ -48,13 +47,137 @@ class PaymentService extends BaseService implements ServiceInterface
 
     public function __construct(
         private PaymentRepositoryInterface $repository,
-        LoggerInterface $logger,
-        CacheItemPoolInterface $cache,
+        private Logger $logger,
         private CreditCardValidator $cardValidator,
-        private CurrencyFormatter $currencyFormatter
+        private CurrencyFormatter $currencyFormatter,
+        private ?CacheItemPoolInterface $cache = null
     ) {
-        parent::__construct($logger, $cache);
+        // Inicialização simples - nova arquitetura híbrida
     }
+
+    // ==============================================
+    // SERVICE INTERFACE METHODS
+    // ==============================================
+
+    /**
+     * Get service name
+     */
+    public function getName(): string
+    {
+        return 'payment_service';
+    }
+
+    /**
+     * Get service version
+     */
+    public function getVersion(): string
+    {
+        return '2.0.0';
+    }
+
+    /**
+     * Check if service is healthy
+     */
+    public function isHealthy(): bool
+    {
+        try {
+            // Verifica se há gateways disponíveis
+            $availableGateways = $this->getAvailableGateways();
+            if (empty($availableGateways)) {
+                return false;
+            }
+
+            // Verifica conectividade básica com repositório
+            if (!$this->repository) {
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            $this->logger->error('PaymentService health check failed', [
+                'error' => $e->getMessage(),
+                'service' => $this->getName()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Get service metrics and status
+     */
+    public function getMetrics(): array
+    {
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'healthy' => $this->isHealthy(),
+            'available_gateways' => count($this->gateways),
+            'circuit_breaker_states' => array_map(
+                fn ($cb) => $cb['state'],
+                $this->circuitBreaker
+            ),
+            'total_gateways' => count($this->gateways),
+            'healthy_gateways' => count(array_filter(
+                array_keys($this->gateways),
+                fn ($name) => $this->isGatewayAvailable($name)
+            )),
+            'config' => $this->getConfig(),
+            'timestamp' => time()
+        ];
+    }
+
+    /**
+     * Get service configuration
+     */
+    public function getConfig(): array
+    {
+        return [
+            'retry_config' => $this->retryConfig,
+            'registered_gateways' => array_keys($this->gateways),
+            'circuit_breaker_config' => array_map(
+                fn ($cb) => [
+                    'state' => $cb['state'],
+                    'threshold' => $cb['threshold'],
+                    'timeout' => $cb['timeout'],
+                    'failures' => $cb['failures']
+                ],
+                $this->circuitBreaker
+            )
+        ];
+    }
+
+    /**
+     * Check if service is available
+     */
+    public function isAvailable(): bool
+    {
+        try {
+            return $this->isHealthy() && !empty($this->getAvailableGateways());
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get service status information
+     */
+    public function getStatus(): array
+    {
+        $isHealthy = $this->isHealthy();
+
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'status' => $isHealthy ? 'healthy' : 'unhealthy',
+            'available' => $isHealthy,
+            'last_check' => time(),
+            'metrics' => $this->getMetrics()
+        ];
+    }
+
+    // ==============================================
+    // BUSINESS LOGIC METHODS - GATEWAY MANAGEMENT
+    // ==============================================
 
     /**
      * Registra gateway de pagamento
@@ -677,120 +800,50 @@ class PaymentService extends BaseService implements ServiceInterface
         return 'pay_' . uniqid() . '_' . bin2hex(random_bytes(8));
     }
 
-    // ===============================================
-    // ServiceInterface Implementation
-    // ===============================================
+    // ==============================================
+    // UTILITY METHODS FOR CACHE AND HELPERS
+    // ==============================================
 
     /**
-     * {@inheritDoc}
+     * Get item from cache if available
      */
-    public function getName(): string
+    private function getFromCache(string $key): mixed
     {
-        return 'payment';
-    }
+        if (!$this->cache) {
+            return null;
+        }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function getVersion(): string
-    {
-        return '1.0.0';
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function isHealthy(): bool
-    {
         try {
-            // Verifica se há gateways disponíveis
-            $availableGateways = $this->getAvailableGateways();
-            if (empty($availableGateways)) {
-                return false;
-            }
-
-            // Verifica conectividade básica com repositório
-            if (!$this->repository) {
-                return false;
-            }
-
-            return true;
+            $item = $this->cache->getItem($key);
+            return $item->isHit() ? $item->get() : null;
         } catch (\Throwable $e) {
-            $this->logger->error('PaymentService health check failed', [
+            $this->logger->warning('Cache get failed', [
+                'key' => $key,
                 'error' => $e->getMessage()
             ]);
-            return false;
+            return null;
         }
     }
 
     /**
-     * {@inheritDoc}
+     * Set item in cache with TTL
      */
-    public function getMetrics(): array
+    private function setCache(string $key, mixed $value, int $ttl = 300): void
     {
-        return [
-            'service' => $this->getName(),
-            'version' => $this->getVersion(),
-            'available_gateways' => count($this->gateways),
-            'circuit_breaker_states' => array_map(
-                fn ($cb) => $cb['state'],
-                $this->circuitBreaker
-            ),
-            'total_gateways' => count($this->gateways),
-            'healthy_gateways' => count(array_filter(
-                array_keys($this->gateways),
-                fn ($name) => $this->isGatewayAvailable($name)
-            )),
-            'memory_usage' => memory_get_usage(true),
-            'timestamp' => time()
-        ];
-    }
+        if (!$this->cache) {
+            return;
+        }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function getConfig(): array
-    {
-        return [
-            'retry_config' => $this->retryConfig,
-            'registered_gateways' => array_keys($this->gateways),
-            'circuit_breaker_config' => array_map(
-                fn ($cb) => [
-                    'state' => $cb['state'],
-                    'threshold' => $cb['threshold'],
-                    'timeout' => $cb['timeout'],
-                    'failures' => $cb['failures']
-                ],
-                $this->circuitBreaker
-            )
-        ];
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function isAvailable(): bool
-    {
         try {
-            return $this->isHealthy() && !empty($this->getAvailableGateways());
+            $item = $this->cache->getItem($key);
+            $item->set($value);
+            $item->expiresAfter($ttl);
+            $this->cache->save($item);
         } catch (\Throwable $e) {
-            return false;
+            $this->logger->warning('Cache set failed', [
+                'key' => $key,
+                'error' => $e->getMessage()
+            ]);
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function getStatus(): array
-    {
-        return [
-            'service' => $this->getName(),
-            'version' => $this->getVersion(),
-            'healthy' => $this->isHealthy(),
-            'available' => $this->isAvailable(),
-            'metrics' => $this->getMetrics(),
-            'config' => $this->getConfig(),
-            'timestamp' => time()
-        ];
     }
 }

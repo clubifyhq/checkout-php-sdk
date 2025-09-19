@@ -304,6 +304,7 @@ return array(
     'Clubify\\Checkout\\Modules\\Payments\\DTOs\\TransactionData' => $baseDir . '/src/Modules/Payments/DTOs/TransactionData.php',
     'Clubify\\Checkout\\Modules\\Payments\\Exceptions\\CardNotFoundException' => $baseDir . '/src/Modules/Payments/Exceptions/CardNotFoundException.php',
     'Clubify\\Checkout\\Modules\\Payments\\Exceptions\\CardValidationException' => $baseDir . '/src/Modules/Payments/Exceptions/CardValidationException.php',
+    'Clubify\\Checkout\\Modules\\Payments\\Exceptions\\GatewayException' => $baseDir . '/src/Modules/Payments/Exceptions/GatewayException.php',
     'Clubify\\Checkout\\Modules\\Payments\\Exceptions\\PaymentNotFoundException' => $baseDir . '/src/Modules/Payments/Exceptions/PaymentNotFoundException.php',
     'Clubify\\Checkout\\Modules\\Payments\\Exceptions\\PaymentValidationException' => $baseDir . '/src/Modules/Payments/Exceptions/PaymentValidationException.php',
     'Clubify\\Checkout\\Modules\\Payments\\Factories\\PaymentsServiceFactory' => $baseDir . '/src/Modules/Payments/Factories/PaymentsServiceFactory.php',

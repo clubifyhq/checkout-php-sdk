@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Modules\Payments\DTOs;
 
 use Clubify\Checkout\Data\BaseData;
-use ClubifyCheckout\Utils\Validators\CreditCardValidator;
+use Clubify\Checkout\Utils\Validators\CreditCardValidator;
 use InvalidArgumentException;
 
 /**

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Modules\Payments\DTOs;
 
 use Clubify\Checkout\Data\BaseData;
-use ClubifyCheckout\Utils\Validators\CreditCardValidator;
-use ClubifyCheckout\Utils\Validators\EmailValidator;
-use ClubifyCheckout\Utils\Validators\CPFValidator;
-use ClubifyCheckout\Utils\Validators\CNPJValidator;
+use Clubify\Checkout\Utils\Validators\CreditCardValidator;
+use Clubify\Checkout\Utils\Validators\EmailValidator;
+use Clubify\Checkout\Utils\Validators\CPFValidator;
+use Clubify\Checkout\Utils\Validators\CNPJValidator;
 use InvalidArgumentException;
 
 /**

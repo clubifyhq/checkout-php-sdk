@@ -38,6 +38,14 @@ class ApiKeyService extends BaseService
     }
 
     /**
+     * Obtém a versão do serviço
+     */
+    protected function getServiceVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
      * Gera API keys iniciais para uma organização
      */
     public function generateInitialKeys(string $organizationId): array

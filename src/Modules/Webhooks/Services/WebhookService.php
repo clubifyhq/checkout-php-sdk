@@ -90,6 +90,11 @@ class WebhookService extends BaseService implements ServiceInterface
     public function create(array $webhookData): array
     {
         return $this->executeWithMetrics('create', function () use ($webhookData) {
+            // Gera secret se não fornecido (ANTES da validação)
+            if (empty($webhookData['secret'])) {
+                $webhookData['secret'] = $this->generateSecret();
+            }
+
             // Valida dados
             $this->validateWebhookData($webhookData);
 
@@ -104,11 +109,6 @@ class WebhookService extends BaseService implements ServiceInterface
 
             // Sanitiza dados
             $sanitizedData = $this->sanitizeWebhookData($webhookData);
-
-            // Gera secret se não fornecido
-            if (empty($sanitizedData['secret'])) {
-                $sanitizedData['secret'] = $this->generateSecret();
-            }
 
             // Adiciona metadados padrão
             $sanitizedData = $this->addDefaultMetadata($sanitizedData);

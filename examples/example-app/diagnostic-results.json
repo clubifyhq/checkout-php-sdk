@@ -1,7 +1,7 @@
 {
     "diagnostic_info": {
-        "timestamp": "2025-09-18 19:12:43",
-        "total_time": 3.99,
+        "timestamp": "2025-09-19 00:00:49",
+        "total_time": 10.38,
         "sdk_version": "1.0.0",
         "environment": "sandbox"
     },
@@ -9,9 +9,9 @@
         "total_tests": 31,
         "successful_tests": 14,
         "failed_tests": 4,
-        "mock_data_detected": 3,
+        "mock_data_detected": 2,
         "success_rate": 45.16,
-        "mock_rate": 9.68
+        "mock_rate": 6.45
     },
     "detailed_results": [
         {
@@ -23,7 +23,7 @@
                 "environment": "sandbox",
                 "base_url": "https:\/\/checkout.svelve.com\/api\/v1"
             },
-            "timestamp": "2025-09-18 19:12:39"
+            "timestamp": "2025-09-19 00:00:38"
         },
         {
             "test": "HTTP_CONNECTIVITY",
@@ -31,10 +31,10 @@
             "message": "Conectividade HTTP OK",
             "data": {
                 "base_url": "https:\/\/checkout.svelve.com\/api\/v1",
-                "response_time": "812.54ms",
+                "response_time": "1273.04ms",
                 "response_size": "99 bytes"
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:39"
         },
         {
             "test": "SDK_STATS",
@@ -59,21 +59,21 @@
                 "memory_usage": 10485760,
                 "peak_memory": 10485760
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:39"
         },
         {
             "test": "SDK_VERSION",
             "status": "SUCCESS",
             "message": "Versão: 1.0.0",
             "data": [],
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:39"
         },
         {
             "test": "SDK_INITIALIZED",
             "status": "WARNING",
             "message": "Status de inicialização: Não inicializado",
             "data": [],
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:39"
         },
         {
             "test": "MODULE_ORGANIZATION",
@@ -96,10 +96,10 @@
                         "domain": false
                     },
                     "repository": false,
-                    "timestamp": 1758222760
+                    "timestamp": 1758240040
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:40"
         },
         {
             "test": "MODULE_PRODUCTS",
@@ -126,10 +126,10 @@
                         "pricing": false,
                         "upsell": false
                     },
-                    "timestamp": 1758222760
+                    "timestamp": 1758240040
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:40"
         },
         {
             "test": "MODULE_CHECKOUT",
@@ -145,10 +145,10 @@
                     "version": "1.0.0",
                     "initialized": true,
                     "available": true,
-                    "timestamp": 1758222760
+                    "timestamp": 1758240040
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:40"
         },
         {
             "test": "MODULE_PAYMENTS",
@@ -164,10 +164,10 @@
                     "version": "1.0.0",
                     "initialized": true,
                     "available": true,
-                    "timestamp": 1758222760
+                    "timestamp": 1758240040
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:40"
         },
         {
             "test": "MODULE_CUSTOMERS",
@@ -188,10 +188,10 @@
                         "matching": false
                     },
                     "factory_loaded": false,
-                    "timestamp": 1758222760
+                    "timestamp": 1758240040
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:40"
         },
         {
             "test": "MODULE_WEBHOOKS",
@@ -215,10 +215,10 @@
                         "retry": false,
                         "testing": false
                     },
-                    "timestamp": 1758222760
+                    "timestamp": 1758240040
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:40"
         },
         {
             "test": "MODULE_TRACKING",
@@ -240,10 +240,10 @@
                         "beacon": false,
                         "analytics": false
                     },
-                    "timestamp": 1758222760
+                    "timestamp": 1758240040
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:40"
         },
         {
             "test": "MODULE_USERMANAGEMENT",
@@ -263,10 +263,10 @@
                         "user": false
                     },
                     "factory_loaded": false,
-                    "timestamp": 1758222760
+                    "timestamp": 1758240040
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:40"
         },
         {
             "test": "MODULE_SUBSCRIPTIONS",
@@ -294,10 +294,10 @@
                         "subscription_metrics": false,
                         "subscription_lifecycle": false
                     },
-                    "timestamp": 1758222760
+                    "timestamp": 1758240040
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:40"
         },
         {
             "test": "CUSTOMERS_CREATE",
@@ -313,38 +313,27 @@
                 ],
                 "request_data": {
                     "name": "Diagnostic Test User",
-                    "email": "diagnostic.1758222760@test.com",
+                    "email": "diagnostic.1758240040@test.com",
                     "phone": "+5511999999999"
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:40"
         },
         {
             "test": "CUSTOMERS_FIND_BY_EMAIL",
-            "status": "MOCK_DETECTED",
-            "message": "Dados mock detectados",
+            "status": "REAL_DATA",
+            "message": "Dados reais da API",
             "data": {
                 "response_type": "array",
-                "item_count": 6,
+                "item_count": 3,
                 "has_success_key": true,
                 "has_data_key": false,
-                "mock_indicators": [
-                    "contains_test",
-                    "contains_example"
-                ],
+                "mock_indicators": [],
                 "request_data": {
                     "email": "test@example.com"
-                },
-                "mock_analysis": {
-                    "suspicious_timestamps": [],
-                    "round_numbers": [],
-                    "test_emails": [
-                        "test@example.com"
-                    ],
-                    "predictable_ids": []
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:42"
         },
         {
             "test": "CUSTOMERS_UPDATE_PROFILE",
@@ -368,7 +357,7 @@
                     "predictable_ids": []
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:42"
         },
         {
             "test": "PAYMENTS_PROCESS",
@@ -397,7 +386,7 @@
                     "predictable_ids": []
                 }
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:42"
         },
         {
             "test": "PAYMENTS_STATUS",
@@ -411,7 +400,7 @@
                 "mock_indicators": [],
                 "request_data": []
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:42"
         },
         {
             "test": "PRODUCTS_STATS",
@@ -425,7 +414,7 @@
                 "mock_indicators": [],
                 "request_data": []
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:42"
         },
         {
             "test": "PRODUCTS_STATUS",
@@ -439,7 +428,7 @@
                 "mock_indicators": [],
                 "request_data": []
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:42"
         },
         {
             "test": "PRODUCTS_THEMES",
@@ -453,7 +442,7 @@
                 "mock_indicators": [],
                 "request_data": []
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:42"
         },
         {
             "test": "ORGANIZATION_STATUS",
@@ -467,7 +456,7 @@
                 "mock_indicators": [],
                 "request_data": []
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:42"
         },
         {
             "test": "ORGANIZATION_NAME",
@@ -481,16 +470,16 @@
                 "mock_indicators": [],
                 "request_data": []
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:42"
         },
         {
             "test": "WEBHOOKS_MODULE",
             "status": "ERROR",
             "message": "Erro no módulo Webhooks",
             "data": {
-                "error": "Campo obrigatório ausente: secret"
+                "error": "HTTP request failed after 3 attempts"
             },
-            "timestamp": "2025-09-18 19:12:40"
+            "timestamp": "2025-09-19 00:00:44"
         },
         {
             "test": "ENDPOINT_HEALTH",
@@ -498,24 +487,24 @@
             "message": "Endpoint \/health respondeu",
             "data": {
                 "url": "https:\/\/checkout.svelve.com\/api\/v1\/health",
-                "response_time": "749.39ms",
+                "response_time": "1844.79ms",
                 "response_size": "99 bytes",
                 "valid_json": true,
                 "response_preview": "{\"status\":\"ok\",\"info\":{\"mongodb\":{\"status\":\"up\"}},\"error\":{},\"details\":{\"mongodb\":{\"status\":\"up\"}}}..."
             },
-            "timestamp": "2025-09-18 19:12:41"
+            "timestamp": "2025-09-19 00:00:46"
         },
         {
-            "test": "ENDPOINT_ORGANIZATION",
+            "test": "ENDPOINT_ORGANIZATIONS",
             "status": "ERROR",
-            "message": "Endpoint \/organization não respondeu",
+            "message": "Endpoint \/organizations não respondeu",
             "data": {
-                "url": "https:\/\/checkout.svelve.com\/api\/v1\/organization",
-                "attempted_time": "937.99ms",
+                "url": "https:\/\/checkout.svelve.com\/api\/v1\/organizations",
+                "attempted_time": "1022.87ms",
                 "headers": [
                     "HTTP\/1.1 404 Not Found",
                     "Server: openresty\/1.21.4.3",
-                    "Date: Thu, 18 Sep 2025 19:12:42 GMT",
+                    "Date: Fri, 19 Sep 2025 00:00:47 GMT",
                     "Content-Type: text\/html; charset=utf-8",
                     "Connection: close",
                     "Vary: Accept-Encoding",
@@ -528,7 +517,7 @@
                     "Referrer-Policy: strict-origin-when-cross-origin"
                 ]
             },
-            "timestamp": "2025-09-18 19:12:42"
+            "timestamp": "2025-09-19 00:00:47"
         },
         {
             "test": "ENDPOINT_PRODUCTS",
@@ -536,18 +525,18 @@
             "message": "Endpoint \/products não respondeu",
             "data": {
                 "url": "https:\/\/checkout.svelve.com\/api\/v1\/products",
-                "attempted_time": "600.06ms",
+                "attempted_time": "1026.97ms",
                 "headers": [
                     "HTTP\/1.1 401 Unauthorized",
                     "Server: openresty\/1.21.4.3",
-                    "Date: Thu, 18 Sep 2025 19:12:43 GMT",
+                    "Date: Fri, 19 Sep 2025 00:00:48 GMT",
                     "Content-Type: application\/json; charset=utf-8",
                     "Content-Length: 74",
                     "Connection: close",
                     "X-Powered-By: Express",
                     "Vary: Origin",
                     "Access-Control-Allow-Credentials: true",
-                    "ETag: W\/\"4a-azxtO8n7nDnNyoqpveFo3jxllRI\"",
+                    "ETag: W\/\"4a-7mmzLdToMRHEKPYGIyWknLdaqy0\"",
                     "Strict-Transport-Security: max-age=31536000; includeSubDomains",
                     "X-Frame-Options: DENY",
                     "X-Content-Type-Options: nosniff",
@@ -555,21 +544,21 @@
                     "Referrer-Policy: strict-origin-when-cross-origin"
                 ]
             },
-            "timestamp": "2025-09-18 19:12:42"
+            "timestamp": "2025-09-19 00:00:48"
         },
         {
             "test": "ENDPOINT_PAYMENTS",
             "status": "ERROR",
-            "message": "Endpoint \/payments\/methods não respondeu",
+            "message": "Endpoint \/payments não respondeu",
             "data": {
-                "url": "https:\/\/checkout.svelve.com\/api\/v1\/payments\/methods",
-                "attempted_time": "664.36ms",
+                "url": "https:\/\/checkout.svelve.com\/api\/v1\/payments",
+                "attempted_time": "707.62ms",
                 "headers": [
                     "HTTP\/1.1 404 Not Found",
                     "Server: openresty\/1.21.4.3",
-                    "Date: Thu, 18 Sep 2025 19:12:44 GMT",
+                    "Date: Fri, 19 Sep 2025 00:00:49 GMT",
                     "Content-Type: application\/json; charset=utf-8",
-                    "Content-Length: 86",
+                    "Content-Length: 78",
                     "Connection: close",
                     "Cross-Origin-Opener-Policy: same-origin-allow-popups",
                     "Cross-Origin-Resource-Policy: same-origin",
@@ -588,7 +577,7 @@
                     "X-Security-Version: v1.0",
                     "Vary: Origin",
                     "Access-Control-Allow-Credentials: true",
-                    "ETag: W\/\"56-HAvX+PzMQt7ROgy3R7OGaIVNJx4\"",
+                    "ETag: W\/\"4e-NI2D9cvtSNsHVEe1QLU6AMiVjRc\"",
                     "Strict-Transport-Security: max-age=31536000; includeSubDomains",
                     "X-Frame-Options: DENY",
                     "X-Content-Type-Options: nosniff",
@@ -596,7 +585,7 @@
                     "Referrer-Policy: strict-origin-when-cross-origin"
                 ]
             },
-            "timestamp": "2025-09-18 19:12:43"
+            "timestamp": "2025-09-19 00:00:49"
         },
         {
             "test": "MOCK_VS_REAL_ANALYSIS",
@@ -604,19 +593,19 @@
             "message": "Análise de dados mock vs reais",
             "data": {
                 "total_tests": 29,
-                "mock_responses_detected": 3,
-                "real_responses": 26,
-                "mock_percentage": "10.34%",
-                "real_percentage": "89.66%"
+                "mock_responses_detected": 2,
+                "real_responses": 27,
+                "mock_percentage": "6.9%",
+                "real_percentage": "93.1%"
             },
-            "timestamp": "2025-09-18 19:12:43"
+            "timestamp": "2025-09-19 00:00:49"
         },
         {
             "test": "MOCK_INFO",
             "status": "INFO",
             "message": "Alguns dados mock detectados - normal para ambiente de desenvolvimento",
             "data": [],
-            "timestamp": "2025-09-18 19:12:43"
+            "timestamp": "2025-09-19 00:00:49"
         }
     ]
 }

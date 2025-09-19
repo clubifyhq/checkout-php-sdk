@@ -145,10 +145,44 @@ class Client
     public function getRequestHeaders(): array
     {
         $headers = $this->config->getDefaultHeaders();
-        $this->logger->log("debug", "Default Headers", ['headers' => $headers]);
+
+        // Adicionar Authorization header se AuthManager estiver disponível e autenticado
+        if ($this->authManager && $this->authManager->isAuthenticated()) {
+            $accessToken = $this->authManager->getAccessToken();
+            if ($accessToken) {
+                $headers['Authorization'] = 'Bearer ' . $accessToken;
+            }
+        } else {
+            // Fallback: usar API key diretamente se não tiver AuthManager configurado
+            $apiKey = $this->config->getApiKey();
+            if ($apiKey) {
+                $headers['Authorization'] = 'Bearer ' . $apiKey;
+            }
+        }
+
+        // Garantir que X-Tenant-ID está sempre presente
+        $tenantId = $this->config->getTenantId();
+        if ($tenantId) {
+            $headers['X-Tenant-ID'] = $tenantId;
+        }
+
+        $this->logger->log("debug", "Request Headers", [
+            'headers' => array_keys($headers),
+            'has_auth' => isset($headers['Authorization']),
+            'has_tenant' => isset($headers['X-Tenant-ID'])
+        ]);
+
         return $headers;
     }
 
+
+    /**
+     * Configurar AuthManager (usado para resolver dependência circular)
+     */
+    public function setAuthManager(AuthManagerInterface $authManager): void
+    {
+        $this->authManager = $authManager;
+    }
 
     /**
      * Obter cliente Guzzle interno (para casos avançados)

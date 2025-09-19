@@ -454,6 +454,7 @@ class ClubifyCheckoutSDK
     private function getHttpClient(): Client
     {
         if ($this->httpClient === null) {
+            // Criar Client sem AuthManager primeiro para evitar dependência circular
             $this->httpClient = new Client($this->config, $this->getLogger());
         }
         return $this->httpClient;
@@ -466,6 +467,8 @@ class ClubifyCheckoutSDK
     {
         if ($this->authManager === null) {
             $this->authManager = new AuthManager($this->getHttpClient(), $this->config);
+            // Configurar AuthManager no Client para resolver dependência circular
+            $this->getHttpClient()->setAuthManager($this->authManager);
         }
         return $this->authManager;
     }

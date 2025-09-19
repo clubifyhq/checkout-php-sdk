@@ -112,6 +112,35 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     }
 
     /**
+     * Find webhook by URL
+     */
+    public function findByUrl(string $url): ?array
+    {
+        return $this->getCachedOrExecute(
+            $this->getCacheKey("webhook:url:" . md5($url)),
+            function () use ($url) {
+                $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+                    'url' => $url
+                ]);
+
+                if (!$response->isSuccessful()) {
+                    if ($response->getStatusCode() === 404) {
+                        return null;
+                    }
+                    throw new HttpException(
+                        "Failed to find webhook by URL: " . $response->getError(),
+                        $response->getStatusCode()
+                    );
+                }
+
+                $data = $response->getData();
+                return $data['webhooks'][0] ?? null;
+            },
+            300 // 5 minutes cache
+        );
+    }
+
+    /**
      * Find webhooks by tenant
      */
     public function findByTenant(string $tenantId, array $filters = []): array

@@ -164,14 +164,34 @@ class CustomersModule implements ModuleInterface
     {
         $this->logger?->info('Finding customer by email', ['email' => $email]);
 
-        return [
-            'success' => true,
-            'customer_id' => uniqid('customer_'),
-            'email' => $email,
-            'name' => 'Cliente Exemplo',
-            'created_at' => time() - 86400, // 1 dia atrás
-            'purchases_count' => rand(1, 10)
-        ];
+        try {
+            $customerService = $this->getCustomerService();
+            $customer = $customerService->findByEmail($email);
+
+            if ($customer) {
+                return [
+                    'success' => true,
+                    'data' => $customer
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'message' => 'Customer not found',
+                    'data' => null
+                ];
+            }
+        } catch (\Exception $e) {
+            $this->logger?->error('Error finding customer by email', [
+                'email' => $email,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ];
+        }
     }
 
     /**
@@ -184,12 +204,31 @@ class CustomersModule implements ModuleInterface
             'data' => $profileData
         ]);
 
-        return [
-            'success' => true,
-            'customer_id' => $customerId,
-            'updated_fields' => array_keys($profileData),
-            'updated_at' => time()
-        ];
+        try {
+            $customerService = $this->getCustomerService();
+            $updatedCustomer = $customerService->update($customerId, $profileData);
+
+            return [
+                'success' => true,
+                'data' => $updatedCustomer,
+                'customer_id' => $customerId,
+                'updated_fields' => array_keys($profileData),
+                'updated_at' => time()
+            ];
+        } catch (\Exception $e) {
+            $this->logger?->error('Error updating customer profile', [
+                'customer_id' => $customerId,
+                'data' => $profileData,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'customer_id' => $customerId,
+                'data' => null
+            ];
+        }
     }
 
     // ================================================

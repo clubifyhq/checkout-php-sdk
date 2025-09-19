@@ -297,6 +297,26 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     }
 
     /**
+     * Verifica se a senha está correta
+     */
+    public function verifyPassword(string $email, string $password): bool
+    {
+        return $this->executeWithMetrics('verify_password', function () use ($email, $password) {
+            $response = $this->httpClient->post("users/verify-password", [
+                'email' => $email,
+                'password' => $password
+            ]);
+
+            if ($response->isSuccessful()) {
+                $data = $response->getData();
+                return $data['valid'] ?? false;
+            }
+
+            return false;
+        });
+    }
+
+    /**
      * Atualiza status do usuário
      */
     private function updateUserStatus(string $userId, string $status): bool

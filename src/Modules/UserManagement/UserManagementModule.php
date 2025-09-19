@@ -240,6 +240,15 @@ class UserManagementModule implements ModuleInterface
     }
 
     /**
+     * Autentica um usuário
+     */
+    public function authenticateUser(string $email, string $password): array
+    {
+        $this->requireInitialized();
+        return $this->getUserService()->authenticateUser($email, $password);
+    }
+
+    /**
      * Altera senha do usuário
      */
     public function changePassword(string $userId, string $newPassword): array

@@ -156,7 +156,8 @@ class Configuration implements ConfigurationInterface
             $headers['X-Tenant-ID'] = $tenantId;
         }
 
-
+        // Nota: O Authorization header será adicionado dinamicamente pelo AuthManager
+        // através do método Client::getRequestHeaders() quando o token estiver disponível
 
         return $headers;
     }

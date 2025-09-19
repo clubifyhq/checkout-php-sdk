@@ -36,6 +36,14 @@ class DomainService extends BaseService
     }
 
     /**
+     * Obtém a versão do serviço
+     */
+    protected function getServiceVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
      * Configura um domínio customizado para uma organização
      */
     public function configure(string $organizationId, string $domain): array

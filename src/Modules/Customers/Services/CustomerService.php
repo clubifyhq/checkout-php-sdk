@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Customers\Services;
 
-use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Modules\Customers\Contracts\CustomerRepositoryInterface;
 use Clubify\Checkout\Modules\Customers\Exceptions\CustomerNotFoundException;
 use Clubify\Checkout\Modules\Customers\Exceptions\DuplicateCustomerException;
-use ClubifyCheckout\Utils\Validators\EmailValidator;
-use ClubifyCheckout\Utils\Validators\CPFValidator;
-use ClubifyCheckout\Utils\Validators\CNPJValidator;
-use ClubifyCheckout\Utils\Validators\PhoneValidator;
-use Psr\Log\LoggerInterface;
+use Clubify\Checkout\Utils\Validators\EmailValidator;
+use Clubify\Checkout\Utils\Validators\CPFValidator;
+use Clubify\Checkout\Utils\Validators\CNPJValidator;
+use Clubify\Checkout\Utils\Validators\PhoneValidator;
+use Clubify\Checkout\Core\Logger\Logger;
 use Psr\Cache\CacheItemPoolInterface;
 use InvalidArgumentException;
 
@@ -39,7 +38,7 @@ use InvalidArgumentException;
  * - I: Interface Segregation - Interface específica
  * - D: Dependency Inversion - Depende de abstrações
  */
-class CustomerService extends BaseService implements ServiceInterface
+class CustomerService implements ServiceInterface
 {
     private array $validationRules = [
         'name' => ['required', 'string', 'min:2', 'max:100'],
@@ -53,14 +52,14 @@ class CustomerService extends BaseService implements ServiceInterface
 
     public function __construct(
         private CustomerRepositoryInterface $repository,
-        LoggerInterface $logger,
-        CacheItemPoolInterface $cache = null,
+        private Logger $logger,
+        private ?CacheItemPoolInterface $cache = null,
         private ?EmailValidator $emailValidator = null,
         private ?CPFValidator $cpfValidator = null,
         private ?CNPJValidator $cnpjValidator = null,
         private ?PhoneValidator $phoneValidator = null
     ) {
-        parent::__construct($logger, $cache);
+        // Inicialização simples - nova arquitetura híbrida
 
         // Initialize validators if not injected
         $this->emailValidator ??= new EmailValidator();
@@ -789,5 +788,142 @@ class CustomerService extends BaseService implements ServiceInterface
     private function generateCustomerId(): string
     {
         return 'cust_' . uniqid() . '_' . bin2hex(random_bytes(8));
+    }
+
+    // ==============================================
+    // CACHE UTILITY METHODS
+    // ==============================================
+
+    /**
+     * Execute operation with cache
+     */
+    private function getCachedOrExecute(string $cacheKey, callable $operation, int $ttl = 300): mixed
+    {
+        if (!$this->cache) {
+            return $operation();
+        }
+
+        try {
+            $item = $this->cache->getItem($cacheKey);
+            if ($item->isHit()) {
+                return $item->get();
+            }
+
+            $result = $operation();
+            $item->set($result);
+            $item->expiresAfter($ttl);
+            $this->cache->save($item);
+
+            return $result;
+        } catch (\Throwable $e) {
+            $this->logger->warning('Cache operation failed', [
+                'key' => $cacheKey,
+                'error' => $e->getMessage()
+            ]);
+            return $operation();
+        }
+    }
+
+    /**
+     * Clear cache pattern (simplified implementation)
+     */
+    private function clearCachePattern(string $pattern): void
+    {
+        if (!$this->cache) {
+            return;
+        }
+
+        try {
+            // PSR-6 doesn't have pattern deletion, so we'll just clear a specific key
+            // In a real implementation, you'd use a cache adapter that supports patterns
+            $this->cache->deleteItem($pattern);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Cache clear failed', [
+                'pattern' => $pattern,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Execute operation with metrics tracking
+     */
+    private function executeWithMetrics(string $operation, callable $callback): mixed
+    {
+        $startTime = microtime(true);
+
+        try {
+            $result = $callback();
+
+            $duration = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
+
+            $this->logger->info('Customer operation completed', [
+                'operation' => $operation,
+                'duration_ms' => round($duration, 2),
+                'service' => $this->getName(),
+                'success' => true
+            ]);
+
+            return $result;
+        } catch (\Throwable $e) {
+            $duration = (microtime(true) - $startTime) * 1000;
+
+            $this->logger->error('Customer operation failed', [
+                'operation' => $operation,
+                'duration_ms' => round($duration, 2),
+                'service' => $this->getName(),
+                'error' => $e->getMessage(),
+                'success' => false
+            ]);
+
+            throw $e;
+        }
+    }
+
+    // ==============================================
+    // SERVICE INTERFACE METHODS (Nova Arquitetura)
+    // ==============================================
+
+    /**
+     * Get service configuration
+     */
+    public function getConfig(): array
+    {
+        return [
+            'validation_rules' => $this->validationRules,
+            'cache_enabled' => $this->cache !== null,
+            'validators' => [
+                'email' => $this->emailValidator !== null,
+                'cpf' => $this->cpfValidator !== null,
+                'cnpj' => $this->cnpjValidator !== null,
+                'phone' => $this->phoneValidator !== null,
+            ]
+        ];
+    }
+
+    /**
+     * Check if service is available
+     */
+    public function isAvailable(): bool
+    {
+        return $this->isHealthy();
+    }
+
+    /**
+     * Get service status information
+     */
+    public function getStatus(): array
+    {
+        $isHealthy = $this->isHealthy();
+
+        return [
+            'service' => $this->getName(),
+            'version' => $this->getVersion(),
+            'status' => $isHealthy ? 'healthy' : 'unhealthy',
+            'available' => $isHealthy,
+            'last_check' => time(),
+            'repository' => get_class($this->repository),
+            'config' => $this->getConfig()
+        ];
     }
 }

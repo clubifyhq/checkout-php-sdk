@@ -101,12 +101,14 @@ interface CustomerRepositoryInterface extends RepositoryInterface
     /**
      * Search customers with advanced criteria (search pattern)
      *
-     * @param array $criteria Search criteria
-     * @param array $options Search options (sort, limit, offset)
+     * @param array $filters Search criteria/filters
+     * @param array $sort Sort options
+     * @param int $limit Limit results
+     * @param int $offset Offset for pagination
      * @return array Search results with pagination
      * @throws \Exception When search fails
      */
-    public function search(array $criteria, array $options = []): array;
+    public function search(array $filters, array $sort = [], int $limit = 100, int $offset = 0): array;
 
     /**
      * Archive customer (soft delete pattern)

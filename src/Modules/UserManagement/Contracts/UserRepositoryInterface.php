@@ -128,4 +128,13 @@ interface UserRepositoryInterface extends RepositoryInterface
      * @return array Estatísticas de usuários
      */
     public function getUserStats(?string $tenantId = null): array;
+
+    /**
+     * Verifica se a senha está correta
+     *
+     * @param string $email Email do usuário
+     * @param string $password Senha a verificar
+     * @return bool True se a senha está correta
+     */
+    public function verifyPassword(string $email, string $password): bool;
 }

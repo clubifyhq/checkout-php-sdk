@@ -380,9 +380,9 @@ class SDKDiagnostic
         // Teste endpoints específicos para verificar conectividade real
         $endpoints = [
             'health' => '/health',
-            'organization' => '/organization',
+            'organizations' => '/organizations',
             'products' => '/products',
-            'payments' => '/payments/methods'
+            'payments' => '/payments'
         ];
 
         foreach ($endpoints as $name => $endpoint) {

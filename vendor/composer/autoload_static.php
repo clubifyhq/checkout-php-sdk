@@ -1086,6 +1086,7 @@ class ComposerStaticInit87ba95117ffe0acbe8fdd45d4da94c36
         'Clubify\\Checkout\\Modules\\Payments\\DTOs\\TransactionData' => __DIR__ . '/../..' . '/src/Modules/Payments/DTOs/TransactionData.php',
         'Clubify\\Checkout\\Modules\\Payments\\Exceptions\\CardNotFoundException' => __DIR__ . '/../..' . '/src/Modules/Payments/Exceptions/CardNotFoundException.php',
         'Clubify\\Checkout\\Modules\\Payments\\Exceptions\\CardValidationException' => __DIR__ . '/../..' . '/src/Modules/Payments/Exceptions/CardValidationException.php',
+        'Clubify\\Checkout\\Modules\\Payments\\Exceptions\\GatewayException' => __DIR__ . '/../..' . '/src/Modules/Payments/Exceptions/GatewayException.php',
         'Clubify\\Checkout\\Modules\\Payments\\Exceptions\\PaymentNotFoundException' => __DIR__ . '/../..' . '/src/Modules/Payments/Exceptions/PaymentNotFoundException.php',
         'Clubify\\Checkout\\Modules\\Payments\\Exceptions\\PaymentValidationException' => __DIR__ . '/../..' . '/src/Modules/Payments/Exceptions/PaymentValidationException.php',
         'Clubify\\Checkout\\Modules\\Payments\\Factories\\PaymentsServiceFactory' => __DIR__ . '/../..' . '/src/Modules/Payments/Factories/PaymentsServiceFactory.php',

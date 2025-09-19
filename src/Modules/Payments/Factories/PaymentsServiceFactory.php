@@ -17,10 +17,10 @@ use Clubify\Checkout\Modules\Payments\Services\TokenizationService;
 use Clubify\Checkout\Modules\Payments\Repositories\ApiPaymentRepository;
 use Clubify\Checkout\Modules\Payments\Repositories\ApiCardRepository;
 // Utils
-use ClubifyCheckout\Utils\Validators\CreditCardValidator;
-use ClubifyCheckout\Utils\Formatters\CurrencyFormatter;
-use ClubifyCheckout\Utils\Crypto\AESEncryption;
-use ClubifyCheckout\Utils\Crypto\HMACSignature;
+use Clubify\Checkout\Utils\Validators\CreditCardValidator;
+use Clubify\Checkout\Utils\Formatters\CurrencyFormatter;
+use Clubify\Checkout\Utils\Crypto\AESEncryption;
+use Clubify\Checkout\Utils\Crypto\HMACSignature;
 
 /**
  * Payments Service Factory
@@ -270,9 +270,9 @@ class PaymentsServiceFactory implements FactoryInterface
         return new PaymentService(
             $repository,
             $this->logger,
-            $this->cache,
             $cardValidator,
-            $currencyFormatter
+            $currencyFormatter,
+            null // cache será null para evitar problemas de compatibilidade
         );
     }
 

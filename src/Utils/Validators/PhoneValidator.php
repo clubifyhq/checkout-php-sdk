@@ -137,16 +137,22 @@ class PhoneValidator implements ValidatorInterface
 
         switch ($phoneType) {
             case 'mobile':
-                return $this->validateMobile($phone);
+                $isValid = $this->validateMobile($phone);
+                break;
             case 'landline':
-                return $this->validateLandline($phone);
+                $isValid = $this->validateLandline($phone);
+                break;
             case 'special':
-                return $this->validateSpecial($phone);
+                $isValid = $this->validateSpecial($phone);
+                break;
             case 'international':
-                return $this->validateInternational($phone);
+                $isValid = $this->validateInternational($phone);
+                break;
             default:
                 return $this->setError('Formato de telefone não reconhecido');
         }
+
+        return $isValid ? ['valid' => true, 'message' => ''] : ['valid' => false, 'message' => $this->lastErrorMessage];
     }
 
     /**
@@ -277,30 +283,35 @@ class PhoneValidator implements ValidatorInterface
         if (strlen($phone) === 11) {
             $ddd = (int) substr($phone, 0, 2);
             if (!in_array($ddd, $this->validDDDs)) {
-                return $this->setError('DDD inválido para celular');
+                $this->setError('DDD inválido para celular');
+                return false;
             }
 
             if ($this->config['strict_mobile_format'] && $phone[2] !== '9') {
-                return $this->setError('Celular deve começar com 9 após o DDD');
+                $this->setError('Celular deve começar com 9 após o DDD');
+                return false;
             }
 
-            return ['valid' => true, 'message' => ''];
+            return true;
         }
 
         // Celular sem DDD (9 dígitos)
         if (strlen($phone) === 9) {
             if ($this->config['require_area_code']) {
-                return $this->setError('DDD é obrigatório para celulares');
+                $this->setError('DDD é obrigatório para celulares');
+                return false;
             }
 
             if ($this->config['strict_mobile_format'] && $phone[0] !== '9') {
-                return $this->setError('Celular deve começar com 9');
+                $this->setError('Celular deve começar com 9');
+                return false;
             }
 
-            return ['valid' => true, 'message' => ''];
+            return true;
         }
 
-        return $this->setError('Celular deve ter 9 dígitos (sem DDD) ou 11 dígitos (com DDD)');
+        $this->setError('Celular deve ter 9 dígitos (sem DDD) ou 11 dígitos (com DDD)');
+        return false;
     }
 
     /**
@@ -312,22 +323,25 @@ class PhoneValidator implements ValidatorInterface
         if (strlen($phone) === 10) {
             $ddd = (int) substr($phone, 0, 2);
             if (!in_array($ddd, $this->validDDDs)) {
-                return $this->setError('DDD inválido para telefone fixo');
+                $this->setError('DDD inválido para telefone fixo');
+                return false;
             }
 
-            return ['valid' => true, 'message' => ''];
+            return true;
         }
 
         // Fixo sem DDD (8 dígitos)
         if (strlen($phone) === 8) {
             if ($this->config['require_area_code']) {
-                return $this->setError('DDD é obrigatório para telefones fixos');
+                $this->setError('DDD é obrigatório para telefones fixos');
+            return false;
             }
 
-            return ['valid' => true, 'message' => ''];
+            return true;
         }
 
-        return $this->setError('Telefone fixo deve ter 8 dígitos (sem DDD) ou 10 dígitos (com DDD)');
+        $this->setError('Telefone fixo deve ter 8 dígitos (sem DDD) ou 10 dígitos (com DDD)');
+        return false;
     }
 
     /**
@@ -336,7 +350,8 @@ class PhoneValidator implements ValidatorInterface
     private function validateSpecial(string $phone): bool
     {
         if (!$this->config['allow_special_numbers']) {
-            return $this->setError('Números especiais não são permitidos');
+            $this->setError('Números especiais não são permitidos');
+            return false;
         }
 
         // Verifica se começa com prefixo válido
@@ -345,12 +360,13 @@ class PhoneValidator implements ValidatorInterface
                 // Valida comprimento específico por tipo
                 $expectedLength = $this->getExpectedLengthForPrefix($prefix);
                 if (strlen($phone) === $expectedLength) {
-                    return ['valid' => true, 'message' => ''];
+                    return true;
                 }
             }
         }
 
-        return $this->setError('Número especial inválido');
+        $this->setError('Número especial inválido');
+        return false;
     }
 
     /**
@@ -359,15 +375,17 @@ class PhoneValidator implements ValidatorInterface
     private function validateInternational(string $phone): bool
     {
         if (!$this->config['allow_international']) {
-            return $this->setError('Números internacionais não são permitidos');
+            $this->setError('Números internacionais não são permitidos');
+            return false;
         }
 
         // Validação básica para números internacionais
         if (strlen($phone) >= 8 && strlen($phone) <= 15) {
-            return ['valid' => true, 'message' => ''];
+            return true;
         }
 
-        return $this->setError('Número internacional inválido');
+        $this->setError('Número internacional inválido');
+        return false;
     }
 
     /**

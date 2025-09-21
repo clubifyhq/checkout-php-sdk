@@ -179,6 +179,66 @@ class Configuration implements ConfigurationInterface
     }
 
     /**
+     * Definir credenciais de super admin
+     */
+    public function setSuperAdminCredentials(array $credentials): self
+    {
+        $this->set('super_admin', $credentials);
+        return $this;
+    }
+
+    /**
+     * Obter credenciais de super admin
+     */
+    public function getSuperAdminCredentials(): ?array
+    {
+        return $this->get('super_admin');
+    }
+
+    /**
+     * Adicionar credenciais de tenant
+     */
+    public function addTenantCredentials(string $tenantId, array $credentials): self
+    {
+        $this->set("tenants.{$tenantId}", $credentials);
+        return $this;
+    }
+
+    /**
+     * Obter credenciais de tenant específico
+     */
+    public function getTenantCredentials(string $tenantId): ?array
+    {
+        return $this->get("tenants.{$tenantId}");
+    }
+
+    /**
+     * Obter todos os tenants configurados
+     */
+    public function getAllTenants(): array
+    {
+        return $this->get('tenants', []);
+    }
+
+    /**
+     * Verificar se há credenciais de super admin
+     */
+    public function hasSuperAdminCredentials(): bool
+    {
+        $credentials = $this->getSuperAdminCredentials();
+        return $credentials !== null && isset($credentials['api_key']);
+    }
+
+    /**
+     * Verificar se tenant específico está configurado
+     */
+    public function hasTenantCredentials(string $tenantId): bool
+    {
+        $credentials = $this->getTenantCredentials($tenantId);
+        return $credentials !== null && isset($credentials['api_key']);
+    }
+
+    /**
      * Inicializar configurações padrão
      */
     private function initializeDefaults(): void

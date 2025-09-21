@@ -116,8 +116,12 @@ class ApiKeyService extends BaseService
             ]);
 
             // Criar API key via API
-            $response = $this->httpClient->post('/api-keys', $data);
-            $apiKey = $response->getData();
+            $response = $this->httpClient->post('api-keys', ['json' => $data]);
+            $apiKey = $this->processHttpResponse($response);
+
+            if (!$apiKey) {
+                throw new HttpException('Failed to create API key: Invalid response from server');
+            }
 
             // Cache da chave
             $this->cache->set($this->getCacheKey("api_key:{$apiKey['id']}"), $apiKey, 7200);
@@ -171,8 +175,8 @@ class ApiKeyService extends BaseService
     public function getApiKeysByOrganization(string $organizationId): array
     {
         return $this->executeWithMetrics('get_api_keys_by_organization', function () use ($organizationId) {
-            $response = $this->httpClient->get("/organizations/{$organizationId}/api-keys");
-            return $response->getData() ?? [];
+            $response = $this->httpClient->get("/organizations/{$organizationId}api-keys");
+            return $this->processHttpResponse($response) ?? [];
         });
     }
 
@@ -184,11 +188,17 @@ class ApiKeyService extends BaseService
         return $this->executeWithMetrics('update_api_key_permissions', function () use ($apiKeyId, $permissions) {
             $this->validatePermissions($permissions);
 
-            $response = $this->httpClient->put("/api-keys/{$apiKeyId}/permissions", [
-                'permissions' => $permissions
+            $response = $this->httpClient->put("api-keys/{$apiKeyId}/permissions", [
+                'json' => [
+                    'permissions' => $permissions
+                ]
             ]);
 
-            $apiKey = $response->getData();
+            $apiKey = $this->processHttpResponse($response);
+
+            if (!$apiKey) {
+                throw new HttpException('Failed to update API key permissions: Invalid response from server');
+            }
 
             // Invalidar cache
             $this->invalidateApiKeyCache($apiKeyId);
@@ -213,11 +223,17 @@ class ApiKeyService extends BaseService
                 throw new ValidationException('Rate limit must be between 1 and 100000');
             }
 
-            $response = $this->httpClient->put("/api-keys/{$apiKeyId}/rate-limit", [
-                'rate_limit' => $rateLimit
+            $response = $this->httpClient->put("api-keys/{$apiKeyId}/rate-limit", [
+                'json' => [
+                    'rate_limit' => $rateLimit
+                ]
             ]);
 
-            $apiKey = $response->getData();
+            $apiKey = $this->processHttpResponse($response);
+
+            if (!$apiKey) {
+                throw new HttpException('Failed to update API key rate limit: Invalid response from server');
+            }
 
             // Invalidar cache
             $this->invalidateApiKeyCache($apiKeyId);
@@ -279,12 +295,18 @@ class ApiKeyService extends BaseService
             $newKey = $this->generateSecureKey($currentKey['type']);
             $newSecret = $this->generateSecureSecret();
 
-            $response = $this->httpClient->put("/api-keys/{$apiKeyId}/regenerate", [
-                'key' => $newKey,
-                'secret' => $newSecret
+            $response = $this->httpClient->put("api-keys/{$apiKeyId}/regenerate", [
+                'json' => [
+                    'key' => $newKey,
+                    'secret' => $newSecret
+                ]
             ]);
 
-            $apiKey = $response->getData();
+            $apiKey = $this->processHttpResponse($response);
+
+            if (!$apiKey) {
+                throw new HttpException('Failed to regenerate API key: Invalid response from server');
+            }
 
             // Invalidar cache
             $this->invalidateApiKeyCache($apiKeyId);
@@ -337,8 +359,8 @@ class ApiKeyService extends BaseService
     public function getApiKeyStats(string $apiKeyId): array
     {
         return $this->executeWithMetrics('get_api_key_stats', function () use ($apiKeyId) {
-            $response = $this->httpClient->get("/api-keys/{$apiKeyId}/stats");
-            return $response->getData() ?? [];
+            $response = $this->httpClient->get("api-keys/{$apiKeyId}/stats");
+            return $this->processHttpResponse($response) ?? [];
         });
     }
 
@@ -348,10 +370,12 @@ class ApiKeyService extends BaseService
     public function getApiKeyLogs(string $apiKeyId, int $limit = 100): array
     {
         return $this->executeWithMetrics('get_api_key_logs', function () use ($apiKeyId, $limit) {
-            $response = $this->httpClient->get("/api-keys/{$apiKeyId}/logs", [
-                'limit' => $limit
+            $response = $this->httpClient->get("api-keys/{$apiKeyId}/logs", [
+                'query' => [
+                    'limit' => $limit
+                ]
             ]);
-            return $response->getData() ?? [];
+            return $this->processHttpResponse($response) ?? [];
         });
     }
 
@@ -376,10 +400,12 @@ class ApiKeyService extends BaseService
     public function recordUsage(string $apiKey, array $metadata = []): void
     {
         $this->executeWithMetrics('record_api_key_usage', function () use ($apiKey, $metadata) {
-            $this->httpClient->post("/api-keys/usage", [
-                'api_key' => $apiKey,
-                'timestamp' => time(),
-                'metadata' => $metadata
+            $this->httpClient->post("api-keys/usage", [
+                'json' => [
+                    'api_key' => $apiKey,
+                    'timestamp' => time(),
+                    'metadata' => $metadata
+                ]
             ]);
         });
     }
@@ -390,8 +416,8 @@ class ApiKeyService extends BaseService
     private function fetchApiKeyByKey(string $apiKey): ?array
     {
         try {
-            $response = $this->httpClient->get("/api-keys/validate/{$apiKey}");
-            return $response->getData();
+            $response = $this->httpClient->get("api-keys/validate/{$apiKey}");
+            return $this->processHttpResponse($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404 || $e->getStatusCode() === 401) {
                 return null;
@@ -406,8 +432,8 @@ class ApiKeyService extends BaseService
     private function fetchApiKeyById(string $apiKeyId): ?array
     {
         try {
-            $response = $this->httpClient->get("/api-keys/{$apiKeyId}");
-            return $response->getData();
+            $response = $this->httpClient->get("api-keys/{$apiKeyId}");
+            return $this->processHttpResponse($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -423,8 +449,10 @@ class ApiKeyService extends BaseService
     {
         return $this->executeWithMetrics("update_api_key_status_{$status}", function () use ($apiKeyId, $status) {
             try {
-                $response = $this->httpClient->put("/api-keys/{$apiKeyId}/status", [
-                    'status' => $status
+                $response = $this->httpClient->put("api-keys/{$apiKeyId}/status", [
+                    'json' => [
+                        'status' => $status
+                    ]
                 ]);
 
                 // Invalidar cache
@@ -595,5 +623,29 @@ class ApiKeyService extends BaseService
             'log_requests' => true,
             'rate_limit_window' => 3600
         ];
+    }
+
+    /**
+     * Processa resposta HTTP do Client (Guzzle) e retorna dados JSON
+     */
+    private function processHttpResponse(\Psr\Http\Message\ResponseInterface $response): ?array
+    {
+        $content = $response->getBody()->getContents();
+
+        if (empty($content)) {
+            return null;
+        }
+
+        $data = json_decode($content, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->logger->error('Failed to decode JSON response', [
+                'json_error' => json_last_error_msg(),
+                'content' => $content
+            ]);
+            return null;
+        }
+
+        return $data;
     }
 }

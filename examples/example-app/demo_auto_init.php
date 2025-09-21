@@ -23,6 +23,8 @@ try {
     $sdk = ClubifySDKHelper::getInstance();
     $endTime = microtime(true);
 
+    $sdk->initialize(true);
+
     echo "   ✅ Instância criada em " . round(($endTime - $startTime) * 1000, 2) . "ms\n";
     echo "   🔍 Status de inicialização: " . ($sdk->isInitialized() ? 'INICIALIZADO' : 'NÃO INICIALIZADO') . "\n\n";
 

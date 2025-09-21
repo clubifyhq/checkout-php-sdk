@@ -8,6 +8,7 @@ use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Config\ConfigurationInterface;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Auth\AuthManager;
+use Clubify\Checkout\Core\Auth\CredentialManager;
 use Clubify\Checkout\Core\Events\EventDispatcher;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Cache\CacheManager;
@@ -29,6 +30,7 @@ use Clubify\Checkout\Modules\Subscriptions\SubscriptionsModule;
 use Clubify\Checkout\Modules\Subscriptions\Factories\SubscriptionsServiceFactory;
 use Clubify\Checkout\Modules\Orders\Factories\OrdersServiceFactory;
 use Clubify\Checkout\Modules\Payments\Factories\PaymentsServiceFactory;
+use Clubify\Checkout\Modules\SuperAdmin\SuperAdminModule;
 use Clubify\Checkout\Enums\Environment;
 use Clubify\Checkout\Exceptions\ConfigurationException;
 use Clubify\Checkout\Exceptions\SDKException;
@@ -44,10 +46,12 @@ class ClubifyCheckoutSDK
     private ConfigurationInterface $config;
     private bool $initialized = false;
     private bool $initializing = false;
+    private string $operatingMode = 'single_tenant'; // 'single_tenant' | 'super_admin'
 
     // Core components
     private ?Client $httpClient = null;
     private ?AuthManager $authManager = null;
+    private ?CredentialManager $credentialManager = null;
     private ?EventDispatcher $eventDispatcher = null;
     private ?Logger $logger = null;
     private ?CacheManager $cache = null;
@@ -62,6 +66,7 @@ class ClubifyCheckoutSDK
     private ?TrackingModule $tracking = null;
     private ?UserManagementModule $userManagement = null;
     private ?SubscriptionsModule $subscriptions = null;
+    private ?SuperAdminModule $superAdmin = null;
 
     /**
      * Cria nova instância do SDK
@@ -86,10 +91,11 @@ class ClubifyCheckoutSDK
      *
      * Executa autenticação automática e configurações iniciais
      *
+     * @param bool $skipHealthCheck Pular verificação de health check (útil para testes)
      * @return array Resultado da inicialização
      * @throws SDKException
      */
-    public function initialize(): array
+    public function initialize(bool $skipHealthCheck = false): array
     {
         if ($this->initialized) {
             return [
@@ -108,11 +114,13 @@ class ClubifyCheckoutSDK
             // Autenticação automática (Lazy Loading)
             $authResult = $this->getAuthManager()->authenticate();
 
-            // Validação de conectividade (Lazy Loading)
-            $connectivityCheck = $this->getHttpClient()->healthCheck();
-
-            if (!$connectivityCheck) {
-                throw new SDKException('API connectivity check failed');
+            // Validação de conectividade (Lazy Loading) - pode ser pulada para testes
+            $connectivityCheck = true;
+            if (!$skipHealthCheck) {
+                $connectivityCheck = $this->getHttpClient()->healthCheck();
+                if (!$connectivityCheck) {
+                    throw new SDKException('API connectivity check failed');
+                }
             }
 
             $this->initialized = true;
@@ -125,6 +133,7 @@ class ClubifyCheckoutSDK
                 'environment' => $this->config->getEnvironment(),
                 'auth_result' => $authResult,
                 'connectivity' => $connectivityCheck,
+                'health_check_skipped' => $skipHealthCheck,
                 'timestamp' => date('c'),
             ];
         } catch (\Throwable $e) {
@@ -172,6 +181,132 @@ class ClubifyCheckoutSDK
             $this->cache->clear();
         }
         $this->initialized = false;
+    }
+
+    /**
+     * Verificar se API key foi validada
+     */
+    public function isApiKeyValidated(): bool
+    {
+        if ($this->authManager === null) {
+            return false;
+        }
+        return $this->authManager->isApiKeyValidated();
+    }
+
+    /**
+     * Verificar se precisa fazer login de usuário
+     */
+    public function requiresUserLogin(): bool
+    {
+        if ($this->authManager === null) {
+            return false;
+        }
+        return $this->authManager->requiresUserLogin();
+    }
+
+    /**
+     * Inicializar SDK como super admin
+     */
+    public function initializeAsSuperAdmin(array $superAdminCredentials): array
+    {
+        $this->operatingMode = 'super_admin';
+        $this->credentialManager = new CredentialManager();
+
+        // Configurar credenciais de super admin na configuração
+        $this->config->setSuperAdminCredentials($superAdminCredentials);
+
+        // Configurar credential manager no auth manager
+        $authManager = $this->getAuthManager();
+        $authManager->setCredentialManager($this->credentialManager);
+
+        // Autenticar como super admin
+        $authResult = $authManager->authenticateAsSuperAdmin($superAdminCredentials);
+
+        if (!$authResult) {
+            throw new SDKException('Super admin authentication failed');
+        }
+
+        $this->initialized = true;
+
+        return [
+            'success' => true,
+            'mode' => 'super_admin',
+            'authenticated' => true,
+            'role' => 'super_admin',
+            'timestamp' => date('c')
+        ];
+    }
+
+    /**
+     * Criar organização (apenas super admin)
+     */
+    public function createOrganization(array $organizationData): array
+    {
+        $this->requireSuperAdminMode();
+
+        // Criar organização e tenant_admin
+        $result = $this->getAuthManager()->createTenantCredentials(
+            $organizationData['name'],
+            $organizationData
+        );
+
+        return $result;
+    }
+
+    /**
+     * Alternar para tenant específico
+     */
+    public function switchToTenant(string $tenantId): void
+    {
+        $this->requireSuperAdminMode();
+        $this->getAuthManager()->switchToTenant($tenantId);
+    }
+
+    /**
+     * Alternar para super admin
+     */
+    public function switchToSuperAdmin(): void
+    {
+        $this->requireSuperAdminMode();
+        $this->getAuthManager()->switchToSuperAdmin();
+    }
+
+    /**
+     * Obter contexto atual
+     */
+    public function getCurrentContext(): array
+    {
+        if ($this->operatingMode === 'single_tenant') {
+            return [
+                'mode' => 'single_tenant',
+                'tenant_id' => $this->config->getTenantId(),
+                'role' => 'tenant_admin'
+            ];
+        }
+
+        $authManager = $this->getAuthManager();
+        return [
+            'mode' => 'super_admin',
+            'current_role' => $authManager->getCurrentRole(),
+            'available_contexts' => $authManager->getAvailableContexts()
+        ];
+    }
+
+    /**
+     * Verificar se está em modo super admin
+     */
+    public function isSuperAdminMode(): bool
+    {
+        return $this->operatingMode === 'super_admin';
+    }
+
+    /**
+     * Fazer login com usuário e senha para obter access token
+     */
+    public function loginUser(string $email, string $password, ?string $deviceFingerprint = null): array
+    {
+        return $this->getAuthManager()->login($email, $password, null, $deviceFingerprint);
     }
 
     /**
@@ -372,6 +507,24 @@ class ClubifyCheckoutSDK
     }
 
     /**
+     * Acesso ao módulo Super Admin
+     */
+    public function superAdmin(): SuperAdminModule
+    {
+        if (!$this->superAdmin) {
+            $this->superAdmin = new SuperAdminModule();
+            $this->superAdmin->initialize($this->config, $this->getLogger());
+            $this->superAdmin->setDependencies(
+                $this->getHttpClient(),
+                $this->getCache(),
+                $this->getEventDispatcher()
+            );
+        }
+
+        return $this->superAdmin;
+    }
+
+    /**
      * Validar configuração mínima
      */
     private function validateMinimalConfig(array $config): void
@@ -416,6 +569,16 @@ class ClubifyCheckoutSDK
                 null,
                 ['operation' => $operation, 'initialized' => false]
             );
+        }
+    }
+
+    /**
+     * Verificar se está em modo super admin
+     */
+    private function requireSuperAdminMode(): void
+    {
+        if ($this->operatingMode !== 'super_admin') {
+            throw new SDKException('SDK must be in super_admin mode for this operation');
         }
     }
 

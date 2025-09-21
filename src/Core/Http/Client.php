@@ -146,30 +146,23 @@ class Client
     {
         $headers = $this->config->getDefaultHeaders();
 
-        // Adicionar Authorization header se AuthManager estiver disponível e autenticado
+        // Adicionar Authorization header APENAS se AuthManager estiver disponível e autenticado
         if ($this->authManager && $this->authManager->isAuthenticated()) {
             $accessToken = $this->authManager->getAccessToken();
             if ($accessToken) {
                 $headers['Authorization'] = 'Bearer ' . $accessToken;
             }
-        } else {
-            // Fallback: usar API key diretamente se não tiver AuthManager configurado
-            $apiKey = $this->config->getApiKey();
-            if ($apiKey) {
-                $headers['Authorization'] = 'Bearer ' . $apiKey;
-            }
         }
+        // IMPORTANTE: NÃO usar API key como fallback no Authorization header
+        // API key é apenas para validação, não para autenticação de requests
 
-        // Garantir que X-Tenant-ID está sempre presente
-        $tenantId = $this->config->getTenantId();
-        if ($tenantId) {
-            $headers['X-Tenant-ID'] = $tenantId;
-        }
+        // X-Tenant-ID já incluído nos headers padrão da configuração
 
         $this->logger->log("debug", "Request Headers", [
             'headers' => array_keys($headers),
             'has_auth' => isset($headers['Authorization']),
-            'has_tenant' => isset($headers['X-Tenant-ID'])
+            'has_tenant' => isset($headers['X-Tenant-ID']),
+            'auth_required' => $this->authManager ? $this->authManager->requiresUserLogin() : false
         ]);
 
         return $headers;

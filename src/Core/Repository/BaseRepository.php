@@ -43,7 +43,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
             $this->getCacheKey("{$this->getResourceName()}:{$id}"),
             function () use ($id) {
                 $response = $this->httpClient->get("{$this->getEndpoint()}/{$id}");
-                return $response->isSuccessful() ? $response->getData() : null;
+                return $this->isSuccessfulResponse($response) ? $this->extractResponseData($response) : null;
             },
             300 // 5 minutes cache
         );
@@ -63,7 +63,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
                 $endpoint = $this->getEndpoint() . '?' . http_build_query($queryParams);
 
                 $response = $this->httpClient->get($endpoint);
-                return $response->isSuccessful() ? $response->getData() : [];
+                return $this->isSuccessfulResponse($response) ? $this->extractResponseData($response) ?? [] : [];
             },
             180 // 3 minutes cache
         );
@@ -83,7 +83,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
                 $endpoint = $this->getEndpoint() . '?' . http_build_query($queryParams);
 
                 $response = $this->httpClient->get($endpoint);
-                return $response->isSuccessful() ? $response->getData() : [];
+                return $this->isSuccessfulResponse($response) ? $this->extractResponseData($response) ?? [] : [];
             },
             180 // 3 minutes cache
         );
@@ -103,7 +103,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
                 $endpoint = $this->getEndpoint() . '?' . http_build_query($queryParams);
 
                 $response = $this->httpClient->get($endpoint);
-                return $response->isSuccessful() ? $response->getData() : [];
+                return $this->isSuccessfulResponse($response) ? $this->extractResponseData($response) ?? [] : [];
             },
             180 // 3 minutes cache
         );
@@ -126,14 +126,14 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
         return $this->executeWithMetrics("create_{$this->getResourceName()}", function () use ($data) {
             $response = $this->httpClient->post($this->getEndpoint(), $data);
 
-            if (!$response->isSuccessful()) {
+            if (!$this->isSuccessfulResponse($response)) {
                 throw new HttpException(
                     "Failed to create {$this->getResourceName()}: " . $response->getError(),
                     $response->getStatusCode()
                 );
             }
 
-            $createdData = $response->getData();
+            $createdData = $this->extractResponseData($response);
 
             // Dispatch creation event
             $this->dispatch("{$this->getResourceName()}.created", [
@@ -153,14 +153,14 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
         return $this->executeWithMetrics("update_{$this->getResourceName()}", function () use ($id, $data) {
             $response = $this->httpClient->put("{$this->getEndpoint()}/{$id}", $data);
 
-            if (!$response->isSuccessful()) {
+            if (!$this->isSuccessfulResponse($response)) {
                 throw new HttpException(
                     "Failed to update {$this->getResourceName()}: " . $response->getError(),
                     $response->getStatusCode()
                 );
             }
 
-            $updatedData = $response->getData();
+            $updatedData = $this->extractResponseData($response);
 
             // Invalidate cache
             $this->cache->delete($this->getCacheKey("{$this->getResourceName()}:{$id}"));
@@ -183,7 +183,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
         return $this->executeWithMetrics("delete_{$this->getResourceName()}", function () use ($id) {
             $response = $this->httpClient->delete("{$this->getEndpoint()}/{$id}");
 
-            if ($response->isSuccessful()) {
+            if ($this->isSuccessfulResponse($response)) {
                 // Invalidate cache
                 $this->cache->delete($this->getCacheKey("{$this->getResourceName()}:{$id}"));
 
@@ -222,8 +222,8 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
 
                 $response = $this->httpClient->get($endpoint);
 
-                if ($response->isSuccessful()) {
-                    $data = $response->getData();
+                if ($this->isSuccessfulResponse($response)) {
+                    $data = $this->extractResponseData($response);
                     return $data['total'] ?? count($data['data'] ?? []);
                 }
 
@@ -250,7 +250,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
                 $endpoint = $this->getEndpoint() . '/search?' . http_build_query($queryParams);
 
                 $response = $this->httpClient->get($endpoint);
-                return $response->isSuccessful() ? $response->getData() : [];
+                return $this->isSuccessfulResponse($response) ? $this->extractResponseData($response) ?? [] : [];
             },
             180 // 3 minutes cache
         );
@@ -289,5 +289,34 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
     protected function getServiceVersion(): string
     {
         return '1.0.0';
+    }
+
+    /**
+     * Verifica se a resposta HTTP é bem-sucedida
+     */
+    protected function isSuccessfulResponse(\Psr\Http\Message\ResponseInterface $response): bool
+    {
+        $statusCode = $response->getStatusCode();
+        return $statusCode >= 200 && $statusCode < 300;
+    }
+
+    /**
+     * Extrai dados JSON da resposta HTTP
+     */
+    protected function extractResponseData(\Psr\Http\Message\ResponseInterface $response): ?array
+    {
+        $content = $response->getBody()->getContents();
+
+        if (empty($content)) {
+            return null;
+        }
+
+        $data = json_decode($content, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return null;
+        }
+
+        return $data;
     }
 }

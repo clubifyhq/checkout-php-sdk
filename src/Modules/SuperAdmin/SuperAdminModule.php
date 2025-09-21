@@ -1,0 +1,406 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Clubify\Checkout\Modules\SuperAdmin;
+
+use Clubify\Checkout\Contracts\ModuleInterface;
+use Clubify\Checkout\Core\Config\Configuration;
+use Clubify\Checkout\Core\Logger\Logger;
+use Clubify\Checkout\Core\Http\Client;
+use Clubify\Checkout\Core\Cache\CacheManagerInterface;
+use Clubify\Checkout\Core\Events\EventDispatcherInterface;
+use Clubify\Checkout\Modules\SuperAdmin\Services\TenantManagementService;
+use Clubify\Checkout\Modules\SuperAdmin\Services\OrganizationCreationService;
+use Clubify\Checkout\Exceptions\SDKException;
+
+/**
+ * Módulo Super Admin
+ *
+ * Responsável pela gestão de super admin, incluindo:
+ * - Criação e gerenciamento de organizações
+ * - Gerenciamento de tenants
+ * - Administração de credenciais
+ * - Supervisão geral do sistema
+ */
+class SuperAdminModule implements ModuleInterface
+{
+    private Configuration $config;
+    private Logger $logger;
+    private bool $initialized = false;
+
+    private ?TenantManagementService $tenantManagement = null;
+    private ?OrganizationCreationService $organizationCreation = null;
+
+    private ?Client $httpClient = null;
+    private ?CacheManagerInterface $cache = null;
+    private ?EventDispatcherInterface $eventDispatcher = null;
+
+    /**
+     * Inicializa o módulo com configurações
+     */
+    public function initialize(Configuration $config, Logger $logger): void
+    {
+        $this->config = $config;
+        $this->logger = $logger;
+        $this->initialized = true;
+
+        $this->logger->info('SuperAdmin module initialized', [
+            'module' => $this->getName(),
+            'version' => $this->getVersion()
+        ]);
+    }
+
+    /**
+     * Define as dependências necessárias
+     */
+    public function setDependencies(
+        Client $httpClient,
+        CacheManagerInterface $cache,
+        EventDispatcherInterface $eventDispatcher
+    ): void {
+        $this->httpClient = $httpClient;
+        $this->cache = $cache;
+        $this->eventDispatcher = $eventDispatcher;
+    }
+
+    /**
+     * Verifica se o módulo está inicializado
+     */
+    public function isInitialized(): bool
+    {
+        return $this->initialized;
+    }
+
+    /**
+     * Obtém o nome do módulo
+     */
+    public function getName(): string
+    {
+        return 'super_admin';
+    }
+
+    /**
+     * Obtém a versão do módulo
+     */
+    public function getVersion(): string
+    {
+        return '1.0.0';
+    }
+
+    /**
+     * Obtém as dependências do módulo
+     */
+    public function getDependencies(): array
+    {
+        return [
+            'http_client' => Client::class,
+            'cache' => CacheManagerInterface::class,
+            'event_dispatcher' => EventDispatcherInterface::class
+        ];
+    }
+
+    /**
+     * Verifica se o módulo está disponível
+     */
+    public function isAvailable(): bool
+    {
+        if (!$this->initialized) {
+            return false;
+        }
+
+        $this->ensureDependenciesInitialized();
+
+        return $this->initialized &&
+               $this->httpClient !== null &&
+               $this->cache !== null &&
+               $this->eventDispatcher !== null;
+    }
+
+    /**
+     * Obtém o status do módulo
+     */
+    public function getStatus(): array
+    {
+        return [
+            'name' => $this->getName(),
+            'version' => $this->getVersion(),
+            'initialized' => $this->initialized,
+            'available' => $this->isAvailable(),
+            'services' => [
+                'tenant_management' => $this->tenantManagement !== null,
+                'organization_creation' => $this->organizationCreation !== null
+            ],
+            'timestamp' => time()
+        ];
+    }
+
+    /**
+     * Cleanup do módulo
+     */
+    public function cleanup(): void
+    {
+        $this->tenantManagement = null;
+        $this->organizationCreation = null;
+        $this->initialized = false;
+
+        $this->logger->info('SuperAdmin module cleaned up');
+    }
+
+    /**
+     * Criar organização
+     */
+    public function createOrganization(array $data): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $response = $this->httpClient->post('super-admin/organizations', [
+                'json' => $data
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to create organization');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            $this->logger->info('Organization created successfully', [
+                'organization_id' => $result['organization']['id'] ?? 'unknown'
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to create organization', [
+                'error' => $e->getMessage(),
+                'data' => $data
+            ]);
+
+            throw new SDKException('Organization creation failed: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Listar tenants
+     */
+    public function listTenants(array $filters = []): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $response = $this->httpClient->get('super-admin/tenants', [
+                'query' => $filters
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to list tenants');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to list tenants', [
+                'error' => $e->getMessage(),
+                'filters' => $filters
+            ]);
+
+            throw new SDKException('Failed to list tenants: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Obter credenciais de tenant
+     */
+    public function getTenantCredentials(string $tenantId): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $response = $this->httpClient->get("super-admin/tenants/{$tenantId}/credentials");
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to get tenant credentials');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to get tenant credentials', [
+                'error' => $e->getMessage(),
+                'tenant_id' => $tenantId
+            ]);
+
+            throw new SDKException('Failed to get tenant credentials: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Regenerar API key de tenant
+     */
+    public function regenerateApiKey(string $tenantId): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $response = $this->httpClient->post("super-admin/tenants/{$tenantId}/regenerate-api-key");
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to regenerate API key');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            $this->logger->info('API key regenerated successfully', [
+                'tenant_id' => $tenantId
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to regenerate API key', [
+                'error' => $e->getMessage(),
+                'tenant_id' => $tenantId
+            ]);
+
+            throw new SDKException('Failed to regenerate API key: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Obter estatísticas gerais
+     */
+    public function getSystemStats(): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $response = $this->httpClient->get('super-admin/stats');
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to get system stats');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to get system stats', [
+                'error' => $e->getMessage()
+            ]);
+
+            throw new SDKException('Failed to get system stats: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Suspender tenant
+     */
+    public function suspendTenant(string $tenantId, string $reason = ''): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $response = $this->httpClient->post("super-admin/tenants/{$tenantId}/suspend", [
+                'json' => [
+                    'reason' => $reason
+                ]
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to suspend tenant');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            $this->logger->info('Tenant suspended successfully', [
+                'tenant_id' => $tenantId,
+                'reason' => $reason
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to suspend tenant', [
+                'error' => $e->getMessage(),
+                'tenant_id' => $tenantId
+            ]);
+
+            throw new SDKException('Failed to suspend tenant: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Reativar tenant
+     */
+    public function reactivateTenant(string $tenantId): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $response = $this->httpClient->post("super-admin/tenants/{$tenantId}/reactivate");
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to reactivate tenant');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            $this->logger->info('Tenant reactivated successfully', [
+                'tenant_id' => $tenantId
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to reactivate tenant', [
+                'error' => $e->getMessage(),
+                'tenant_id' => $tenantId
+            ]);
+
+            throw new SDKException('Failed to reactivate tenant: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Garante que as dependências estão inicializadas
+     */
+    private function ensureDependenciesInitialized(): void
+    {
+        if (!isset($this->httpClient)) {
+            $this->httpClient = new \Clubify\Checkout\Core\Http\Client($this->config, $this->logger);
+        }
+
+        if (!isset($this->cache)) {
+            $this->cache = new \Clubify\Checkout\Core\Cache\CacheManager($this->config);
+        }
+
+        if (!isset($this->eventDispatcher)) {
+            $this->eventDispatcher = new \Clubify\Checkout\Core\Events\EventDispatcher();
+        }
+    }
+
+    /**
+     * Verificar se está inicializado
+     */
+    private function ensureInitialized(): void
+    {
+        if (!$this->initialized) {
+            throw new SDKException('SuperAdmin module not initialized');
+        }
+
+        $this->ensureDependenciesInitialized();
+    }
+}

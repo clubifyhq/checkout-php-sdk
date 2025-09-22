@@ -31,4 +31,5 @@ interface ConfigurationInterface
     public function isDebugEnabled(): bool;
 
     public function getDefaultHeaders(): array;
+
 }

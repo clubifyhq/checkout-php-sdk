@@ -9,6 +9,7 @@ use Clubify\Checkout\Core\Config\ConfigurationInterface;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Auth\AuthManager;
 use Clubify\Checkout\Core\Auth\CredentialManager;
+use Clubify\Checkout\Core\Auth\EncryptedFileStorage;
 use Clubify\Checkout\Core\Events\EventDispatcher;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Cache\CacheManager;
@@ -211,7 +212,13 @@ class ClubifyCheckoutSDK
     public function initializeAsSuperAdmin(array $superAdminCredentials): array
     {
         $this->operatingMode = 'super_admin';
-        $this->credentialManager = new CredentialManager();
+
+        // Criar storage criptografado para credenciais
+        $storageDir = sys_get_temp_dir() . '/clubify_sdk_storage';
+        $encryptionKey = hash('sha256', 'clubify_sdk_encryption_key_' . time());
+
+        $storage = new EncryptedFileStorage($storageDir, $encryptionKey);
+        $this->credentialManager = new CredentialManager($storage);
 
         // Configurar credenciais de super admin na configuração
         $this->config->setSuperAdminCredentials($superAdminCredentials);

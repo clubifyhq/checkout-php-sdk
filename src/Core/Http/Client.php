@@ -280,6 +280,17 @@ class Client
             } catch (RequestException $e) {
                 $lastException = $e;
 
+                // Log detalhes do erro para debugging
+                $errorDetails = [
+                    'attempt' => $attempt,
+                    'uri' => (string) $request->getUri(),
+                    'method' => $request->getMethod(),
+                    'error' => $e->getMessage(),
+                    'response_code' => $e->getResponse() ? $e->getResponse()->getStatusCode() : null,
+                    'response_body' => $e->getResponse() ? substr($e->getResponse()->getBody()->getContents(), 0, 500) : null
+                ];
+                error_log('HTTP Request Error: ' . json_encode($errorDetails));
+
                 // Verificar se deve tentar novamente
                 if (!$this->retryStrategy->shouldRetry(
                     $attempt - 1,

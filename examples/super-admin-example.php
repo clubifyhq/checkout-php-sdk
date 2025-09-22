@@ -17,16 +17,55 @@ try {
 
     echo "=== Inicializando SDK como Super Admin ===\n";
 
-    $sdk = new ClubifyCheckoutSDK();
-
     // Credenciais do super admin
     $superAdminCredentials = [
-        'api_key' => 'clb_live_super_admin_api_key_here',
-        'access_token' => 'super_admin_access_token_here',
-        'refresh_token' => 'super_admin_refresh_token_here',
-        'username' => 'super_admin@clubify.com',
-        'password' => 'super_admin_password'
+        'api_key' => 'clb_test_c6eb0dda0da66cb65cf92dad27456bbd',
+        'access_token' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGMwMzA1Yzg1ZDczZjg3NmY5YTBkNjUiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwicm9sZXMiOlsic3lzdGVtX2FkbWluIiwic3VwZXJfYWRtaW4iXSwidGVuYW50SWQiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJmYW1pbHlJZCI6ImQyMTZkZmUzLTFmMzMtNDllNi05ZWIwLTJmZWUwNjk4M2U1NSIsImdlbmVyYXRpb24iOjAsImRldmljZUZpbmdlcnByaW50IjoiZGZwLTE3NTg1NTgxODUiLCJhdWQiOlsiY2x1YmlmeS11c2VycyJdLCJpc3MiOiJjbHViaWZ5LWNoZWNrb3V0IiwidG9rZW5UeXBlIjoiYWNjZXNzIiwianRpIjoiMzUwMzgzN2UtNjk3YS00MjIyLTkxNTYtZjNhYmI5NGE1MzU1IiwiaWF0IjoxNzU4NTU4MTg1LCJleHAiOjE3NTg2NDQ1ODV9.9eZuRGnngSTIQa2Px9Yyfoaddo1m-PM20l4XxdaVMlg',
+        'refresh_token' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGMwMzA1Yzg1ZDczZjg3NmY5YTBkNjUiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwicm9sZXMiOlsic3lzdGVtX2FkbWluIiwic3VwZXJfYWRtaW4iXSwidGVuYW50SWQiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJmYW1pbHlJZCI6ImQyMTZkZmUzLTFmMzMtNDllNi05ZWIwLTJmZWUwNjk4M2U1NSIsImdlbmVyYXRpb24iOjAsImRldmljZUZpbmdlcnByaW50IjoiZGZwLTE3NTg1NTgxODUiLCJhdWQiOlsiY2x1YmlmeS11c2VycyJdLCJpc3MiOiJjbHViaWZ5LWNoZWNrb3V0IiwidG9rZW5UeXBlIjoicmVmcmVzaCIsImp0aSI6ImJiNGU4NzQ3LTk2OGMtNDI0Yi05NDM0LTg1NTQxYjMzMjUyNyIsImlhdCI6MTc1ODU1ODE4NiwiZXhwIjoxNzU5MTYyOTg2fQ.tq3A_UQCWhpJlf8HKzKfsDJ8inKSVjc-QIfOCMK5Ei',
+        'username' => 'admin@example.com',
+        'password' => 'P@ssw0rd!',
+        'tenant_id' => '507f1f77bcf86cd799439011'
     ];
+
+    // Configuração completa do SDK (baseada no test-sdk-simple.php)
+    $config = [
+        'credentials' => [
+            'tenant_id' => $superAdminCredentials['tenant_id'],
+            'api_key' => $superAdminCredentials['api_key'],
+            'api_secret' => '87aa1373d3a948f996cf1b066651941b2f9928507c1e963c867b4aa90fec9e15',  // Placeholder para secret
+            'email' => $superAdminCredentials['username'],
+            'password' => $superAdminCredentials['password']
+        ],
+        'environment' => 'test',
+        'api' => [
+            'base_url' => 'https://checkout.svelve.com/api/v1',
+            'timeout' => 45,
+            'retries' => 3,
+            'verify_ssl' => false
+        ],
+        'cache' => [
+            'enabled' => true,
+            'ttl' => 3600
+        ],
+        'logging' => [
+            'enabled' => true,
+            'level' => 'info'
+        ]
+    ];
+
+    echo "📋 Configuração do SDK:\n";
+    echo "   Tenant ID: {$config['credentials']['tenant_id']}\n";
+    echo "   API Key: " . substr($config['credentials']['api_key'], 0, 20) . "...\n";
+    echo "   Environment: {$config['environment']}\n";
+    echo "   Base URL: {$config['api']['base_url']}\n\n";
+
+    // Inicializar SDK com configuração completa
+    $sdk = new ClubifyCheckoutSDK($config);
+    echo "✅ SDK initialized successfully!\n";
+
+    echo "   Version: " . $sdk->getVersion() . "\n";
+    echo "   Authenticated: " . ($sdk->isAuthenticated() ? 'Yes' : 'No') . "\n";
+    echo "   Initialized: " . ($sdk->isInitialized() ? 'Yes' : 'No') . "\n\n";
 
     // Inicializar como super admin
     $initResult = $sdk->initializeAsSuperAdmin($superAdminCredentials);
@@ -95,8 +134,9 @@ try {
 
     $context = $sdk->getCurrentContext();
     echo "🔄 Contexto alterado:\n";
-    echo "   Current Role: " . $context['current_role'] . "\n";
-    echo "   Active Context: " . ($context['current_role'] === 'tenant_admin' ? $tenantId : 'super_admin') . "\n\n";
+    echo "   Current Role: " . (isset($context['current_role']) ? $context['current_role'] : 'N/A') . "\n";
+    $currentRole = isset($context['current_role']) ? $context['current_role'] : '';
+    echo "   Active Context: " . ($currentRole === 'tenant_admin' ? $tenantId : 'super_admin') . "\n\n";
 
     // ===============================================
     // 5. OPERAÇÕES COMO TENANT ADMIN
@@ -106,14 +146,14 @@ try {
 
     // Agora podemos fazer operações normais como tenant admin
     try {
-        // Listar produtos (como tenant admin)
-        $products = $sdk->products()->getProductService()->list();
+        // Listar produtos (como tenant admin) - usando método direto
+        $products = $sdk->products()->list();
         echo "📦 Produtos do tenant: " . count($products) . "\n";
     } catch (Exception $e) {
-        echo "ℹ️  Ainda não há produtos para este tenant\n";
+        echo "ℹ️  Ainda não há produtos para este tenant: " . $e->getMessage() . "\n";
     }
 
-    // Criar um produto de exemplo
+    // Criar um produto de exemplo usando método de conveniência do SDK
     $productData = [
         'name' => 'Produto Demo',
         'description' => 'Produto criado via SDK com super admin',
@@ -125,10 +165,19 @@ try {
     ];
 
     try {
-        $product = $sdk->products()->getProductService()->create($productData);
+        // Usar método de conveniência do SDK para criar produto completo
+        $product = $sdk->createCompleteProduct($productData);
         echo "✅ Produto criado: " . $product['name'] . "\n";
     } catch (Exception $e) {
-        echo "⚠️  Erro ao criar produto: " . $e->getMessage() . "\n";
+        echo "ℹ️  Testando criação de produto: " . $e->getMessage() . "\n";
+
+        // Tentar método alternativo através do módulo products
+        try {
+            $product = $sdk->products()->create($productData);
+            echo "✅ Produto criado (método alternativo): " . $product['name'] . "\n";
+        } catch (Exception $e2) {
+            echo "⚠️  Erro ao criar produto: " . $e2->getMessage() . "\n";
+        }
     }
 
     // ===============================================
@@ -141,7 +190,7 @@ try {
     $sdk->switchToSuperAdmin();
 
     $context = $sdk->getCurrentContext();
-    echo "🔄 Contexto alterado para: " . $context['current_role'] . "\n";
+    echo "🔄 Contexto alterado para: " . (isset($context['current_role']) ? $context['current_role'] : 'N/A') . "\n";
 
     // Agora podemos fazer operações de super admin novamente
     $tenantCredentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
@@ -175,9 +224,14 @@ try {
     echo "\n=== Informações do Contexto Atual ===\n";
 
     $finalContext = $sdk->getCurrentContext();
-    echo "📍 Modo de operação: " . $finalContext['mode'] . "\n";
-    echo "👤 Role atual: " . $finalContext['current_role'] . "\n";
-    echo "🏢 Contextos disponíveis: " . count($finalContext['available_contexts']['contexts']) . "\n";
+    echo "📍 Modo de operação: " . (isset($finalContext['mode']) ? $finalContext['mode'] : 'N/A') . "\n";
+    echo "👤 Role atual: " . (isset($finalContext['current_role']) ? $finalContext['current_role'] : 'N/A') . "\n";
+
+    if (isset($finalContext['available_contexts']['contexts'])) {
+        echo "🏢 Contextos disponíveis: " . count($finalContext['available_contexts']['contexts']) . "\n";
+    } else {
+        echo "🏢 Contextos disponíveis: N/A\n";
+    }
 
     echo "\n✅ Exemplo de Super Admin concluído com sucesso!\n";
 

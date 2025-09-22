@@ -190,7 +190,7 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->get('super-admin/tenants', [
+            $response = $this->httpClient->get('tenants', [
                 'query' => $filters
             ]);
 
@@ -221,7 +221,7 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->get("super-admin/tenants/{$tenantId}/credentials");
+            $response = $this->httpClient->get("tenants/{$tenantId}");
 
             $statusCode = $response->getStatusCode();
             if ($statusCode < 200 || $statusCode >= 300) {
@@ -250,7 +250,7 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->post("super-admin/tenants/{$tenantId}/regenerate-api-key");
+            $response = $this->httpClient->post("tenants/{$tenantId}/regenerate-api-key");
 
             $statusCode = $response->getStatusCode();
             if ($statusCode < 200 || $statusCode >= 300) {
@@ -311,7 +311,7 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->post("super-admin/tenants/{$tenantId}/suspend", [
+            $response = $this->httpClient->put("tenants/{$tenantId}/suspend", [
                 'json' => [
                     'reason' => $reason
                 ]
@@ -349,7 +349,7 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->post("super-admin/tenants/{$tenantId}/reactivate");
+            $response = $this->httpClient->put("tenants/{$tenantId}/activate");
 
             $statusCode = $response->getStatusCode();
             if ($statusCode < 200 || $statusCode >= 300) {

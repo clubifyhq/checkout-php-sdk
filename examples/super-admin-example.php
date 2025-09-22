@@ -17,12 +17,14 @@ try {
 
     echo "=== Inicializando SDK como Super Admin ===\n";
 
-    // Credenciais do super admin
+    // Credenciais do super admin (API key como método primário, email/senha como fallback)
     $superAdminCredentials = [
-        'api_key' => 'clb_test_c6eb0dda0da66cb65cf92dad27456bbd',
+        // 'api_key' => 'clb_test_c6eb0dda0da66cb65cf92dad27456bbd', // Comentado para forçar fallback login
+        'api_key_disabled' => 'clb_test_c6eb0dda0da66cb65cf92dad27456bbd',
         'access_token' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGMwMzA1Yzg1ZDczZjg3NmY5YTBkNjUiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwicm9sZXMiOlsic3lzdGVtX2FkbWluIiwic3VwZXJfYWRtaW4iXSwidGVuYW50SWQiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJmYW1pbHlJZCI6ImQyMTZkZmUzLTFmMzMtNDllNi05ZWIwLTJmZWUwNjk4M2U1NSIsImdlbmVyYXRpb24iOjAsImRldmljZUZpbmdlcnByaW50IjoiZGZwLTE3NTg1NTgxODUiLCJhdWQiOlsiY2x1YmlmeS11c2VycyJdLCJpc3MiOiJjbHViaWZ5LWNoZWNrb3V0IiwidG9rZW5UeXBlIjoiYWNjZXNzIiwianRpIjoiMzUwMzgzN2UtNjk3YS00MjIyLTkxNTYtZjNhYmI5NGE1MzU1IiwiaWF0IjoxNzU4NTU4MTg1LCJleHAiOjE3NTg2NDQ1ODV9.9eZuRGnngSTIQa2Px9Yyfoaddo1m-PM20l4XxdaVMlg',
         'refresh_token' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGMwMzA1Yzg1ZDczZjg3NmY5YTBkNjUiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwicm9sZXMiOlsic3lzdGVtX2FkbWluIiwic3VwZXJfYWRtaW4iXSwidGVuYW50SWQiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJmYW1pbHlJZCI6ImQyMTZkZmUzLTFmMzMtNDllNi05ZWIwLTJmZWUwNjk4M2U1NSIsImdlbmVyYXRpb24iOjAsImRldmljZUZpbmdlcnByaW50IjoiZGZwLTE3NTg1NTgxODUiLCJhdWQiOlsiY2x1YmlmeS11c2VycyJdLCJpc3MiOiJjbHViaWZ5LWNoZWNrb3V0IiwidG9rZW5UeXBlIjoicmVmcmVzaCIsImp0aSI6ImJiNGU4NzQ3LTk2OGMtNDI0Yi05NDM0LTg1NTQxYjMzMjUyNyIsImlhdCI6MTc1ODU1ODE4NiwiZXhwIjoxNzU5MTYyOTg2fQ.tq3A_UQCWhpJlf8HKzKfsDJ8inKSVjc-QIfOCMK5Ei',
-        'username' => 'admin@example.com',
+        // Fallback para autenticação por usuário/senha
+        'email' => 'admin@example.com',
         'password' => 'P@ssw0rd!',
         'tenant_id' => '507f1f77bcf86cd799439011'
     ];
@@ -31,9 +33,9 @@ try {
     $config = [
         'credentials' => [
             'tenant_id' => $superAdminCredentials['tenant_id'],
-            'api_key' => $superAdminCredentials['api_key'],
+            'api_key' => $superAdminCredentials['api_key_disabled'],
             'api_secret' => '87aa1373d3a948f996cf1b066651941b2f9928507c1e963c867b4aa90fec9e15',  // Placeholder para secret
-            'email' => $superAdminCredentials['username'],
+            'email' => $superAdminCredentials['email'],
             'password' => $superAdminCredentials['password']
         ],
         'environment' => 'test',
@@ -83,10 +85,10 @@ try {
 
     $organizationData = [
         'name' => 'Nova Empresa Ltda',
-        'admin_email' => 'admin@novaempresa.com',
+        'admin_email' => 'admin@nova-empresa.com',
         'admin_name' => 'João Admin',
-        'subdomain' => 'novaempresa',
-        'custom_domain' => 'checkout.novaempresa.com',
+        'subdomain' => 'nova-empresa',
+        'custom_domain' => 'checkout.nova-empresa.com',
         'settings' => [
             'timezone' => 'America/Sao_Paulo',
             'currency' => 'BRL',

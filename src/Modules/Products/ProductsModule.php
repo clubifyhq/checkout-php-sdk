@@ -193,6 +193,24 @@ class ProductsModule implements ModuleInterface
     }
 
     /**
+     * List products (proxy to ProductService)
+     */
+    public function list(array $filters = [], int $page = 1, int $limit = 20): array
+    {
+        $this->requireInitialized();
+        return $this->getProductService()->list($filters, $page, $limit);
+    }
+
+    /**
+     * Create product (proxy to ProductService)
+     */
+    public function create(array $productData): array
+    {
+        $this->requireInitialized();
+        return $this->getProductService()->create($productData);
+    }
+
+    /**
      * Configura um produto completo
      */
     public function setupComplete(array $productData): array

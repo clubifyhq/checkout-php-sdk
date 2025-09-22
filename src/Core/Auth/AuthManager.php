@@ -116,7 +116,9 @@ class AuthManager implements AuthManagerInterface
             $this->refreshToken();
         }
 
-        return $this->tokenStorage->getAccessToken();
+        $token = $this->tokenStorage->getAccessToken();
+        error_log('AuthManager getAccessToken: ' . ($token ? 'present (' . substr($token, 0, 20) . '...)' : 'missing'));
+        return $token;
     }
 
     public function getRefreshToken(): ?string
@@ -528,7 +530,7 @@ class AuthManager implements AuthManagerInterface
     {
         $this->requireSuperAdminRole();
 
-        // Criar tenant e usuário tenant_admin via API
+        // Criar tenant e usuário tenant_admin via API (baseado no CreateTenantDto)
         $requestData = [
             'name' => $organizationName,
             'domain' => $tenantData['custom_domain'] ?? $tenantData['subdomain'] . '.clubify.com',
@@ -540,15 +542,11 @@ class AuthManager implements AuthManagerInterface
                 'phone' => $tenantData['admin_phone'] ?? null,
                 'website' => $tenantData['website'] ?? null,
                 'supportEmail' => $tenantData['support_email'] ?? null
-            ],
-            'settings' => $tenantData['settings'] ?? [],
-            'features' => $tenantData['features'] ?? [],
-            'initialUser' => [
-                'name' => $tenantData['admin_name'],
-                'email' => $tenantData['admin_email'],
-                'password' => $tenantData['admin_password'] ?? null
             ]
+            // Removidos campos não aceitos pelo DTO: settings, features, initialUser
         ];
+
+        error_log('Create Tenant Request Data: ' . json_encode($requestData, JSON_PRETTY_PRINT));
 
         $response = $this->httpClient->post('tenants', [
             'json' => $requestData
@@ -560,13 +558,30 @@ class AuthManager implements AuthManagerInterface
         }
 
         $data = json_decode($response->getBody()->getContents(), true);
+        error_log('Create Tenant Response: ' . json_encode($data, JSON_PRETTY_PRINT));
 
-        // Adicionar contexto do novo tenant
-        $this->credentialManager->addTenantContext($data['tenant_id'], [
-            'api_key' => $data['api_key'],
-            'access_token' => $data['access_token'] ?? null,
-            'refresh_token' => $data['refresh_token'] ?? null
-        ]);
+        // Verificar se a resposta tem a estrutura esperada
+        if (isset($data['success']) && $data['success'] && isset($data['data'])) {
+            $tenantData = $data['data'];
+            $tenantId = $tenantData['_id'] ?? $tenantData['id'] ?? null;
+
+            if ($tenantId) {
+                // Adicionar contexto do novo tenant (sem API key pois não é retornada na criação)
+                $this->credentialManager->addTenantContext($tenantId, [
+                    'tenant_id' => $tenantId,
+                    'name' => $tenantData['name'] ?? null,
+                    'domain' => $tenantData['domain'] ?? null,
+                    'subdomain' => $tenantData['subdomain'] ?? null,
+                    'created_at' => time()
+                ]);
+            }
+
+            return [
+                'success' => true,
+                'tenant' => $tenantData,
+                'organization' => $tenantData // Alias para compatibilidade
+            ];
+        }
 
         return $data;
     }
@@ -671,51 +686,114 @@ class AuthManager implements AuthManagerInterface
      */
     private function authenticateWithSuperAdminCredentials(array $credentials): bool
     {
-        try {
-            // Tentar autenticar via endpoint de API key do user-management-service
-            $response = $this->httpClient->post('auth/api-key/token', [
-                'json' => [
+        // Tentar primeiro com API key se disponível
+        if (isset($credentials['api_key'])) {
+            try {
+                $requestData = [
                     'api_key' => $credentials['api_key'],
                     'tenant_id' => $credentials['tenant_id'] ?? $this->config->getTenantId(),
                     'grant_type' => 'api_key'
-                ]
-            ]);
-
-            $statusCode = $response->getStatusCode();
-            if ($statusCode >= 200 && $statusCode < 300) {
-                $data = json_decode($response->getBody()->getContents(), true);
-
-                // Se retornou tokens, armazenar
-                if (isset($data['access_token'])) {
-                    $this->tokenStorage->storeAccessToken(
-                        $data['access_token'],
-                        $data['expires_in'] ?? 3600
-                    );
-                }
-
-                if (isset($data['refresh_token'])) {
-                    $this->tokenStorage->storeRefreshToken($data['refresh_token']);
-                }
-
-                // Armazenar informações do super admin
-                $this->userInfo = [
-                    'user_id' => $data['user']['id'] ?? null,
-                    'username' => $data['user']['username'] ?? $credentials['username'],
-                    'role' => 'super_admin',
-                    'permissions' => $data['user']['permissions'] ?? [],
-                    'authenticated_at' => date('Y-m-d H:i:s'),
-                    'auth_type' => 'super_admin'
                 ];
 
-                return true;
+                error_log('Super Admin Auth Request (API Key): ' . json_encode($requestData));
+
+                // Tentar autenticar via endpoint de API key do user-management-service
+                $response = $this->httpClient->post('auth/api-key/token', [
+                    'json' => $requestData
+                ]);
+
+                $statusCode = $response->getStatusCode();
+                error_log('Super Admin Auth Response Code (API Key): ' . $statusCode);
+
+                if ($statusCode >= 200 && $statusCode < 300) {
+                    $data = json_decode($response->getBody()->getContents(), true);
+                    error_log('Super Admin Auth Success (API Key): ' . json_encode($data));
+
+                    return $this->storeAuthTokens($data, $credentials, 'api_key');
+                } else {
+                    $errorBody = $response->getBody()->getContents();
+                    error_log('Super Admin Auth Failed (API Key) - Status: ' . $statusCode . ', Body: ' . $errorBody);
+                }
+
+            } catch (\Exception $e) {
+                error_log('Super Admin Auth Exception (API Key): ' . $e->getMessage());
             }
-
-            return false;
-
-        } catch (\Exception $e) {
-            // Super admin authentication failed
-            return false;
         }
+
+        // Fallback: tentar com credenciais de usuário/senha
+        if (isset($credentials['email']) && isset($credentials['password'])) {
+            try {
+                $loginData = [
+                    'email' => $credentials['email'],
+                    'password' => $credentials['password'],
+                    'rememberMe' => true
+                ];
+
+                error_log('Super Admin Auth Request (Login): ' . json_encode(['email' => $credentials['email']]));
+
+                // Tentar autenticar via endpoint de login
+                $response = $this->httpClient->post('auth/login', [
+                    'json' => $loginData,
+                    'headers' => [
+                        'X-Tenant-ID' => $credentials['tenant_id'] ?? $this->config->getTenantId()
+                    ]
+                ]);
+
+                $statusCode = $response->getStatusCode();
+                error_log('Super Admin Auth Response Code (Login): ' . $statusCode);
+
+                if ($statusCode >= 200 && $statusCode < 300) {
+                    $data = json_decode($response->getBody()->getContents(), true);
+                    error_log('Super Admin Auth Success (Login): ' . json_encode($data));
+
+                    return $this->storeAuthTokens($data, $credentials, 'login');
+                } else {
+                    $errorBody = $response->getBody()->getContents();
+                    error_log('Super Admin Auth Failed (Login) - Status: ' . $statusCode . ', Body: ' . $errorBody);
+                }
+
+            } catch (\Exception $e) {
+                error_log('Super Admin Auth Exception (Login): ' . $e->getMessage());
+            }
+        }
+
+        error_log('Super Admin Auth Failed: No valid authentication method succeeded');
+        return false;
+    }
+
+    /**
+     * Armazenar tokens de autenticação
+     */
+    private function storeAuthTokens(array $data, array $credentials, string $authType): bool
+    {
+        // Extrair tokens dependendo do formato da resposta
+        $accessToken = $data['access_token'] ?? $data['tokens']['accessToken'] ?? null;
+        $refreshToken = $data['refresh_token'] ?? $data['tokens']['refreshToken'] ?? null;
+        $expiresIn = $data['expires_in'] ?? 3600;
+
+        error_log('Storing tokens - Access Token: ' . ($accessToken ? 'present' : 'missing') . ', Refresh Token: ' . ($refreshToken ? 'present' : 'missing'));
+
+        // Se retornou tokens, armazenar
+        if ($accessToken) {
+            $this->tokenStorage->storeAccessToken($accessToken, $expiresIn);
+        }
+
+        if ($refreshToken) {
+            $this->tokenStorage->storeRefreshToken($refreshToken);
+        }
+
+        // Armazenar informações do super admin
+        $this->userInfo = [
+            'user_id' => $data['user']['id'] ?? null,
+            'username' => $data['user']['username'] ?? $credentials['username'] ?? $credentials['email'],
+            'email' => $data['user']['email'] ?? $credentials['email'],
+            'role' => 'super_admin',
+            'permissions' => $data['user']['permissions'] ?? [],
+            'authenticated_at' => date('Y-m-d H:i:s'),
+            'auth_type' => $authType
+        ];
+
+        return true;
     }
 
     /**

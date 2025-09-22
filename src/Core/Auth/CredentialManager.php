@@ -39,10 +39,11 @@ class CredentialManager
 
         $contextData = [
             'type' => 'super_admin',
-            'api_key' => $credentials['api_key'],
+            'api_key' => $credentials['api_key'] ?? null,
             'access_token' => $credentials['access_token'] ?? null,
             'refresh_token' => $credentials['refresh_token'] ?? null,
-            'username' => $credentials['username'] ?? null,
+            'username' => $credentials['username'] ?? $credentials['email'] ?? null,
+            'email' => $credentials['email'] ?? null,
             'password' => $credentials['password'] ?? null,
             'role' => 'super_admin',
             'created_at' => time(),
@@ -66,9 +67,12 @@ class CredentialManager
         $contextData = [
             'type' => 'tenant_admin',
             'tenant_id' => $tenantId,
-            'api_key' => $credentials['api_key'],
+            'api_key' => $credentials['api_key'] ?? null,
             'access_token' => $credentials['access_token'] ?? null,
             'refresh_token' => $credentials['refresh_token'] ?? null,
+            'name' => $credentials['name'] ?? null,
+            'domain' => $credentials['domain'] ?? null,
+            'subdomain' => $credentials['subdomain'] ?? null,
             'role' => 'tenant_admin',
             'created_at' => time(),
             'last_used' => time()
@@ -231,16 +235,17 @@ class CredentialManager
      */
     private function validateSuperAdminCredentials(array $credentials): void
     {
-        $required = ['api_key'];
+        // Aceitar tanto API key quanto email/senha para super admin
+        $hasApiKey = isset($credentials['api_key']) && !empty($credentials['api_key']);
+        $hasEmailPassword = isset($credentials['email']) && !empty($credentials['email']) &&
+                           isset($credentials['password']) && !empty($credentials['password']);
 
-        foreach ($required as $field) {
-            if (!isset($credentials[$field]) || empty($credentials[$field])) {
-                throw new AuthenticationException("Missing required super admin credential: {$field}");
-            }
+        if (!$hasApiKey && !$hasEmailPassword) {
+            throw new AuthenticationException("Super admin credentials must include either 'api_key' or both 'email' and 'password'");
         }
 
-        // Validar formato da API key
-        if (!preg_match('/^clb_(test|live)_[a-f0-9]{32}$/', $credentials['api_key'])) {
+        // Validar formato da API key se presente
+        if ($hasApiKey && !preg_match('/^clb_(test|live)_[a-f0-9]{32}$/', $credentials['api_key'])) {
             throw new AuthenticationException('Invalid super admin API key format');
         }
     }
@@ -250,16 +255,17 @@ class CredentialManager
      */
     private function validateTenantCredentials(array $credentials): void
     {
-        $required = ['api_key'];
+        // API key é opcional para contextos criados durante tenant creation
+        // A API key pode ser adicionada posteriormente quando necessária
+        $hasApiKey = isset($credentials['api_key']) && !empty($credentials['api_key']);
+        $hasBasicInfo = isset($credentials['tenant_id']) || isset($credentials['name']);
 
-        foreach ($required as $field) {
-            if (!isset($credentials[$field]) || empty($credentials[$field])) {
-                throw new AuthenticationException("Missing required tenant credential: {$field}");
-            }
+        if (!$hasApiKey && !$hasBasicInfo) {
+            throw new AuthenticationException("Tenant credentials must include either 'api_key' or basic tenant information");
         }
 
-        // Validar formato da API key
-        if (!preg_match('/^clb_(test|live)_[a-f0-9]{32}$/', $credentials['api_key'])) {
+        // Validar formato da API key se presente
+        if ($hasApiKey && !preg_match('/^clb_(test|live)_[a-f0-9]{32}$/', $credentials['api_key'])) {
             throw new AuthenticationException('Invalid tenant API key format');
         }
     }

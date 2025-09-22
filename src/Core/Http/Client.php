@@ -149,9 +149,13 @@ class Client
         // Adicionar Authorization header APENAS se AuthManager estiver disponível e autenticado
         if ($this->authManager && $this->authManager->isAuthenticated()) {
             $accessToken = $this->authManager->getAccessToken();
+            error_log('HTTP Client - Is Authenticated: ' . ($this->authManager->isAuthenticated() ? 'yes' : 'no'));
+            error_log('HTTP Client - Access Token: ' . ($accessToken ? 'present (' . substr($accessToken, 0, 20) . '...)' : 'missing'));
             if ($accessToken) {
                 $headers['Authorization'] = 'Bearer ' . $accessToken;
             }
+        } else {
+            error_log('HTTP Client - AuthManager not available or not authenticated');
         }
         // IMPORTANTE: NÃO usar API key como fallback no Authorization header
         // API key é apenas para validação, não para autenticação de requests

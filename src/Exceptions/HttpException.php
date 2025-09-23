@@ -83,4 +83,44 @@ class HttpException extends SDKException
                $statusCode === 429 || // Rate limit
                $statusCode === 408; // Request timeout
     }
+
+    /**
+     * Check if this is a conflict error (HTTP 409)
+     */
+    public function isConflict(): bool
+    {
+        return $this->getStatusCode() === 409;
+    }
+
+    /**
+     * Check if this is a not found error (HTTP 404)
+     */
+    public function isNotFound(): bool
+    {
+        return $this->getStatusCode() === 404;
+    }
+
+    /**
+     * Check if this is an unauthorized error (HTTP 401)
+     */
+    public function isUnauthorized(): bool
+    {
+        return $this->getStatusCode() === 401;
+    }
+
+    /**
+     * Check if this is a forbidden error (HTTP 403)
+     */
+    public function isForbidden(): bool
+    {
+        return $this->getStatusCode() === 403;
+    }
+
+    /**
+     * Check if this is a validation error (HTTP 422)
+     */
+    public function isValidationError(): bool
+    {
+        return $this->getStatusCode() === 422;
+    }
 }

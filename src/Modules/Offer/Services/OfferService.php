@@ -439,6 +439,261 @@ class OfferService extends BaseService implements ServiceInterface
     }
 
     /**
+     * Verifica disponibilidade de slug
+     */
+    public function verifySlugAvailability(string $slug): array
+    {
+        return $this->executeWithMetrics('verify_offer_slug_availability', function () use ($slug) {
+            $this->logger->info('Verifying offer slug availability', ['slug' => $slug]);
+
+            // Validate slug format
+            if (!$this->isValidSlug($slug)) {
+                throw new ValidationException('Invalid slug format. Use only letters, numbers, and hyphens.');
+            }
+
+            // Check if slug is already taken
+            $isAvailable = !$this->slugExists($slug);
+
+            $result = [
+                'success' => true,
+                'slug' => $slug,
+                'available' => $isAvailable,
+                'checked_at' => date('c')
+            ];
+
+            if (!$isAvailable) {
+                $result['message'] = 'Slug is already in use';
+                $this->logger->info('Slug not available', ['slug' => $slug]);
+            } else {
+                $result['message'] = 'Slug is available';
+                $this->logger->info('Slug is available', ['slug' => $slug]);
+            }
+
+            return $result;
+        });
+    }
+
+    /**
+     * Gera sugestões de slug disponíveis
+     */
+    public function suggestAvailableSlugs(string $desiredSlug, int $maxSuggestions = 5): array
+    {
+        return $this->executeWithMetrics('suggest_offer_slugs', function () use ($desiredSlug, $maxSuggestions) {
+            $this->logger->info('Generating slug suggestions', [
+                'desired_slug' => $desiredSlug,
+                'max_suggestions' => $maxSuggestions
+            ]);
+
+            // Clean and validate the desired slug
+            $cleanSlug = $this->generateSlug($desiredSlug);
+
+            // Check if desired slug is available
+            $isAvailable = !$this->slugExists($cleanSlug);
+
+            $suggestions = [];
+
+            if ($isAvailable) {
+                return [
+                    'success' => true,
+                    'desired_slug' => $cleanSlug,
+                    'available' => true,
+                    'suggestions' => [],
+                    'message' => 'Desired slug is available'
+                ];
+            }
+
+            // Generate suggestions
+            $suggestionPatterns = [
+                $cleanSlug . '-' . date('Y'),
+                $cleanSlug . '-' . date('m-d'),
+                $cleanSlug . '-v2',
+                $cleanSlug . '-new',
+                $cleanSlug . '-' . rand(100, 999)
+            ];
+
+            foreach ($suggestionPatterns as $pattern) {
+                if (count($suggestions) >= $maxSuggestions) {
+                    break;
+                }
+
+                if (!$this->slugExists($pattern)) {
+                    $suggestions[] = $pattern;
+                }
+            }
+
+            return [
+                'success' => true,
+                'desired_slug' => $cleanSlug,
+                'available' => false,
+                'suggestions' => $suggestions,
+                'message' => 'Desired slug is not available, here are some suggestions'
+            ];
+        });
+    }
+
+    /**
+     * Lista ofertas agrupadas por categoria
+     */
+    public function listByCategory(string $category = null): array
+    {
+        return $this->executeWithMetrics('list_offers_by_category', function () use ($category) {
+            $filters = $category ? ['category' => $category] : [];
+
+            $response = $this->httpClient->get('/offers/by-category', [
+                'query' => $filters
+            ]);
+
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Lista ofertas por status
+     */
+    public function listByStatus(string $status): array
+    {
+        return $this->executeWithMetrics('list_offers_by_status', function () use ($status) {
+            $allowedStatuses = ['draft', 'active', 'inactive', 'paused', 'archived'];
+            if (!in_array($status, $allowedStatuses)) {
+                throw new ValidationException("Invalid status: {$status}");
+            }
+
+            $response = $this->httpClient->get('/offers', [
+                'query' => ['status' => $status]
+            ]);
+
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Lista ofertas populares (com mais vendas)
+     */
+    public function listPopular(int $limit = 10): array
+    {
+        return $this->executeWithMetrics('list_popular_offers', function () use ($limit) {
+            $response = $this->httpClient->get('/offers/popular', [
+                'query' => ['limit' => $limit]
+            ]);
+
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Lista ofertas recentes
+     */
+    public function listRecent(int $limit = 10): array
+    {
+        return $this->executeWithMetrics('list_recent_offers', function () use ($limit) {
+            $response = $this->httpClient->get('/offers/recent', [
+                'query' => ['limit' => $limit]
+            ]);
+
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Lista ofertas por tipo
+     */
+    public function listByType(string $type): array
+    {
+        return $this->executeWithMetrics('list_offers_by_type', function () use ($type) {
+            $allowedTypes = ['single_product', 'bundle', 'subscription', 'funnel'];
+            if (!in_array($type, $allowedTypes)) {
+                throw new ValidationException("Invalid offer type: {$type}");
+            }
+
+            $response = $this->httpClient->get('/offers', [
+                'query' => ['type' => $type]
+            ]);
+
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Busca ofertas por texto
+     */
+    public function search(string $query, array $filters = []): array
+    {
+        return $this->executeWithMetrics('search_offers', function () use ($query, $filters) {
+            $searchParams = array_merge($filters, [
+                'q' => $query
+            ]);
+
+            $response = $this->httpClient->get('/offers/search', [
+                'query' => $searchParams
+            ]);
+
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Lista ofertas com filtros avançados
+     */
+    public function listAdvanced(array $criteria): array
+    {
+        return $this->executeWithMetrics('list_offers_advanced', function () use ($criteria) {
+            $this->validateAdvancedCriteria($criteria);
+
+            $response = $this->httpClient->get('/offers/advanced-search', [
+                'query' => $criteria
+            ]);
+
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Obtém ofertas relacionadas/similares
+     */
+    public function getRelated(string $offerId, int $limit = 5): array
+    {
+        return $this->executeWithMetrics('get_related_offers', function () use ($offerId, $limit) {
+            $response = $this->httpClient->get("/offers/{$offerId}/related", [
+                'query' => ['limit' => $limit]
+            ]);
+
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Lista ofertas por faixa de preço
+     */
+    public function listByPriceRange(float $minPrice, float $maxPrice): array
+    {
+        return $this->executeWithMetrics('list_offers_by_price_range', function () use ($minPrice, $maxPrice) {
+            if ($minPrice < 0 || $maxPrice < 0 || $minPrice > $maxPrice) {
+                throw new ValidationException('Invalid price range');
+            }
+
+            $response = $this->httpClient->get('/offers', [
+                'query' => [
+                    'price_min' => $minPrice,
+                    'price_max' => $maxPrice
+                ]
+            ]);
+
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Lista ofertas em promoção
+     */
+    public function listOnPromotion(): array
+    {
+        return $this->executeWithMetrics('list_offers_on_promotion', function () {
+            $response = $this->httpClient->get('/offers/promotions');
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
      * Busca oferta por ID via API
      */
     private function fetchOfferById(string $offerId): ?array
@@ -682,5 +937,45 @@ class OfferService extends BaseService implements ServiceInterface
             'source' => 'api',
             'sdk_version' => $this->getServiceVersion()
         ];
+    }
+
+    /**
+     * Valida se o slug tem formato válido
+     */
+    private function isValidSlug(string $slug): bool
+    {
+        // Slug deve conter apenas letras, números e hífens, sem espaços
+        return preg_match('/^[a-z0-9-]+$/', $slug) && !str_starts_with($slug, '-') && !str_ends_with($slug, '-');
+    }
+
+    /**
+     * Valida critérios avançados de busca
+     */
+    private function validateAdvancedCriteria(array $criteria): void
+    {
+        $allowedFields = [
+            'type', 'status', 'category', 'price_min', 'price_max',
+            'created_after', 'created_before', 'has_upsells', 'has_order_bumps',
+            'conversion_rate_min', 'conversion_rate_max', 'revenue_min', 'revenue_max'
+        ];
+
+        foreach ($criteria as $field => $value) {
+            if (!in_array($field, $allowedFields)) {
+                throw new ValidationException("Invalid search field: {$field}");
+            }
+
+            // Validate specific field types
+            if (in_array($field, ['price_min', 'price_max', 'revenue_min', 'revenue_max']) && !is_numeric($value)) {
+                throw new ValidationException("Field '{$field}' must be numeric");
+            }
+
+            if (in_array($field, ['conversion_rate_min', 'conversion_rate_max']) && (!is_numeric($value) || $value < 0 || $value > 100)) {
+                throw new ValidationException("Field '{$field}' must be between 0 and 100");
+            }
+
+            if (in_array($field, ['has_upsells', 'has_order_bumps']) && !is_bool($value)) {
+                throw new ValidationException("Field '{$field}' must be boolean");
+            }
+        }
     }
 }

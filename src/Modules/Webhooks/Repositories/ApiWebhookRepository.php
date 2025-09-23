@@ -83,6 +83,242 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     // ==============================================
 
     /**
+     * Validate webhook URL
+     */
+    public function validateUrl(string $url): array
+    {
+        return $this->executeWithMetrics('validate_url', function () use ($url) {
+            $response = $this->httpClient->post("{$this->getEndpoint()}/validate-url", [
+                'url' => $url
+            ]);
+
+            if (!$response->isSuccessful()) {
+                // If API validation fails, do basic validation
+                return [
+                    'url' => $url,
+                    'accessible' => false,
+                    'reachable' => false,
+                    'response_code' => null,
+                    'response_time' => null,
+                    'error' => 'API validation failed: ' . $response->getError(),
+                    'ssl_valid' => false,
+                ];
+            }
+
+            return $response->getData();
+        });
+    }
+
+    /**
+     * Find webhooks by event type
+     */
+    public function findByEvent(string $eventType): array
+    {
+        return $this->getCachedOrExecute(
+            $this->getCacheKey("webhook:event:{$eventType}"),
+            function () use ($eventType) {
+                $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+                    'event_type' => $eventType,
+                    'active' => true
+                ]);
+
+                if (!$response->isSuccessful()) {
+                    throw new HttpException(
+                        "Failed to find webhooks by event: " . $response->getError(),
+                        $response->getStatusCode()
+                    );
+                }
+
+                $data = $response->getData();
+                return $data['webhooks'] ?? [];
+            },
+            300 // 5 minutes cache
+        );
+    }
+
+    /**
+     * Find webhooks by organization
+     */
+    public function findByOrganization(string $organizationId): array
+    {
+        return $this->getCachedOrExecute(
+            $this->getCacheKey("webhook:org:{$organizationId}"),
+            function () use ($organizationId) {
+                $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+                    'organization_id' => $organizationId,
+                    'active' => true
+                ]);
+
+                if (!$response->isSuccessful()) {
+                    throw new HttpException(
+                        "Failed to find webhooks by organization: " . $response->getError(),
+                        $response->getStatusCode()
+                    );
+                }
+
+                $data = $response->getData();
+                return $data['webhooks'] ?? [];
+            },
+            300 // 5 minutes cache
+        );
+    }
+
+    /**
+     * Reset failure count for webhook
+     */
+    public function resetFailureCount(string $webhookId): bool
+    {
+        return $this->executeWithMetrics('reset_failure_count', function () use ($webhookId) {
+            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/reset-failures");
+
+            if ($response->isSuccessful()) {
+                $this->invalidateCache($webhookId);
+                return true;
+            }
+
+            return false;
+        });
+    }
+
+    /**
+     * Increment failure count for webhook
+     */
+    public function incrementFailureCount(string $webhookId): bool
+    {
+        return $this->executeWithMetrics('increment_failure_count', function () use ($webhookId) {
+            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/increment-failures");
+
+            if ($response->isSuccessful()) {
+                $this->invalidateCache($webhookId);
+                return true;
+            }
+
+            return false;
+        });
+    }
+
+    /**
+     * Update last delivery information
+     */
+    public function updateLastDelivery(string $webhookId, array $deliveryData): bool
+    {
+        return $this->executeWithMetrics('update_last_delivery', function () use ($webhookId, $deliveryData) {
+            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/last-delivery", $deliveryData);
+
+            if ($response->isSuccessful()) {
+                $this->invalidateCache($webhookId);
+                return true;
+            }
+
+            return false;
+        });
+    }
+
+    /**
+     * Activate webhook
+     */
+    public function activate(string $webhookId): bool
+    {
+        return $this->updateStatus($webhookId, 'active');
+    }
+
+    /**
+     * Deactivate webhook
+     */
+    public function deactivate(string $webhookId): bool
+    {
+        return $this->updateStatus($webhookId, 'inactive');
+    }
+
+    /**
+     * Get webhook statistics
+     */
+    public function getWebhookStats(string $webhookId): array
+    {
+        return $this->getCachedOrExecute(
+            $this->getCacheKey("webhook:stats:{$webhookId}"),
+            function () use ($webhookId) {
+                $response = $this->httpClient->get("{$this->getEndpoint()}/{$webhookId}/stats");
+
+                if (!$response->isSuccessful()) {
+                    if ($response->getStatusCode() === 404) {
+                        throw new WebhookNotFoundException("Webhook not found: {$webhookId}");
+                    }
+                    throw new HttpException(
+                        "Failed to get webhook stats: " . $response->getError(),
+                        $response->getStatusCode()
+                    );
+                }
+
+                return $response->getData();
+            },
+            300 // 5 minutes cache
+        );
+    }
+
+    /**
+     * Get delivery logs for webhook
+     */
+    public function findDeliveryLogs(string $webhookId, array $options = []): array
+    {
+        $cacheKey = $this->getCacheKey("webhook:logs:{$webhookId}:" . md5(serialize($options)));
+
+        return $this->getCachedOrExecute(
+            $cacheKey,
+            function () use ($webhookId, $options) {
+                $endpoint = "{$this->getEndpoint()}/{$webhookId}/delivery-logs";
+                if ($options) {
+                    $endpoint .= '?' . http_build_query($options);
+                }
+
+                $response = $this->httpClient->get($endpoint);
+
+                if (!$response->isSuccessful()) {
+                    throw new HttpException(
+                        "Failed to get delivery logs: " . $response->getError(),
+                        $response->getStatusCode()
+                    );
+                }
+
+                $data = $response->getData();
+                return $data['logs'] ?? [];
+            },
+            120 // 2 minutes cache for logs
+        );
+    }
+
+    /**
+     * Find failed deliveries
+     */
+    public function findFailedDeliveries(string $period = '24 hours', array $filters = []): array
+    {
+        $cacheKey = $this->getCacheKey("webhook:failed:{$period}:" . md5(serialize($filters)));
+
+        return $this->getCachedOrExecute(
+            $cacheKey,
+            function () use ($period, $filters) {
+                $params = array_merge($filters, [
+                    'status' => 'failed',
+                    'period' => $period
+                ]);
+
+                $response = $this->httpClient->get("{$this->getEndpoint()}/delivery-logs?" . http_build_query($params));
+
+                if (!$response->isSuccessful()) {
+                    throw new HttpException(
+                        "Failed to get failed deliveries: " . $response->getError(),
+                        $response->getStatusCode()
+                    );
+                }
+
+                $data = $response->getData();
+                return $data['logs'] ?? [];
+            },
+            300 // 5 minutes cache
+        );
+    }
+
+    /**
      * Find webhook by specific field
      */
     public function findByEmail(string $fieldValue): ?array

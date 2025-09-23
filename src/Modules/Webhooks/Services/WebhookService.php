@@ -47,19 +47,110 @@ class WebhookService extends BaseService implements ServiceInterface
     ];
 
     private array $supportedEvents = [
+        // Order events
         'order.created',
+        'order.paid',
         'order.updated',
+        'order.shipped',
+        'order.delivered',
         'order.completed',
         'order.cancelled',
+        'order.refunded',
+
+        // Payment events
+        'payment.authorized',
+        'payment.paid',
         'payment.completed',
         'payment.failed',
+        'payment.refunded',
+        'payment.cancelled',
+        'payment.method.saved',
+        'payment.action_required',
+        'payment_method.changed',
+        'payment_method.setup_completed',
+
+        // Customer events
         'customer.created',
         'customer.updated',
+        'customer.deleted',
+        'customer.merged',
+        'customer.segment.changed',
+        'customer.consent.updated',
+        'customer.metrics.updated',
+        'customer.address.added',
+        'customer.address.updated',
+        'customer.address.deleted',
+
+        // User events
+        'user.preferences.updated',
+        'user.data.deleted',
+        'user.updated',
+
+        // Product events
         'product.created',
         'product.updated',
-        'checkout.abandoned',
+        'product.deleted',
+
+        // Checkout events
+        'checkout.created',
+        'checkout.confirmed',
+        'checkout.payment_method_updated',
+        'checkout.failed',
+        'checkout.expired',
+
+        // Cart events
+        'cart.created',
+        'cart.updated',
+        'cart.abandoned',
+        'cart.recovered',
+        'cart.cleanup',
+        'cart.converted',
+
+        // Subscription events
         'subscription.created',
         'subscription.cancelled',
+        'subscription.access_suspended',
+        'subscription.canceled_for_nonpayment',
+        'subscription.activated',
+        'subscription.updated',
+        'subscription.canceled',
+        'subscription.trial_ending',
+        'subscription.trial_converted',
+        'subscription.payment_failed',
+        'subscription.payment_recovered',
+        'subscription.access_revoked',
+
+        // Special events
+        'dunning.email_required',
+        'dunning.sms_required',
+        'dunning.payment_recovered',
+        'gdpr.audit',
+        'coupon.validated',
+        'coupon.applied',
+        'promotions.detected',
+        'promotion.applied',
+
+        // OneClick Checkout events
+        'oneclickcheckout.initiated',
+        'oneclickcheckout.processing',
+        'oneclickcheckout.completed',
+        'oneclickcheckout.failed',
+
+        // Affiliate events
+        'affiliate.registered',
+        'affiliate.approved',
+        'affiliate.click',
+        'affiliate.conversion',
+
+        // Digital Wallet events
+        'digital-wallet.payment.processed',
+        'digital-wallet.payment.failed',
+
+        // API Key events
+        'api-key.generated',
+        'api-key.updated',
+        'api-key.revoked',
+        'api-key.rotated',
     ];
 
     public function __construct(
@@ -484,7 +575,7 @@ class WebhookService extends BaseService implements ServiceInterface
      */
     private function validateUrlConnectivity(string $url): void
     {
-        $validation = $this->repository->validateUrl($url);
+        $validation = $this->validateUrl($url);
 
         if (!$validation['accessible']) {
             throw new InvalidWebhookException("URL não acessível: {$validation['error']}");
@@ -493,6 +584,127 @@ class WebhookService extends BaseService implements ServiceInterface
         if ($validation['response_code'] < 200 || $validation['response_code'] >= 300) {
             throw new InvalidWebhookException("URL retornou código HTTP inválido: {$validation['response_code']}");
         }
+    }
+
+    /**
+     * Valida URL de webhook
+     */
+    public function validateUrl(string $url): array
+    {
+        $result = [
+            'url' => $url,
+            'accessible' => false,
+            'response_code' => null,
+            'response_time' => null,
+            'error' => null,
+            'headers' => [],
+            'ssl_valid' => false,
+            'redirect_count' => 0,
+        ];
+
+        try {
+            // Parse URL
+            $parsedUrl = parse_url($url);
+            if (!$parsedUrl || !isset($parsedUrl['scheme'], $parsedUrl['host'])) {
+                $result['error'] = 'URL malformada';
+                return $result;
+            }
+
+            // Validate scheme
+            if (!in_array($parsedUrl['scheme'], ['http', 'https'])) {
+                $result['error'] = 'Esquema não suportado. Use HTTP ou HTTPS';
+                return $result;
+            }
+
+            // Check for private/local networks in production
+            if ($this->isProductionEnvironment() && $this->isPrivateNetwork($parsedUrl['host'])) {
+                $result['error'] = 'URLs de rede privada não são permitidas em produção';
+                return $result;
+            }
+
+            $startTime = microtime(true);
+
+            // Initialize cURL
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_NOBODY => true, // HEAD request
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS => 5,
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_USERAGENT => 'Clubify-Checkout-SDK/1.0 (+https://clubify.com.br)',
+                CURLOPT_HEADER => true,
+                CURLOPT_HEADERFUNCTION => function($curl, $header) use (&$result) {
+                    $len = strlen($header);
+                    $header = explode(':', $header, 2);
+                    if (count($header) < 2) return $len;
+
+                    $name = strtolower(trim($header[0]));
+                    $value = trim($header[1]);
+                    $result['headers'][$name] = $value;
+
+                    return $len;
+                },
+            ]);
+
+            $response = curl_exec($ch);
+            $result['response_code'] = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $result['response_time'] = round((microtime(true) - $startTime) * 1000, 2);
+            $result['redirect_count'] = curl_getinfo($ch, CURLINFO_REDIRECT_COUNT);
+
+            if (curl_errno($ch)) {
+                $result['error'] = curl_error($ch);
+            } else {
+                $result['accessible'] = $result['response_code'] >= 200 && $result['response_code'] < 500;
+
+                // Check SSL for HTTPS URLs
+                if ($parsedUrl['scheme'] === 'https') {
+                    $sslInfo = curl_getinfo($ch, CURLINFO_SSL_VERIFYRESULT);
+                    $result['ssl_valid'] = $sslInfo === 0;
+                }
+            }
+
+            curl_close($ch);
+
+        } catch (\Exception $e) {
+            $result['error'] = $e->getMessage();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Verifica se é ambiente de produção
+     */
+    private function isProductionEnvironment(): bool
+    {
+        return in_array(strtolower($_ENV['APP_ENV'] ?? 'production'), ['production', 'prod']);
+    }
+
+    /**
+     * Verifica se host está em rede privada
+     */
+    private function isPrivateNetwork(string $host): bool
+    {
+        // Localhost variants
+        if (in_array($host, ['localhost', '127.0.0.1', '::1', '0.0.0.0'])) {
+            return true;
+        }
+
+        // Private IP ranges
+        if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            $ip = ip2long($host);
+            return ($ip >= ip2long('10.0.0.0') && $ip <= ip2long('10.255.255.255')) ||
+                   ($ip >= ip2long('172.16.0.0') && $ip <= ip2long('172.31.255.255')) ||
+                   ($ip >= ip2long('192.168.0.0') && $ip <= ip2long('192.168.255.255')) ||
+                   ($ip >= ip2long('169.254.0.0') && $ip <= ip2long('169.254.255.255'));
+        }
+
+        return false;
     }
 
     /**

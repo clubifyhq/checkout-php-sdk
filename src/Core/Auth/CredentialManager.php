@@ -64,24 +64,33 @@ class CredentialManager
     {
         $this->validateTenantCredentials($credentials);
 
+        // Se já existe, merge com os dados existentes para preservar informações
+        $existingContext = $this->contexts[$tenantId] ?? [];
+
         $contextData = [
             'type' => 'tenant_admin',
             'tenant_id' => $tenantId,
-            'api_key' => $credentials['api_key'] ?? null,
-            'access_token' => $credentials['access_token'] ?? null,
-            'refresh_token' => $credentials['refresh_token'] ?? null,
-            'name' => $credentials['name'] ?? null,
-            'domain' => $credentials['domain'] ?? null,
-            'subdomain' => $credentials['subdomain'] ?? null,
+            'api_key' => $credentials['api_key'] ?? $existingContext['api_key'] ?? null,
+            'access_token' => $credentials['access_token'] ?? $existingContext['access_token'] ?? null,
+            'refresh_token' => $credentials['refresh_token'] ?? $existingContext['refresh_token'] ?? null,
+            'name' => $credentials['name'] ?? $existingContext['name'] ?? null,
+            'domain' => $credentials['domain'] ?? $existingContext['domain'] ?? null,
+            'subdomain' => $credentials['subdomain'] ?? $existingContext['subdomain'] ?? null,
             'role' => 'tenant_admin',
-            'created_at' => time(),
-            'last_used' => time()
+            'created_at' => $existingContext['created_at'] ?? time(),
+            'last_used' => time(),
+            'updated_at' => time()
         ];
 
         $this->contexts[$tenantId] = $contextData;
 
         if ($this->autoSync) {
-            $this->storage->store($tenantId, $contextData);
+            try {
+                $this->storage->store($tenantId, $contextData);
+            } catch (\Exception $e) {
+                // Log error but don't fail the operation
+                error_log("Warning: Failed to store tenant context '{$tenantId}': " . $e->getMessage());
+            }
         }
     }
 
@@ -150,7 +159,30 @@ class CredentialManager
         }
 
         $apiKey = $this->contexts[$contextId]['api_key'] ?? null;
-        return !empty($apiKey) && is_string($apiKey) && strlen($apiKey) > 10;
+
+        // Basic validation
+        if (empty($apiKey) || !is_string($apiKey) || strlen($apiKey) < 10) {
+            return false;
+        }
+
+        // Enhanced validation for Clubify API key format
+        return $this->validateApiKeyFormat($apiKey);
+    }
+
+    /**
+     * Validate API key format (Clubify specific)
+     */
+    private function validateApiKeyFormat(string $apiKey): bool
+    {
+        // Clubify API keys follow pattern: clb_(test|live)_[32-char-hex]
+        $pattern = '/^clb_(test|live)_[a-f0-9]{32}$/';
+
+        if (preg_match($pattern, $apiKey)) {
+            return true;
+        }
+
+        // Fallback: Accept any key longer than 20 characters for compatibility
+        return strlen($apiKey) >= 20;
     }
 
     /**

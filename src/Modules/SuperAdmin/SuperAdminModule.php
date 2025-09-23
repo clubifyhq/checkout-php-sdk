@@ -398,16 +398,92 @@ class SuperAdminModule implements ModuleInterface
     }
 
     /**
-     * Criar usuário com role tenant_admin para um tenant
+     * Verificar se usuário existe no tenant
+     */
+    public function checkUserExists(string $email, string $tenantId): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            // Primeiro tentar buscar usuário por email no contexto do tenant
+            $response = $this->httpClient->get('users', [
+                'query' => [
+                    'email' => $email,
+                    'limit' => 1
+                ],
+                'headers' => [
+                    'X-Tenant-Id' => $tenantId
+                ]
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode >= 200 && $statusCode < 300) {
+                $result = json_decode($response->getBody()->getContents(), true);
+                $users = $result['data'] ?? $result['users'] ?? $result;
+
+                if (is_array($users) && count($users) > 0) {
+                    $user = $users[0];
+                    return [
+                        'exists' => true,
+                        'user' => $user,
+                        'user_id' => $user['id'] ?? $user['_id'] ?? null,
+                        'roles' => $user['roles'] ?? [],
+                        'message' => 'User found in tenant'
+                    ];
+                }
+            }
+
+            return [
+                'exists' => false,
+                'message' => 'User not found in tenant'
+            ];
+
+        } catch (\Exception $e) {
+            $this->logger->warning('Error checking user existence', [
+                'email' => $email,
+                'tenant_id' => $tenantId,
+                'error' => $e->getMessage()
+            ]);
+
+            // Return false to allow creation attempt
+            return [
+                'exists' => false,
+                'error' => $e->getMessage(),
+                'message' => 'Could not verify user existence - will attempt creation'
+            ];
+        }
+    }
+
+    /**
+     * Criar usuário com role tenant_admin para um tenant (com verificação prévia)
      */
     public function createTenantAdmin(string $tenantId, array $userData): array
     {
         $this->ensureInitialized();
 
+        $email = $userData['email'];
+
+        // STEP 1: Verificar se usuário já existe
+        $userCheck = $this->checkUserExists($email, $tenantId);
+
+        if ($userCheck['exists']) {
+            $this->logger->info('User already exists, returning existing user data', [
+                'email' => $email,
+                'tenant_id' => $tenantId,
+                'user_id' => $userCheck['user_id']
+            ]);
+
+            return [
+                'data' => $userCheck['user'],
+                'existed' => true,
+                'message' => 'User already exists in tenant'
+            ];
+        }
+
         try {
-            // Estrutura correta baseada na validação da API
+            // STEP 2: Criar novo usuário se não existe
             $payload = [
-                'email' => $userData['email'],
+                'email' => $email,
                 'firstName' => $userData['firstName'] ?? $userData['name'] ?? 'Tenant',
                 'lastName' => $userData['lastName'] ?? 'Administrator',
                 'password' => $userData['password'],
@@ -415,7 +491,6 @@ class SuperAdminModule implements ModuleInterface
                 'tenantId' => $tenantId
             ];
 
-            // Adicionar cabeçalho X-Tenant-Id para contexto correto
             $response = $this->httpClient->post('users', [
                 'json' => $payload,
                 'headers' => [
@@ -436,17 +511,48 @@ class SuperAdminModule implements ModuleInterface
                 'email' => $payload['email']
             ]);
 
+            $result['existed'] = false;
             return $result;
 
         } catch (\Exception $e) {
+            // STEP 3: Handle 409 conflicts gracefully
+            if ($this->is409ConflictError($e)) {
+                $this->logger->info('User creation conflict detected, re-checking existence', [
+                    'email' => $email,
+                    'tenant_id' => $tenantId
+                ]);
+
+                // Re-check user existence after conflict
+                $recheckResult = $this->checkUserExists($email, $tenantId);
+                if ($recheckResult['exists']) {
+                    return [
+                        'data' => $recheckResult['user'],
+                        'existed' => true,
+                        'message' => 'User already exists (detected after 409 conflict)'
+                    ];
+                }
+            }
+
             $this->logger->error('Failed to create tenant admin user', [
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
-                'email' => $userData['email'] ?? 'unknown'
+                'email' => $email
             ]);
 
             throw new SDKException('Failed to create tenant admin user: ' . $e->getMessage(), 0, $e);
         }
+    }
+
+    /**
+     * Check if exception is a 409 conflict error
+     */
+    private function is409ConflictError(\Exception $e): bool
+    {
+        $message = $e->getMessage();
+        return strpos($message, '409') !== false ||
+               strpos($message, 'Conflict') !== false ||
+               strpos($message, 'already exists') !== false ||
+               strpos($message, 'duplicate') !== false;
     }
 
     /**
@@ -534,15 +640,51 @@ class SuperAdminModule implements ModuleInterface
                 'password' => $options['admin_password'] ?? $this->generateSecurePassword()
             ];
 
-            // 1. Criar usuário tenant_admin
+            // 1. Criar ou obter usuário tenant_admin existente
             $userResult = $this->createTenantAdmin($tenantId, $adminData);
-            $userId = $userResult['data']['id'] ?? $userResult['id'] ?? null;
+            $userData = $userResult['data'] ?? $userResult;
+            $userId = $userData['id'] ?? $userData['_id'] ?? null;
+            $userExisted = $userResult['existed'] ?? false;
 
             if (!$userId) {
-                throw new SDKException('Failed to get user ID from creation response');
+                throw new SDKException('Failed to get user ID from creation/retrieval response');
             }
 
-            // 2. Criar API key para o tenant
+            // 2. Verificar se já existe API key para o tenant
+            $existingApiKey = $this->checkExistingApiKey($tenantId);
+
+            if ($existingApiKey['exists']) {
+                $this->logger->info('Using existing API key for tenant', [
+                    'tenant_id' => $tenantId,
+                    'api_key_id' => $existingApiKey['api_key_id']
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => $userExisted ?
+                        'Tenant credentials already exist - retrieved successfully' :
+                        'User created, existing API key found',
+                    'user' => [
+                        'id' => $userId,
+                        'email' => $userData['email'] ?? $adminData['email'],
+                        'firstName' => $userData['firstName'] ?? $adminData['firstName'],
+                        'lastName' => $userData['lastName'] ?? $adminData['lastName'],
+                        'fullName' => ($userData['firstName'] ?? $adminData['firstName']) . ' ' . ($userData['lastName'] ?? $adminData['lastName']),
+                        'password' => $userExisted ? '[EXISTING]' : $adminData['password'],
+                        'roles' => $userData['roles'] ?? ['tenant_admin'],
+                        'existed' => $userExisted
+                    ],
+                    'api_key' => [
+                        'id' => $existingApiKey['api_key_id'],
+                        'key' => $existingApiKey['api_key'],
+                        'name' => $existingApiKey['name'],
+                        'existed' => true
+                    ],
+                    'tenant_id' => $tenantId
+                ];
+            }
+
+            // 3. Criar nova API key se não existe
             $apiKeyData = [
                 'name' => $options['api_key_name'] ?? 'Tenant Admin API Key',
                 'description' => $options['api_key_description'] ?? 'API key for tenant admin operations',
@@ -550,8 +692,9 @@ class SuperAdminModule implements ModuleInterface
             ];
 
             $apiKeyResult = $this->createApiKey($tenantId, $apiKeyData);
-            $apiKey = $apiKeyResult['data']['key'] ?? $apiKeyResult['key'] ?? null;
-            $apiKeyId = $apiKeyResult['data']['id'] ?? $apiKeyResult['id'] ?? null;
+            $apiKeyResponseData = $apiKeyResult['data'] ?? $apiKeyResult;
+            $apiKey = $apiKeyResponseData['key'] ?? null;
+            $apiKeyId = $apiKeyResponseData['id'] ?? null;
 
             if (!$apiKey) {
                 throw new SDKException('Failed to get API key from creation response');
@@ -560,26 +703,31 @@ class SuperAdminModule implements ModuleInterface
             $this->logger->info('Tenant credentials provisioned successfully', [
                 'tenant_id' => $tenantId,
                 'user_id' => $userId,
+                'user_existed' => $userExisted,
                 'api_key_id' => $apiKeyId,
                 'admin_email' => $adminData['email']
             ]);
 
             return [
                 'success' => true,
-                'message' => 'Tenant credentials provisioned successfully',
+                'message' => $userExisted ?
+                    'User already existed - API key created successfully' :
+                    'Tenant credentials provisioned successfully',
                 'user' => [
                     'id' => $userId,
-                    'email' => $adminData['email'],
-                    'firstName' => $adminData['firstName'],
-                    'lastName' => $adminData['lastName'],
-                    'fullName' => $adminData['firstName'] . ' ' . $adminData['lastName'],
-                    'password' => $adminData['password'], // Retorna apenas para configuração inicial
-                    'roles' => ['tenant_admin']
+                    'email' => $userData['email'] ?? $adminData['email'],
+                    'firstName' => $userData['firstName'] ?? $adminData['firstName'],
+                    'lastName' => $userData['lastName'] ?? $adminData['lastName'],
+                    'fullName' => ($userData['firstName'] ?? $adminData['firstName']) . ' ' . ($userData['lastName'] ?? $adminData['lastName']),
+                    'password' => $userExisted ? '[EXISTING]' : $adminData['password'],
+                    'roles' => $userData['roles'] ?? ['tenant_admin'],
+                    'existed' => $userExisted
                 ],
                 'api_key' => [
                     'id' => $apiKeyId,
                     'key' => $apiKey,
-                    'name' => $apiKeyData['name']
+                    'name' => $apiKeyData['name'],
+                    'existed' => false
                 ],
                 'tenant_id' => $tenantId
             ];
@@ -591,6 +739,49 @@ class SuperAdminModule implements ModuleInterface
             ]);
 
             throw new SDKException('Failed to provision tenant credentials: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Verificar se já existe API key para o tenant
+     */
+    private function checkExistingApiKey(string $tenantId): array
+    {
+        try {
+            $response = $this->httpClient->get('api-keys', [
+                'headers' => [
+                    'X-Tenant-Id' => $tenantId
+                ]
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode >= 200 && $statusCode < 300) {
+                $result = json_decode($response->getBody()->getContents(), true);
+                $apiKeys = $result['data'] ?? $result['api_keys'] ?? $result;
+
+                if (is_array($apiKeys) && count($apiKeys) > 0) {
+                    // Retornar a primeira API key encontrada
+                    $apiKey = $apiKeys[0] ?? null;
+                    if ($apiKey) {
+                        return [
+                            'exists' => true,
+                            'api_key' => $apiKey['key'] ?? null,
+                            'api_key_id' => $apiKey['id'] ?? $apiKey['_id'] ?? null,
+                            'name' => $apiKey['name'] ?? 'Existing API Key'
+                        ];
+                    }
+                }
+            }
+
+            return ['exists' => false];
+
+        } catch (\Exception $e) {
+            $this->logger->warning('Error checking existing API keys', [
+                'tenant_id' => $tenantId,
+                'error' => $e->getMessage()
+            ]);
+
+            return ['exists' => false];
         }
     }
 

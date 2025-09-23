@@ -490,6 +490,157 @@ class UpsellService extends BaseService implements ServiceInterface
     }
 
     /**
+     * Executa teste de conversão do upsell
+     */
+    public function runConversionTest(string $upsellId, array $testConfig): array
+    {
+        return $this->executeWithMetrics('run_upsell_conversion_test', function () use ($upsellId, $testConfig) {
+            $this->validateConversionTestConfig($testConfig);
+
+            $response = $this->httpClient->post("/upsells/{$upsellId}/conversion-test", $testConfig);
+            $result = $response->getData();
+
+            // Dispatch evento
+            $this->dispatch('upsell.conversion_test_executed', [
+                'upsell_id' => $upsellId,
+                'test_type' => $testConfig['type'] ?? 'standard',
+                'duration' => $testConfig['duration'] ?? 'default'
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * Obtém recomendações de otimização
+     */
+    public function getOptimizationRecommendations(string $upsellId): array
+    {
+        return $this->executeWithMetrics('get_upsell_optimization_recommendations', function () use ($upsellId) {
+            $response = $this->httpClient->get("/upsells/{$upsellId}/optimization-recommendations");
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Aplica otimizações automáticas
+     */
+    public function applyAutoOptimizations(string $upsellId, array $optimizationRules = []): array
+    {
+        return $this->executeWithMetrics('apply_upsell_auto_optimizations', function () use ($upsellId, $optimizationRules) {
+            $response = $this->httpClient->post("/upsells/{$upsellId}/auto-optimize", [
+                'optimization_rules' => $optimizationRules
+            ]);
+
+            $result = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateUpsellCache($upsellId);
+
+            // Dispatch evento
+            $this->dispatch('upsell.auto_optimizations_applied', [
+                'upsell_id' => $upsellId,
+                'optimizations_count' => count($result['applied_optimizations'] ?? [])
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * Configura limitações e restrições
+     */
+    public function configureRestrictions(string $upsellId, array $restrictions): array
+    {
+        return $this->executeWithMetrics('configure_upsell_restrictions', function () use ($upsellId, $restrictions) {
+            $this->validateRestrictions($restrictions);
+
+            $response = $this->httpClient->put("/upsells/{$upsellId}/restrictions", [
+                'restrictions' => $restrictions
+            ]);
+
+            $upsell = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateUpsellCache($upsellId);
+
+            // Dispatch evento
+            $this->dispatch('upsell.restrictions_configured', [
+                'upsell_id' => $upsellId,
+                'restrictions_count' => count($restrictions)
+            ]);
+
+            return $upsell;
+        });
+    }
+
+    /**
+     * Agenda upsell para ativação futura
+     */
+    public function scheduleActivation(string $upsellId, string $scheduledDate, array $options = []): array
+    {
+        return $this->executeWithMetrics('schedule_upsell_activation', function () use ($upsellId, $scheduledDate, $options) {
+            if (!strtotime($scheduledDate)) {
+                throw new ValidationException('Invalid scheduled date format');
+            }
+
+            $response = $this->httpClient->post("/upsells/{$upsellId}/schedule-activation", [
+                'scheduled_date' => $scheduledDate,
+                'options' => $options
+            ]);
+
+            $result = $response->getData();
+
+            // Dispatch evento
+            $this->dispatch('upsell.activation_scheduled', [
+                'upsell_id' => $upsellId,
+                'scheduled_date' => $scheduledDate,
+                'options' => $options
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * Exporta configuração do upsell
+     */
+    public function exportConfiguration(string $upsellId): array
+    {
+        return $this->executeWithMetrics('export_upsell_configuration', function () use ($upsellId) {
+            $response = $this->httpClient->get("/upsells/{$upsellId}/export-configuration");
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Importa configuração para um upsell
+     */
+    public function importConfiguration(string $upsellId, array $configuration): array
+    {
+        return $this->executeWithMetrics('import_upsell_configuration', function () use ($upsellId, $configuration) {
+            $this->validateImportConfiguration($configuration);
+
+            $response = $this->httpClient->post("/upsells/{$upsellId}/import-configuration", [
+                'configuration' => $configuration
+            ]);
+
+            $upsell = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateUpsellCache($upsellId);
+
+            // Dispatch evento
+            $this->dispatch('upsell.configuration_imported', [
+                'upsell_id' => $upsellId,
+                'configuration_keys' => array_keys($configuration)
+            ]);
+
+            return $upsell;
+        });
+    }
+
+    /**
      * Busca upsell por ID via API
      */
     private function fetchUpsellById(string $upsellId): ?array
@@ -724,5 +875,63 @@ class UpsellService extends BaseService implements ServiceInterface
             'sequence_completion_rate' => 0,
             'last_updated' => date('Y-m-d H:i:s')
         ];
+    }
+
+    /**
+     * Valida configuração de teste de conversão
+     */
+    private function validateConversionTestConfig(array $config): void
+    {
+        $allowedTypes = ['performance', 'split', 'multivariate', 'funnel'];
+        if (isset($config['type']) && !in_array($config['type'], $allowedTypes)) {
+            throw new ValidationException("Invalid test type: {$config['type']}");
+        }
+
+        if (isset($config['duration']) && (!is_numeric($config['duration']) || $config['duration'] <= 0)) {
+            throw new ValidationException('Test duration must be a positive number');
+        }
+    }
+
+    /**
+     * Valida restrições do upsell
+     */
+    private function validateRestrictions(array $restrictions): void
+    {
+        $allowedRestrictions = [
+            'max_impressions_per_user', 'max_conversions_per_user', 'time_window',
+            'geographic_restrictions', 'device_restrictions', 'user_segment_restrictions'
+        ];
+
+        foreach ($restrictions as $restriction => $value) {
+            if (!in_array($restriction, $allowedRestrictions)) {
+                throw new ValidationException("Invalid restriction type: {$restriction}");
+            }
+
+            if (in_array($restriction, ['max_impressions_per_user', 'max_conversions_per_user']) &&
+                (!is_numeric($value) || $value < 0)) {
+                throw new ValidationException("Restriction '{$restriction}' must be a non-negative number");
+            }
+        }
+    }
+
+    /**
+     * Valida configuração de importação
+     */
+    private function validateImportConfiguration(array $configuration): void
+    {
+        $allowedSections = [
+            'targeting', 'template', 'automation', 'restrictions',
+            'ab_testing', 'display_settings', 'timing_rules'
+        ];
+
+        foreach ($configuration as $section => $config) {
+            if (!in_array($section, $allowedSections)) {
+                throw new ValidationException("Invalid configuration section: {$section}");
+            }
+
+            if (!is_array($config)) {
+                throw new ValidationException("Configuration section '{$section}' must be an array");
+            }
+        }
     }
 }

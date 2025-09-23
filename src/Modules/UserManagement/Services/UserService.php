@@ -540,4 +540,180 @@ class UserService implements ServiceInterface
             throw $e;
         }
     }
+
+    /**
+     * Verifica disponibilidade de email
+     */
+    public function verifyEmailAvailability(string $email): array
+    {
+        try {
+            $this->logger->info('Verifying email availability', ['email' => $email]);
+
+            // Validate email format
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new UserValidationException('Invalid email format');
+            }
+
+            // Check if email is already taken
+            $isAvailable = !$this->repository->isEmailTaken($email);
+
+            $result = [
+                'success' => true,
+                'email' => $email,
+                'available' => $isAvailable,
+                'checked_at' => date('c')
+            ];
+
+            if (!$isAvailable) {
+                $result['message'] = 'Email is already in use';
+                $this->logger->info('Email not available', ['email' => $email]);
+            } else {
+                $result['message'] = 'Email is available';
+                $this->logger->info('Email is available', ['email' => $email]);
+            }
+
+            return $result;
+
+        } catch (UserValidationException $e) {
+            $this->logger->warning('Email validation failed', [
+                'email' => $email,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to verify email availability', [
+                'email' => $email,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Verifica múltiplos emails de uma só vez
+     */
+    public function verifyBulkEmailAvailability(array $emails): array
+    {
+        try {
+            $this->logger->info('Verifying bulk email availability', ['count' => count($emails)]);
+
+            $results = [];
+            $validEmails = [];
+
+            // Validate all emails first
+            foreach ($emails as $email) {
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $results[$email] = [
+                        'available' => false,
+                        'error' => 'Invalid email format'
+                    ];
+                } else {
+                    $validEmails[] = $email;
+                }
+            }
+
+            // Check availability for valid emails
+            foreach ($validEmails as $email) {
+                $isAvailable = !$this->repository->isEmailTaken($email);
+                $results[$email] = [
+                    'available' => $isAvailable,
+                    'message' => $isAvailable ? 'Email is available' : 'Email is already in use'
+                ];
+            }
+
+            return [
+                'success' => true,
+                'results' => $results,
+                'total_checked' => count($emails),
+                'checked_at' => date('c')
+            ];
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to verify bulk email availability', [
+                'emails_count' => count($emails),
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Gera sugestões de email disponíveis baseado no email desejado
+     */
+    public function suggestAvailableEmails(string $desiredEmail, int $maxSuggestions = 5): array
+    {
+        try {
+            $this->logger->info('Generating email suggestions', [
+                'desired_email' => $desiredEmail,
+                'max_suggestions' => $maxSuggestions
+            ]);
+
+            // Validate email format
+            if (!filter_var($desiredEmail, FILTER_VALIDATE_EMAIL)) {
+                throw new UserValidationException('Invalid email format');
+            }
+
+            // Check if desired email is available
+            $isAvailable = !$this->repository->isEmailTaken($desiredEmail);
+
+            $suggestions = [];
+
+            if ($isAvailable) {
+                return [
+                    'success' => true,
+                    'desired_email' => $desiredEmail,
+                    'available' => true,
+                    'suggestions' => [],
+                    'message' => 'Desired email is available'
+                ];
+            }
+
+            // Generate suggestions
+            $emailParts = explode('@', $desiredEmail);
+            $username = $emailParts[0];
+            $domain = $emailParts[1];
+
+            $suggestionPatterns = [
+                $username . '.' . date('Y'),
+                $username . date('y'),
+                $username . rand(10, 99),
+                $username . '.' . rand(100, 999),
+                $username . '_' . date('m') . date('d')
+            ];
+
+            foreach ($suggestionPatterns as $pattern) {
+                if (count($suggestions) >= $maxSuggestions) {
+                    break;
+                }
+
+                $suggestedEmail = $pattern . '@' . $domain;
+                if (!$this->repository->isEmailTaken($suggestedEmail)) {
+                    $suggestions[] = $suggestedEmail;
+                }
+            }
+
+            return [
+                'success' => true,
+                'desired_email' => $desiredEmail,
+                'available' => false,
+                'suggestions' => $suggestions,
+                'message' => 'Desired email is not available, here are some suggestions'
+            ];
+
+        } catch (UserValidationException $e) {
+            $this->logger->warning('Email suggestion validation failed', [
+                'desired_email' => $desiredEmail,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to generate email suggestions', [
+                'desired_email' => $desiredEmail,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
 }

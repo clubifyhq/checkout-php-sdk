@@ -355,6 +355,302 @@ class ThemeService extends BaseService implements ServiceInterface
     }
 
     /**
+     * Configura layout responsivo avançado
+     */
+    public function configureResponsiveLayout(string $themeId, array $responsiveConfig): array
+    {
+        return $this->executeWithMetrics('configure_responsive_layout', function () use ($themeId, $responsiveConfig) {
+            $this->validateResponsiveConfig($responsiveConfig);
+
+            $response = $this->httpClient->put("/themes/{$themeId}/responsive-layout", [
+                'responsive_config' => $responsiveConfig
+            ]);
+
+            $theme = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateThemeCache($themeId);
+
+            // Dispatch evento
+            $this->dispatch('theme.responsive_layout_configured', [
+                'theme_id' => $themeId,
+                'breakpoints_count' => count($responsiveConfig['breakpoints'] ?? [])
+            ]);
+
+            return $theme;
+        });
+    }
+
+    /**
+     * Configura grid system customizado
+     */
+    public function configureGridSystem(string $themeId, array $gridConfig): array
+    {
+        return $this->executeWithMetrics('configure_grid_system', function () use ($themeId, $gridConfig) {
+            $this->validateGridConfig($gridConfig);
+
+            $response = $this->httpClient->put("/themes/{$themeId}/grid-system", [
+                'grid_config' => $gridConfig
+            ]);
+
+            $theme = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateThemeCache($themeId);
+
+            // Dispatch evento
+            $this->dispatch('theme.grid_system_configured', [
+                'theme_id' => $themeId,
+                'columns' => $gridConfig['columns'] ?? 12,
+                'gutters' => $gridConfig['gutters'] ?? 'default'
+            ]);
+
+            return $theme;
+        });
+    }
+
+    /**
+     * Configura componentes de layout
+     */
+    public function configureLayoutComponents(string $themeId, array $components): array
+    {
+        return $this->executeWithMetrics('configure_layout_components', function () use ($themeId, $components) {
+            $this->validateLayoutComponents($components);
+
+            $response = $this->httpClient->put("/themes/{$themeId}/layout-components", [
+                'components' => $components
+            ]);
+
+            $theme = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateThemeCache($themeId);
+
+            // Dispatch evento
+            $this->dispatch('theme.layout_components_configured', [
+                'theme_id' => $themeId,
+                'components_count' => count($components)
+            ]);
+
+            return $theme;
+        });
+    }
+
+    /**
+     * Configura espaçamentos e margens
+     */
+    public function configureSpacing(string $themeId, array $spacingConfig): array
+    {
+        return $this->executeWithMetrics('configure_theme_spacing', function () use ($themeId, $spacingConfig) {
+            $this->validateSpacingConfig($spacingConfig);
+
+            $response = $this->httpClient->put("/themes/{$themeId}/spacing", [
+                'spacing_config' => $spacingConfig
+            ]);
+
+            $theme = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateThemeCache($themeId);
+
+            // Dispatch evento
+            $this->dispatch('theme.spacing_configured', [
+                'theme_id' => $themeId,
+                'spacing_units' => array_keys($spacingConfig)
+            ]);
+
+            return $theme;
+        });
+    }
+
+    /**
+     * Configura tipografia avançada
+     */
+    public function configureAdvancedTypography(string $themeId, array $typographyConfig): array
+    {
+        return $this->executeWithMetrics('configure_advanced_typography', function () use ($themeId, $typographyConfig) {
+            $this->validateAdvancedTypography($typographyConfig);
+
+            $response = $this->httpClient->put("/themes/{$themeId}/advanced-typography", [
+                'typography_config' => $typographyConfig
+            ]);
+
+            $theme = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateThemeCache($themeId);
+
+            // Dispatch evento
+            $this->dispatch('theme.advanced_typography_configured', [
+                'theme_id' => $themeId,
+                'font_families_count' => count($typographyConfig['font_families'] ?? [])
+            ]);
+
+            return $theme;
+        });
+    }
+
+    /**
+     * Configura sistema de cores avançado
+     */
+    public function configureAdvancedColorSystem(string $themeId, array $colorSystem): array
+    {
+        return $this->executeWithMetrics('configure_advanced_color_system', function () use ($themeId, $colorSystem) {
+            $this->validateAdvancedColorSystem($colorSystem);
+
+            $response = $this->httpClient->put("/themes/{$themeId}/advanced-colors", [
+                'color_system' => $colorSystem
+            ]);
+
+            $theme = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateThemeCache($themeId);
+
+            // Dispatch evento
+            $this->dispatch('theme.advanced_color_system_configured', [
+                'theme_id' => $themeId,
+                'palettes_count' => count($colorSystem['palettes'] ?? [])
+            ]);
+
+            return $theme;
+        });
+    }
+
+    /**
+     * Configura animações e transições
+     */
+    public function configureAnimations(string $themeId, array $animationConfig): array
+    {
+        return $this->executeWithMetrics('configure_theme_animations', function () use ($themeId, $animationConfig) {
+            $this->validateAnimationConfig($animationConfig);
+
+            $response = $this->httpClient->put("/themes/{$themeId}/animations", [
+                'animation_config' => $animationConfig
+            ]);
+
+            $theme = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateThemeCache($themeId);
+
+            // Dispatch evento
+            $this->dispatch('theme.animations_configured', [
+                'theme_id' => $themeId,
+                'animations_count' => count($animationConfig['animations'] ?? [])
+            ]);
+
+            return $theme;
+        });
+    }
+
+    /**
+     * Configura CSS customizado
+     */
+    public function configureCustomCSS(string $themeId, string $customCSS, array $options = []): array
+    {
+        return $this->executeWithMetrics('configure_custom_css', function () use ($themeId, $customCSS, $options) {
+            $this->validateCustomCSS($customCSS);
+
+            $response = $this->httpClient->put("/themes/{$themeId}/custom-css", [
+                'custom_css' => $customCSS,
+                'options' => $options
+            ]);
+
+            $theme = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateThemeCache($themeId);
+
+            // Dispatch evento
+            $this->dispatch('theme.custom_css_configured', [
+                'theme_id' => $themeId,
+                'css_size' => strlen($customCSS),
+                'has_variables' => isset($options['variables']) && $options['variables']
+            ]);
+
+            return $theme;
+        });
+    }
+
+    /**
+     * Gera variações do tema
+     */
+    public function generateThemeVariations(string $themeId, array $variationRules): array
+    {
+        return $this->executeWithMetrics('generate_theme_variations', function () use ($themeId, $variationRules) {
+            $this->validateVariationRules($variationRules);
+
+            $response = $this->httpClient->post("/themes/{$themeId}/generate-variations", [
+                'variation_rules' => $variationRules
+            ]);
+
+            $variations = $response->getData();
+
+            // Dispatch evento
+            $this->dispatch('theme.variations_generated', [
+                'theme_id' => $themeId,
+                'variations_count' => count($variations['variations'] ?? [])
+            ]);
+
+            return $variations;
+        });
+    }
+
+    /**
+     * Otimiza tema para performance
+     */
+    public function optimizeForPerformance(string $themeId, array $optimizationOptions = []): array
+    {
+        return $this->executeWithMetrics('optimize_theme_performance', function () use ($themeId, $optimizationOptions) {
+            $response = $this->httpClient->post("/themes/{$themeId}/optimize-performance", [
+                'optimization_options' => $optimizationOptions
+            ]);
+
+            $result = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateThemeCache($themeId);
+
+            // Dispatch evento
+            $this->dispatch('theme.performance_optimized', [
+                'theme_id' => $themeId,
+                'optimizations_applied' => $result['optimizations_applied'] ?? []
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * Valida tema em diferentes dispositivos
+     */
+    public function validateAcrossDevices(string $themeId, array $devices = []): array
+    {
+        return $this->executeWithMetrics('validate_theme_across_devices', function () use ($themeId, $devices) {
+            $defaultDevices = ['desktop', 'tablet', 'mobile'];
+            $testDevices = empty($devices) ? $defaultDevices : $devices;
+
+            $response = $this->httpClient->post("/themes/{$themeId}/validate-devices", [
+                'devices' => $testDevices
+            ]);
+
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Gera relatório de acessibilidade do tema
+     */
+    public function generateAccessibilityReport(string $themeId): array
+    {
+        return $this->executeWithMetrics('generate_accessibility_report', function () use ($themeId) {
+            $response = $this->httpClient->get("/themes/{$themeId}/accessibility-report");
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
      * Busca tema por ID via API
      */
     private function fetchThemeById(string $themeId): ?array
@@ -504,5 +800,192 @@ class ThemeService extends BaseService implements ServiceInterface
             'animations' => $data['animations'] ?? false,
             'custom_css' => $data['custom_css'] ?? ''
         ];
+    }
+
+    /**
+     * Valida configuração responsiva
+     */
+    private function validateResponsiveConfig(array $config): void
+    {
+        if (!isset($config['breakpoints']) || !is_array($config['breakpoints'])) {
+            throw new ValidationException('Responsive configuration must include breakpoints array');
+        }
+
+        $allowedBreakpoints = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl'];
+        foreach ($config['breakpoints'] as $breakpoint => $settings) {
+            if (!in_array($breakpoint, $allowedBreakpoints)) {
+                throw new ValidationException("Invalid breakpoint: {$breakpoint}");
+            }
+
+            if (!is_array($settings)) {
+                throw new ValidationException("Breakpoint settings must be an array for: {$breakpoint}");
+            }
+        }
+    }
+
+    /**
+     * Valida configuração de grid
+     */
+    private function validateGridConfig(array $config): void
+    {
+        if (isset($config['columns']) && (!is_numeric($config['columns']) || $config['columns'] < 1 || $config['columns'] > 24)) {
+            throw new ValidationException('Grid columns must be between 1 and 24');
+        }
+
+        if (isset($config['gutters']) && !in_array($config['gutters'], ['none', 'small', 'default', 'large', 'custom'])) {
+            throw new ValidationException('Invalid gutter size');
+        }
+    }
+
+    /**
+     * Valida componentes de layout
+     */
+    private function validateLayoutComponents(array $components): void
+    {
+        $allowedComponents = [
+            'header', 'footer', 'sidebar', 'content', 'navigation',
+            'hero', 'features', 'testimonials', 'pricing', 'cta'
+        ];
+
+        foreach ($components as $componentName => $config) {
+            if (!in_array($componentName, $allowedComponents)) {
+                throw new ValidationException("Invalid layout component: {$componentName}");
+            }
+
+            if (!is_array($config)) {
+                throw new ValidationException("Component configuration must be an array for: {$componentName}");
+            }
+        }
+    }
+
+    /**
+     * Valida configuração de espaçamentos
+     */
+    private function validateSpacingConfig(array $config): void
+    {
+        $allowedUnits = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl'];
+
+        foreach ($config as $unit => $value) {
+            if (!in_array($unit, $allowedUnits)) {
+                throw new ValidationException("Invalid spacing unit: {$unit}");
+            }
+
+            if (!is_string($value) && !is_numeric($value)) {
+                throw new ValidationException("Spacing value must be string or numeric for: {$unit}");
+            }
+        }
+    }
+
+    /**
+     * Valida tipografia avançada
+     */
+    private function validateAdvancedTypography(array $config): void
+    {
+        if (isset($config['font_families'])) {
+            foreach ($config['font_families'] as $name => $family) {
+                if (!is_array($family) || !isset($family['family'])) {
+                    throw new ValidationException("Invalid font family configuration for: {$name}");
+                }
+            }
+        }
+
+        if (isset($config['font_sizes'])) {
+            foreach ($config['font_sizes'] as $size => $value) {
+                if (!is_string($value) && !is_numeric($value)) {
+                    throw new ValidationException("Font size must be string or numeric for: {$size}");
+                }
+            }
+        }
+    }
+
+    /**
+     * Valida sistema de cores avançado
+     */
+    private function validateAdvancedColorSystem(array $config): void
+    {
+        if (isset($config['palettes'])) {
+            foreach ($config['palettes'] as $paletteName => $palette) {
+                if (!is_array($palette)) {
+                    throw new ValidationException("Color palette must be an array for: {$paletteName}");
+                }
+
+                foreach ($palette as $colorName => $colorValue) {
+                    if (!is_string($colorValue) || !preg_match('/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/', $colorValue)) {
+                        throw new ValidationException("Invalid color format for '{$paletteName}.{$colorName}': {$colorValue}");
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Valida configuração de animações
+     */
+    private function validateAnimationConfig(array $config): void
+    {
+        if (isset($config['animations'])) {
+            foreach ($config['animations'] as $animationName => $animation) {
+                if (!is_array($animation)) {
+                    throw new ValidationException("Animation configuration must be an array for: {$animationName}");
+                }
+
+                $allowedTypes = ['fade', 'slide', 'scale', 'rotate', 'bounce', 'pulse'];
+                if (isset($animation['type']) && !in_array($animation['type'], $allowedTypes)) {
+                    throw new ValidationException("Invalid animation type for '{$animationName}': {$animation['type']}");
+                }
+
+                if (isset($animation['duration']) && (!is_numeric($animation['duration']) || $animation['duration'] < 0)) {
+                    throw new ValidationException("Animation duration must be a positive number for: {$animationName}");
+                }
+            }
+        }
+    }
+
+    /**
+     * Valida CSS customizado
+     */
+    private function validateCustomCSS(string $css): void
+    {
+        // Basic validation - check for potentially dangerous content
+        $dangerousPatterns = [
+            '/@import\s+url\s*\(\s*["\']?javascript:/i',
+            '/expression\s*\(/i',
+            '/javascript\s*:/i',
+            '/<script/i',
+            '/eval\s*\(/i'
+        ];
+
+        foreach ($dangerousPatterns as $pattern) {
+            if (preg_match($pattern, $css)) {
+                throw new ValidationException('Custom CSS contains potentially dangerous content');
+            }
+        }
+
+        // Check CSS size limit (e.g., 100KB)
+        if (strlen($css) > 102400) {
+            throw new ValidationException('Custom CSS exceeds maximum size limit (100KB)');
+        }
+    }
+
+    /**
+     * Valida regras de variação
+     */
+    private function validateVariationRules(array $rules): void
+    {
+        $allowedVariationTypes = ['color_scheme', 'typography', 'layout', 'spacing', 'components'];
+
+        foreach ($rules as $rule) {
+            if (!is_array($rule) || !isset($rule['type']) || !isset($rule['variations'])) {
+                throw new ValidationException('Invalid variation rule format');
+            }
+
+            if (!in_array($rule['type'], $allowedVariationTypes)) {
+                throw new ValidationException("Invalid variation type: {$rule['type']}");
+            }
+
+            if (!is_array($rule['variations']) || empty($rule['variations'])) {
+                throw new ValidationException('Variation rule must have at least one variation');
+            }
+        }
     }
 }

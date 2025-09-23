@@ -257,13 +257,18 @@ function getOrCreateOrganization($sdk, $organizationData) {
                             if ($provisionResult['success']) {
                                 echo "   ✅ Credenciais provisionadas com sucesso!\n";
                                 echo "   👤 Usuário admin criado: " . $provisionResult['user']['email'] . "\n";
-                                echo "   🔑 API Key criada: " . substr($provisionResult['api_key']['key'], 0, 20) . "...\n";
+                                $apiKeyString = $provisionResult['api_key']['key'] ?? null;
+                                if ($apiKeyString) {
+                                    echo "   🔑 API Key criada: " . substr($apiKeyString, 0, 20) . "...\n";
+                                } else {
+                                    echo "   🔑 API Key: não disponível na resposta\n";
+                                }
                                 echo "   🔒 Senha temporária: " . $provisionResult['user']['password'] . "\n";
                                 echo "   ⚠️  IMPORTANTE: Salve essas credenciais em local seguro!\n";
 
                                 // Marcar que agora tem API key
                                 $hasApiKey = true;
-                                $tenantData['api_key'] = $provisionResult['api_key']['key'];
+                                $tenantData['api_key'] = $provisionResult['api_key']['key'] ?? null;
                                 $tenantData['admin_user'] = $provisionResult['user'];
 
                                 // Re-registrar tenant com credenciais
@@ -443,13 +448,18 @@ function getOrCreateOrganization($sdk, $organizationData) {
                             if ($provisionResult['success']) {
                                 echo "   ✅ Credenciais provisionadas com sucesso!\n";
                                 echo "   👤 Usuário admin criado: " . $provisionResult['user']['email'] . "\n";
-                                echo "   🔑 API Key criada: " . substr($provisionResult['api_key']['key'], 0, 20) . "...\n";
+                                $apiKeyString = $provisionResult['api_key']['key'] ?? null;
+                                if ($apiKeyString) {
+                                    echo "   🔑 API Key criada: " . substr($apiKeyString, 0, 20) . "...\n";
+                                } else {
+                                    echo "   🔑 API Key: não disponível na resposta\n";
+                                }
                                 echo "   🔒 Senha temporária: " . $provisionResult['user']['password'] . "\n";
                                 echo "   ⚠️  IMPORTANTE: Salve essas credenciais em local seguro!\n";
 
                                 // Marcar que agora tem API key
                                 $hasApiKey = true;
-                                $tenantData['api_key'] = $provisionResult['api_key']['key'];
+                                $tenantData['api_key'] = $provisionResult['api_key']['key'] ?? null;
                                 $tenantData['admin_user'] = $provisionResult['user'];
 
                                 // Re-registrar tenant com credenciais

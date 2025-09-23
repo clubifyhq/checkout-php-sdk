@@ -449,6 +449,216 @@ class OrderBumpService extends BaseService implements ServiceInterface
     }
 
     /**
+     * Otimiza automaticamente para melhor conversão
+     */
+    public function autoOptimize(string $bumpId, array $optimizationCriteria = []): array
+    {
+        return $this->executeWithMetrics('auto_optimize_order_bump', function () use ($bumpId, $optimizationCriteria) {
+            $response = $this->httpClient->post("/order-bumps/{$bumpId}/auto-optimize", [
+                'optimization_criteria' => $optimizationCriteria
+            ]);
+
+            $result = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateOrderBumpCache($bumpId);
+
+            // Dispatch evento
+            $this->dispatch('order_bump.auto_optimized', [
+                'bump_id' => $bumpId,
+                'optimizations_applied' => count($result['optimizations'] ?? [])
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * Configura gatilhos condicionais
+     */
+    public function configureConditionalTriggers(string $bumpId, array $triggers): array
+    {
+        return $this->executeWithMetrics('configure_order_bump_triggers', function () use ($bumpId, $triggers) {
+            $this->validateConditionalTriggers($triggers);
+
+            $response = $this->httpClient->put("/order-bumps/{$bumpId}/conditional-triggers", [
+                'triggers' => $triggers
+            ]);
+
+            $bump = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateOrderBumpCache($bumpId);
+
+            // Dispatch evento
+            $this->dispatch('order_bump.conditional_triggers_configured', [
+                'bump_id' => $bumpId,
+                'triggers_count' => count($triggers)
+            ]);
+
+            return $bump;
+        });
+    }
+
+    /**
+     * Configura limitações de exibição
+     */
+    public function configureDisplayLimits(string $bumpId, array $limits): array
+    {
+        return $this->executeWithMetrics('configure_order_bump_display_limits', function () use ($bumpId, $limits) {
+            $this->validateDisplayLimits($limits);
+
+            $response = $this->httpClient->put("/order-bumps/{$bumpId}/display-limits", [
+                'limits' => $limits
+            ]);
+
+            $bump = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateOrderBumpCache($bumpId);
+
+            // Dispatch evento
+            $this->dispatch('order_bump.display_limits_configured', [
+                'bump_id' => $bumpId,
+                'limits' => array_keys($limits)
+            ]);
+
+            return $bump;
+        });
+    }
+
+    /**
+     * Configura animações de entrada/saída
+     */
+    public function configureAnimations(string $bumpId, array $animationConfig): array
+    {
+        return $this->executeWithMetrics('configure_order_bump_animations', function () use ($bumpId, $animationConfig) {
+            $this->validateAnimationConfig($animationConfig);
+
+            $response = $this->httpClient->put("/order-bumps/{$bumpId}/animations", [
+                'animation_config' => $animationConfig
+            ]);
+
+            $bump = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateOrderBumpCache($bumpId);
+
+            // Dispatch evento
+            $this->dispatch('order_bump.animations_configured', [
+                'bump_id' => $bumpId,
+                'animations' => array_keys($animationConfig)
+            ]);
+
+            return $bump;
+        });
+    }
+
+    /**
+     * Agenda order bump para ativação futura
+     */
+    public function scheduleActivation(string $bumpId, string $scheduledDate, array $options = []): array
+    {
+        return $this->executeWithMetrics('schedule_order_bump_activation', function () use ($bumpId, $scheduledDate, $options) {
+            if (!strtotime($scheduledDate)) {
+                throw new ValidationException('Invalid scheduled date format');
+            }
+
+            $response = $this->httpClient->post("/order-bumps/{$bumpId}/schedule-activation", [
+                'scheduled_date' => $scheduledDate,
+                'options' => $options
+            ]);
+
+            $result = $response->getData();
+
+            // Dispatch evento
+            $this->dispatch('order_bump.activation_scheduled', [
+                'bump_id' => $bumpId,
+                'scheduled_date' => $scheduledDate,
+                'options' => $options
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * Obtém sugestões de produtos para order bump
+     */
+    public function getProductSuggestions(string $offerId, array $criteria = []): array
+    {
+        return $this->executeWithMetrics('get_order_bump_product_suggestions', function () use ($offerId, $criteria) {
+            $response = $this->httpClient->get("/offers/{$offerId}/order-bump-suggestions", [
+                'query' => $criteria
+            ]);
+
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Executa teste de posicionamento
+     */
+    public function runPositionTest(string $bumpId, array $positions): array
+    {
+        return $this->executeWithMetrics('run_order_bump_position_test', function () use ($bumpId, $positions) {
+            $this->validatePositionTest($positions);
+
+            $response = $this->httpClient->post("/order-bumps/{$bumpId}/position-test", [
+                'positions' => $positions
+            ]);
+
+            $result = $response->getData();
+
+            // Dispatch evento
+            $this->dispatch('order_bump.position_test_executed', [
+                'bump_id' => $bumpId,
+                'positions_tested' => count($positions)
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * Exporta configuração do order bump
+     */
+    public function exportConfiguration(string $bumpId): array
+    {
+        return $this->executeWithMetrics('export_order_bump_configuration', function () use ($bumpId) {
+            $response = $this->httpClient->get("/order-bumps/{$bumpId}/export-configuration");
+            return $response->getData() ?? [];
+        });
+    }
+
+    /**
+     * Importa configuração para um order bump
+     */
+    public function importConfiguration(string $bumpId, array $configuration): array
+    {
+        return $this->executeWithMetrics('import_order_bump_configuration', function () use ($bumpId, $configuration) {
+            $this->validateImportConfiguration($configuration);
+
+            $response = $this->httpClient->post("/order-bumps/{$bumpId}/import-configuration", [
+                'configuration' => $configuration
+            ]);
+
+            $bump = $response->getData();
+
+            // Invalidar cache
+            $this->invalidateOrderBumpCache($bumpId);
+
+            // Dispatch evento
+            $this->dispatch('order_bump.configuration_imported', [
+                'bump_id' => $bumpId,
+                'configuration_keys' => array_keys($configuration)
+            ]);
+
+            return $bump;
+        });
+    }
+
+    /**
      * Busca order bump por ID via API
      */
     private function fetchOrderBumpById(string $bumpId): ?array
@@ -640,5 +850,111 @@ class OrderBumpService extends BaseService implements ServiceInterface
             'average_order_value_increase' => 0,
             'last_updated' => date('Y-m-d H:i:s')
         ];
+    }
+
+    /**
+     * Valida gatilhos condicionais
+     */
+    private function validateConditionalTriggers(array $triggers): void
+    {
+        foreach ($triggers as $trigger) {
+            if (!is_array($trigger) || !isset($trigger['condition']) || !isset($trigger['action'])) {
+                throw new ValidationException('Invalid conditional trigger format');
+            }
+
+            $allowedConditions = [
+                'cart_value', 'product_category', 'user_segment', 'time_on_page',
+                'previous_purchases', 'device_type', 'geographic_location'
+            ];
+
+            if (!in_array($trigger['condition'], $allowedConditions)) {
+                throw new ValidationException("Invalid trigger condition: {$trigger['condition']}");
+            }
+
+            $allowedActions = ['show', 'hide', 'modify_discount', 'change_position'];
+            if (!in_array($trigger['action'], $allowedActions)) {
+                throw new ValidationException("Invalid trigger action: {$trigger['action']}");
+            }
+        }
+    }
+
+    /**
+     * Valida limitações de exibição
+     */
+    private function validateDisplayLimits(array $limits): void
+    {
+        $allowedLimits = [
+            'max_displays_per_session', 'max_displays_per_user', 'time_between_displays',
+            'max_daily_displays', 'session_timeout'
+        ];
+
+        foreach ($limits as $limit => $value) {
+            if (!in_array($limit, $allowedLimits)) {
+                throw new ValidationException("Invalid display limit: {$limit}");
+            }
+
+            if (!is_numeric($value) || $value < 0) {
+                throw new ValidationException("Display limit '{$limit}' must be a non-negative number");
+            }
+        }
+    }
+
+    /**
+     * Valida configuração de animações
+     */
+    private function validateAnimationConfig(array $config): void
+    {
+        $allowedAnimations = ['fadeIn', 'slideIn', 'bounceIn', 'zoomIn', 'none'];
+
+        foreach ($config as $animationType => $settings) {
+            if (!in_array($animationType, $allowedAnimations)) {
+                throw new ValidationException("Invalid animation type: {$animationType}");
+            }
+
+            if (is_array($settings)) {
+                if (isset($settings['duration']) && (!is_numeric($settings['duration']) || $settings['duration'] < 0)) {
+                    throw new ValidationException("Animation duration must be a non-negative number for: {$animationType}");
+                }
+            }
+        }
+    }
+
+    /**
+     * Valida teste de posicionamento
+     */
+    private function validatePositionTest(array $positions): void
+    {
+        if (count($positions) < 2) {
+            throw new ValidationException('Position test must include at least 2 positions');
+        }
+
+        $allowedPositions = ['after_products', 'before_payment', 'in_payment_form', 'after_customer_info'];
+
+        foreach ($positions as $position) {
+            if (!in_array($position, $allowedPositions)) {
+                throw new ValidationException("Invalid position for test: {$position}");
+            }
+        }
+    }
+
+    /**
+     * Valida configuração de importação
+     */
+    private function validateImportConfiguration(array $configuration): void
+    {
+        $allowedSections = [
+            'position', 'discount', 'appearance', 'targeting',
+            'ab_testing', 'conditional_triggers', 'display_limits', 'animations'
+        ];
+
+        foreach ($configuration as $section => $config) {
+            if (!in_array($section, $allowedSections)) {
+                throw new ValidationException("Invalid configuration section: {$section}");
+            }
+
+            if (!is_array($config)) {
+                throw new ValidationException("Configuration section '{$section}' must be an array");
+            }
+        }
     }
 }

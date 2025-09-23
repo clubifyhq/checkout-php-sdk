@@ -19,13 +19,45 @@ class TestingService extends BaseService implements ServiceInterface
 {
     private array $testEventTypes = [
         'webhook.test' => 'Evento de teste básico',
+
+        // Order events
         'order.created' => 'Pedido criado',
+        'order.paid' => 'Pedido pago',
+        'order.shipped' => 'Pedido enviado',
+        'order.delivered' => 'Pedido entregue',
         'order.completed' => 'Pedido concluído',
         'order.cancelled' => 'Pedido cancelado',
+        'order.refunded' => 'Pedido reembolsado',
+
+        // Payment events
+        'payment.authorized' => 'Pagamento autorizado',
+        'payment.paid' => 'Pagamento pago',
         'payment.completed' => 'Pagamento concluído',
         'payment.failed' => 'Pagamento falhou',
-        'user.registered' => 'Usuário registrado',
+        'payment.refunded' => 'Pagamento reembolsado',
+        'payment.cancelled' => 'Pagamento cancelado',
+
+        // Customer events
+        'customer.created' => 'Cliente criado',
+        'customer.updated' => 'Cliente atualizado',
+        'customer.deleted' => 'Cliente removido',
+
+        // User events
+        'user.preferences.updated' => 'Preferências do usuário atualizadas',
+        'user.data.deleted' => 'Dados do usuário removidos',
         'user.updated' => 'Usuário atualizado',
+
+        // Cart events
+        'cart.created' => 'Carrinho criado',
+        'cart.updated' => 'Carrinho atualizado',
+        'cart.abandoned' => 'Carrinho abandonado',
+        'cart.recovered' => 'Carrinho recuperado',
+
+        // Subscription events
+        'subscription.created' => 'Assinatura criada',
+        'subscription.cancelled' => 'Assinatura cancelada',
+        'subscription.activated' => 'Assinatura ativada',
+        'subscription.payment_failed' => 'Falha no pagamento da assinatura',
     ];
 
     private array $testResults = [];
@@ -516,23 +548,123 @@ class TestingService extends BaseService implements ServiceInterface
         ];
 
         $eventSpecificData = match ($eventType) {
-            'order.created', 'order.completed', 'order.cancelled' => [
+            'order.created', 'order.completed', 'order.cancelled', 'order.shipped', 'order.delivered', 'order.refunded' => [
                 'order_id' => 'test_order_' . rand(1000, 9999),
                 'customer_id' => 'test_customer_' . rand(100, 999),
                 'amount' => rand(1000, 50000) / 100,
                 'currency' => 'BRL',
+                'status' => match ($eventType) {
+                    'order.created' => 'created',
+                    'order.completed' => 'completed',
+                    'order.cancelled' => 'cancelled',
+                    'order.shipped' => 'shipped',
+                    'order.delivered' => 'delivered',
+                    'order.refunded' => 'refunded',
+                    default => 'unknown',
+                },
             ],
-            'payment.completed', 'payment.failed' => [
+            'order.paid' => [
+                'eventType' => 'order.paid',
+                'orderId' => 'test_order_' . rand(1000, 9999),
+                'partnerId' => 'test_partner_' . rand(100, 999),
+                'organizationId' => 'test_org_' . rand(100, 999),
+                'customer' => [
+                    'customerId' => 'test_customer_' . rand(100, 999),
+                    'name' => 'Test Customer ' . rand(1, 100),
+                    'email' => 'test' . rand(100, 999) . '@example.com',
+                    'phone' => '+5511' . rand(100000000, 999999999),
+                    'document' => (string) rand(10000000000, 99999999999),
+                ],
+                'items' => [
+                    [
+                        'productId' => 'test_product_' . rand(1000, 9999),
+                        'name' => 'Test Product ' . rand(1, 100),
+                        'quantity' => rand(1, 5),
+                        'unitPrice' => rand(1000, 50000),
+                        'totalPrice' => rand(1000, 50000),
+                        'type' => ['digital', 'physical'][rand(0, 1)],
+                    ]
+                ],
+                'subtotal' => rand(1000, 50000),
+                'shippingCost' => rand(0, 2000),
+                'discount' => rand(0, 5000),
+                'total' => rand(5000, 50000),
+                'currency' => 'BRL',
+                'payment' => [
+                    'method' => ['credit_card', 'pix', 'boleto'][rand(0, 2)],
+                    'brand' => 'visa',
+                    'lastFourDigits' => (string) rand(1000, 9999),
+                    'installments' => rand(1, 12),
+                    'status' => 'paid',
+                    'paidAt' => date('c'),
+                ],
+                'orderDate' => date('c'),
+                'priority' => 'high',
+                'correlationId' => 'test_corr_' . uniqid(),
+                'metadata' => [
+                    'utm_source' => 'test',
+                    'utm_medium' => 'webhook_test',
+                    'test_mode' => true,
+                ],
+            ],
+            'payment.completed', 'payment.failed', 'payment.paid', 'payment.authorized', 'payment.refunded', 'payment.cancelled' => [
                 'payment_id' => 'test_payment_' . rand(1000, 9999),
                 'order_id' => 'test_order_' . rand(1000, 9999),
                 'amount' => rand(1000, 50000) / 100,
                 'currency' => 'BRL',
                 'method' => 'credit_card',
+                'status' => match ($eventType) {
+                    'payment.completed', 'payment.paid' => 'paid',
+                    'payment.failed' => 'failed',
+                    'payment.authorized' => 'authorized',
+                    'payment.refunded' => 'refunded',
+                    'payment.cancelled' => 'cancelled',
+                    default => 'unknown',
+                },
             ],
-            'user.registered', 'user.updated' => [
+            'user.preferences.updated', 'user.data.deleted', 'user.updated' => [
                 'user_id' => 'test_user_' . rand(1000, 9999),
                 'email' => 'test' . rand(100, 999) . '@example.com',
                 'name' => 'Test User ' . rand(1, 100),
+            ],
+            'customer.created', 'customer.updated', 'customer.deleted' => [
+                'customer_id' => 'test_customer_' . rand(100, 999),
+                'email' => 'test' . rand(100, 999) . '@example.com',
+                'name' => 'Test Customer ' . rand(1, 100),
+                'status' => match ($eventType) {
+                    'customer.created' => 'active',
+                    'customer.updated' => 'active',
+                    'customer.deleted' => 'deleted',
+                    default => 'unknown',
+                },
+            ],
+            'cart.created', 'cart.updated', 'cart.abandoned', 'cart.recovered' => [
+                'cart_id' => 'test_cart_' . rand(1000, 9999),
+                'customer_id' => 'test_customer_' . rand(100, 999),
+                'items_count' => rand(1, 10),
+                'total' => rand(1000, 50000) / 100,
+                'currency' => 'BRL',
+                'status' => match ($eventType) {
+                    'cart.created' => 'active',
+                    'cart.updated' => 'active',
+                    'cart.abandoned' => 'abandoned',
+                    'cart.recovered' => 'recovered',
+                    default => 'unknown',
+                },
+            ],
+            'subscription.created', 'subscription.cancelled', 'subscription.activated', 'subscription.payment_failed' => [
+                'subscription_id' => 'test_sub_' . rand(1000, 9999),
+                'customer_id' => 'test_customer_' . rand(100, 999),
+                'plan_id' => 'test_plan_' . rand(100, 999),
+                'amount' => rand(1000, 50000) / 100,
+                'currency' => 'BRL',
+                'status' => match ($eventType) {
+                    'subscription.created' => 'active',
+                    'subscription.cancelled' => 'cancelled',
+                    'subscription.activated' => 'active',
+                    'subscription.payment_failed' => 'past_due',
+                    default => 'unknown',
+                },
             ],
             default => [
                 'message' => 'Test event for webhook validation',

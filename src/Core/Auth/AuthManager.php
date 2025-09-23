@@ -775,7 +775,12 @@ class AuthManager implements AuthManagerInterface
         try {
             // Verificar se tem API key válida
             if (!$this->credentialManager->hasValidApiKey($tenantId)) {
-                throw new AuthenticationException("Tenant {$tenantId} does not have valid API key for authentication");
+                // Try to obtain credentials for this tenant if missing
+                $credentialResult = $this->attemptCredentialRetrieval($tenantId);
+
+                if (!$credentialResult['success']) {
+                    throw new AuthenticationException("Tenant {$tenantId} does not have valid API key for authentication. " . $credentialResult['message']);
+                }
             }
 
             // Alternar contexto
@@ -823,6 +828,75 @@ class AuthManager implements AuthManagerInterface
             }
 
             throw new AuthenticationException("Failed to switch to tenant {$tenantId}: " . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Attempt to retrieve credentials for a tenant that doesn't have API key
+     */
+    private function attemptCredentialRetrieval(string $tenantId): array
+    {
+        try {
+            // First try to get API keys for this tenant
+            $response = $this->httpClient->get("api-keys", [
+                'query' => ['tenant_id' => $tenantId]
+            ]);
+
+            if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
+                $data = json_decode($response->getBody()->getContents(), true);
+                $apiKeys = $data['data'] ?? $data['api_keys'] ?? $data;
+
+                if (is_array($apiKeys) && count($apiKeys) > 0) {
+                    $apiKey = $apiKeys[0] ?? null;
+                    if ($apiKey && isset($apiKey['key'])) {
+                        // Update the credential manager with the found API key
+                        $this->credentialManager->addTenantContext($tenantId, [
+                            'tenant_id' => $tenantId,
+                            'api_key' => $apiKey['key'],
+                            'api_key_id' => $apiKey['id'] ?? $apiKey['_id'] ?? null,
+                            'name' => $apiKey['name'] ?? "Tenant {$tenantId}"
+                        ]);
+
+                        return [
+                            'success' => true,
+                            'message' => 'API key found and credentials updated'
+                        ];
+                    }
+                }
+            }
+
+            // Fallback: try to get tenant info to see if it has embedded api_key
+            $tenantResponse = $this->httpClient->get("tenants/{$tenantId}");
+            if ($tenantResponse->getStatusCode() >= 200 && $tenantResponse->getStatusCode() < 300) {
+                $tenantData = json_decode($tenantResponse->getBody()->getContents(), true);
+                $tenant = $tenantData['data'] ?? $tenantData;
+
+                if (isset($tenant['api_key']) && !empty($tenant['api_key'])) {
+                    $this->credentialManager->addTenantContext($tenantId, [
+                        'tenant_id' => $tenantId,
+                        'api_key' => $tenant['api_key'],
+                        'name' => $tenant['name'] ?? "Tenant {$tenantId}",
+                        'domain' => $tenant['domain'] ?? null,
+                        'subdomain' => $tenant['subdomain'] ?? null
+                    ]);
+
+                    return [
+                        'success' => true,
+                        'message' => 'Credentials retrieved from tenant data'
+                    ];
+                }
+            }
+
+            return [
+                'success' => false,
+                'message' => 'No API key found for tenant - try using super admin to provision credentials'
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Failed to retrieve tenant credentials: ' . $e->getMessage()
+            ];
         }
     }
 

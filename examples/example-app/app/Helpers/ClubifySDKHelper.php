@@ -133,26 +133,41 @@ class ClubifySDKHelper
     {
         return [
             'credentials' => [
-                'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID'),
                 'api_key' => env('CLUBIFY_CHECKOUT_API_KEY'),
-                'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'sandbox')
+                'api_secret' => env('CLUBIFY_CHECKOUT_API_SECRET'),
+                'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID'),
             ],
+            'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'sandbox'),
+            'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'https://checkout.svelve.com/api/v1'),
+
             'http' => [
-                'timeout' => 5000, // 5 segundos em milissegundos (convertido automaticamente)
-                'connect_timeout' => 3, // 3 segundos para conectar (já em segundos!)
-                'retries' => 1
+                'timeout' => (int) env('CLUBIFY_CHECKOUT_TIMEOUT', 30),
+                'connect_timeout' => (int) env('CLUBIFY_CHECKOUT_CONNECT_TIMEOUT', 10),
+                'retry' => [
+                    'enabled' => true,
+                    'attempts' => (int) env('CLUBIFY_CHECKOUT_RETRY_ATTEMPTS', 3),
+                    'delay' => (int) env('CLUBIFY_CHECKOUT_RETRY_DELAY', 1000),
+                ],
             ],
-            'endpoints' => [
-                'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'https://checkout.svelve.com/api/v1')
-            ],
+
             'cache' => [
                 'enabled' => env('CLUBIFY_CHECKOUT_CACHE_ENABLED', true),
-                'ttl' => env('CLUBIFY_CHECKOUT_CACHE_TTL', 3600)
+                'default_ttl' => (int) env('CLUBIFY_CHECKOUT_CACHE_TTL', 3600),
+                'prefix' => env('CLUBIFY_CHECKOUT_CACHE_PREFIX', 'clubify_checkout'),
+                'store' => env('CLUBIFY_CHECKOUT_CACHE_STORE', 'default'),
             ],
-            'logging' => [
-                'enabled' => env('CLUBIFY_CHECKOUT_LOG_REQUESTS', true),
-                'level' => env('CLUBIFY_CHECKOUT_LOG_LEVEL', 'info')
-            ]
+
+            'logger' => [
+                'enabled' => env('CLUBIFY_CHECKOUT_LOGGER_ENABLED', true),
+                'level' => env('CLUBIFY_CHECKOUT_LOGGER_LEVEL', 'info'),
+                'channel' => env('CLUBIFY_CHECKOUT_LOGGER_CHANNEL', 'single'),
+            ],
+
+            'webhooks' => [
+                'enabled' => env('CLUBIFY_CHECKOUT_WEBHOOKS_ENABLED', true),
+                'secret' => env('CLUBIFY_CHECKOUT_WEBHOOK_SECRET'),
+                'tolerance' => (int) env('CLUBIFY_CHECKOUT_WEBHOOK_TOLERANCE', 300),
+            ],
         ];
     }
 
@@ -165,8 +180,9 @@ class ClubifySDKHelper
             'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID', 'NOT_SET'),
             'api_key_present' => !empty(env('CLUBIFY_CHECKOUT_API_KEY')),
             'api_key_first_10' => substr(env('CLUBIFY_CHECKOUT_API_KEY', ''), 0, 10) . '...',
+            'api_secret_present' => !empty(env('CLUBIFY_CHECKOUT_API_SECRET')),
             'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'NOT_SET'),
-            'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'NOT_SET'),
+            'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'NOT_SET'),
         ];
     }
 
@@ -414,19 +430,20 @@ class ClubifySDKHelper
 
         // Override with super admin specific configuration
         $superAdminConfig = array_merge($baseConfig, [
-            'credentials' => [
-                'api_key' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_API_KEY', $baseConfig['credentials']['api_key']),
+            'credentials' => array_merge($baseConfig['credentials'], [
+                'api_key' => env('CLUBIFY_SUPER_ADMIN_API_KEY', $baseConfig['credentials']['api_key']),
+                'api_secret' => env('CLUBIFY_SUPER_ADMIN_API_SECRET', $baseConfig['credentials']['api_secret']),
                 'super_admin_token' => $superAdminToken,
-                'environment' => $baseConfig['credentials']['environment'],
                 'super_admin_mode' => true,
-            ],
-            'endpoints' => [
-                'base_url' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_API_URL', $baseConfig['endpoints']['base_url']),
-                'super_admin_prefix' => '/super-admin',
-            ],
+            ]),
+            'base_url' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_API_URL', $baseConfig['base_url']),
+            'super_admin_prefix' => '/super-admin',
+
             'http' => array_merge($baseConfig['http'], [
-                'timeout' => 10000, // Longer timeout for admin operations
-                'retries' => 2,
+                'timeout' => 60, // Longer timeout for admin operations
+                'retry' => array_merge($baseConfig['http']['retry'], [
+                    'attempts' => 2,
+                ]),
             ]),
         ]);
 
@@ -445,13 +462,12 @@ class ClubifySDKHelper
         $baseConfig = self::getConfig();
 
         return array_merge($baseConfig, [
-            'credentials' => [
+            'credentials' => array_merge($baseConfig['credentials'], [
                 'tenant_id' => $tenantId,
-                'api_key' => $baseConfig['credentials']['api_key'],
                 'super_admin_token' => $superAdminToken,
-                'environment' => $baseConfig['credentials']['environment'],
                 'impersonation_mode' => true,
-            ],
+            ]),
+
             'http' => array_merge($baseConfig['http'], [
                 'headers' => array_merge($baseConfig['http']['headers'] ?? [], [
                     'X-Tenant-ID' => $tenantId,

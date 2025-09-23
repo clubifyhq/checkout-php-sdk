@@ -38,7 +38,7 @@ class ClubifyDemoController extends Controller
             $credentials = [
                 'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID', 'NOT_SET'),
                 'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'NOT_SET'),
-                'base_url' => env('CLUBIFY_CHECKOUT_API_URL', 'NOT_SET'),
+                'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'NOT_SET'),
             ];
 
             return view('clubify.demo', [
@@ -120,7 +120,7 @@ class ClubifyDemoController extends Controller
 
     private function testExternalAPI(): array
     {
-        $apiUrl = env('CLUBIFY_CHECKOUT_API_URL', 'https://checkout.svelve.com/api/v1');
+        $apiUrl = env('CLUBIFY_CHECKOUT_BASE_URL', 'https://checkout.svelve.com/api/v1');
         $context = stream_context_create(['http' => ['timeout' => 3]]);
 
         $startTime = microtime(true);
@@ -141,12 +141,20 @@ class ClubifyDemoController extends Controller
 
             // Tentar criar SDK diretamente sem helper
             $config = [
-                'credentials' => [
-                    'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID'),
-                    'api_key' => env('CLUBIFY_CHECKOUT_API_KEY'),
-                ],
+                'api_key' => env('CLUBIFY_CHECKOUT_API_KEY'),
+                'api_secret' => env('CLUBIFY_CHECKOUT_API_SECRET'),
+                'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID'),
                 'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'sandbox'),
-                'http' => ['timeout' => 3, 'retries' => 1]
+                'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'https://checkout.svelve.com/api/v1'),
+                'http' => [
+                    'timeout' => 3,
+                    'connect_timeout' => 2,
+                    'retry' => [
+                        'enabled' => true,
+                        'attempts' => 1,
+                        'delay' => 500,
+                    ],
+                ]
             ];
 
             $sdk = new \Clubify\Checkout\ClubifyCheckoutSDK($config);

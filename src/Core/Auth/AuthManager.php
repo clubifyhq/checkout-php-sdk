@@ -6,6 +6,7 @@ namespace Clubify\Checkout\Core\Auth;
 
 use Clubify\Checkout\Core\Config\ConfigurationInterface;
 use Clubify\Checkout\Core\Http\Client;
+use Clubify\Checkout\Core\Security\SecurityValidator;
 use Clubify\Checkout\Exceptions\AuthenticationException;
 use Clubify\Checkout\Exceptions\HttpException;
 
@@ -45,6 +46,16 @@ class AuthManager implements AuthManagerInterface
 
         if (!$tenantId || !$apiKey) {
             throw new AuthenticationException('Tenant ID and API key are required for authentication');
+        }
+
+        // Security: Validate API key format before processing
+        if (!SecurityValidator::validateApiKey($apiKey)) {
+            throw new AuthenticationException('Invalid API key format');
+        }
+
+        // Security: Validate tenant ID format
+        if (!SecurityValidator::validateUuid($tenantId)) {
+            throw new AuthenticationException('Invalid tenant ID format');
         }
 
         try {
@@ -117,7 +128,7 @@ class AuthManager implements AuthManagerInterface
         }
 
         $token = $this->tokenStorage->getAccessToken();
-        error_log('AuthManager getAccessToken: ' . ($token ? 'present (' . substr($token, 0, 20) . '...)' : 'missing'));
+        // Security: Remove debug logging that could expose sensitive tokens
         return $token;
     }
 
@@ -359,12 +370,11 @@ class AuthManager implements AuthManagerInterface
     }
 
     /**
-     * Verificar formato da API key
+     * Verificar formato da API key - Enhanced with SecurityValidator
      */
     private function isValidApiKeyFormat(string $apiKey): bool
     {
-        // API keys do Clubify seguem formato: clb_test_* ou clb_live_*
-        return preg_match('/^clb_(test|live)_[a-f0-9]{32}$/', $apiKey) === 1;
+        return SecurityValidator::validateApiKey($apiKey);
     }
 
     /**
@@ -372,10 +382,31 @@ class AuthManager implements AuthManagerInterface
      */
     public function login(string $email, string $password, ?string $tenantId = null, ?string $deviceFingerprint = null): array
     {
+        // Security: Validate inputs
+        if (!SecurityValidator::validateEmail($email)) {
+            throw new AuthenticationException('Invalid email format');
+        }
+
+        $passwordValidation = SecurityValidator::validatePasswordStrength($password);
+        if (!$passwordValidation['valid']) {
+            throw new AuthenticationException('Password does not meet security requirements: ' . implode(', ', $passwordValidation['errors']));
+        }
+
         $tenantId = $tenantId ?? $this->config->getTenantId();
 
         if (!$tenantId) {
             throw new AuthenticationException('Tenant ID is required for login');
+        }
+
+        // Security: Validate tenant ID format
+        if (!SecurityValidator::validateUuid($tenantId)) {
+            throw new AuthenticationException('Invalid tenant ID format');
+        }
+
+        // Security: Rate limiting for login attempts
+        $identifier = $email . ':' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        if (!SecurityValidator::checkRateLimit($identifier, 5, 900)) { // 5 attempts per 15 minutes
+            throw new AuthenticationException('Too many login attempts. Please try again later.');
         }
 
         try {
@@ -546,7 +577,7 @@ class AuthManager implements AuthManagerInterface
             // Removidos campos não aceitos pelo DTO: settings, features, initialUser
         ];
 
-        error_log('Create Tenant Request Data: ' . json_encode($requestData, JSON_PRETTY_PRINT));
+        // Security: Remove sensitive data logging in production
 
         $response = $this->httpClient->post('tenants', [
             'json' => $requestData
@@ -558,7 +589,7 @@ class AuthManager implements AuthManagerInterface
         }
 
         $data = json_decode($response->getBody()->getContents(), true);
-        error_log('Create Tenant Response: ' . json_encode($data, JSON_PRETTY_PRINT));
+        // Security: Remove sensitive response logging in production
 
         // Verificar se a resposta tem a estrutura esperada
         if (isset($data['success']) && $data['success'] && isset($data['data'])) {
@@ -651,8 +682,11 @@ class AuthManager implements AuthManagerInterface
             // Re-throw authentication exceptions
             throw $e;
         } catch (\Exception $e) {
-            // Log but don't fail registration for non-critical errors
-            error_log("Non-critical error during tenant registration. Tenant ID: {$tenantId}, Error: " . $e->getMessage());
+            // Security: Log registration errors without exposing sensitive data
+            $this->logSecurityEvent('tenant_registration_error', [
+                'tenant_id' => $tenantId,
+                'error_type' => get_class($e)
+            ]);
 
             // Register with limited information
             $this->credentialManager->addTenantContext($tenantId, [
@@ -782,7 +816,10 @@ class AuthManager implements AuthManagerInterface
                 }
                 $this->currentRole = $previousRole;
             } catch (\Exception $rollbackError) {
-                error_log("Failed to rollback context switch: " . $rollbackError->getMessage());
+                // Security: Log rollback failures without exposing sensitive data
+                $this->logSecurityEvent('context_rollback_failure', [
+                    'error_type' => get_class($rollbackError)
+                ]);
             }
 
             throw new AuthenticationException("Failed to switch to tenant {$tenantId}: " . $e->getMessage(), 0, $e);
@@ -876,28 +913,25 @@ class AuthManager implements AuthManagerInterface
                     'grant_type' => 'api_key'
                 ];
 
-                error_log('Super Admin Auth Request (API Key): ' . json_encode($requestData));
-
+                // Security: Remove sensitive debug logging
                 // Tentar autenticar via endpoint de API key do user-management-service
                 $response = $this->httpClient->post('auth/api-key/token', [
                     'json' => $requestData
                 ]);
 
                 $statusCode = $response->getStatusCode();
-                error_log('Super Admin Auth Response Code (API Key): ' . $statusCode);
 
                 if ($statusCode >= 200 && $statusCode < 300) {
                     $data = json_decode($response->getBody()->getContents(), true);
-                    error_log('Super Admin Auth Success (API Key): ' . json_encode($data));
-
                     return $this->storeAuthTokens($data, $credentials, 'api_key');
-                } else {
-                    $errorBody = $response->getBody()->getContents();
-                    error_log('Super Admin Auth Failed (API Key) - Status: ' . $statusCode . ', Body: ' . $errorBody);
                 }
 
             } catch (\Exception $e) {
-                error_log('Super Admin Auth Exception (API Key): ' . $e->getMessage());
+                // Security: Avoid exposing sensitive authentication details in logs
+                $this->logSecurityEvent('auth_failure', [
+                    'method' => 'api_key',
+                    'error_type' => get_class($e)
+                ]);
             }
         }
 
@@ -910,8 +944,7 @@ class AuthManager implements AuthManagerInterface
                     'rememberMe' => true
                 ];
 
-                error_log('Super Admin Auth Request (Login): ' . json_encode(['email' => $credentials['email']]));
-
+                // Security: Remove sensitive debug logging
                 // Tentar autenticar via endpoint de login
                 $response = $this->httpClient->post('auth/login', [
                     'json' => $loginData,
@@ -921,24 +954,29 @@ class AuthManager implements AuthManagerInterface
                 ]);
 
                 $statusCode = $response->getStatusCode();
-                error_log('Super Admin Auth Response Code (Login): ' . $statusCode);
 
                 if ($statusCode >= 200 && $statusCode < 300) {
                     $data = json_decode($response->getBody()->getContents(), true);
-                    error_log('Super Admin Auth Success (Login): ' . json_encode($data));
-
                     return $this->storeAuthTokens($data, $credentials, 'login');
-                } else {
-                    $errorBody = $response->getBody()->getContents();
-                    error_log('Super Admin Auth Failed (Login) - Status: ' . $statusCode . ', Body: ' . $errorBody);
                 }
 
             } catch (\Exception $e) {
-                error_log('Super Admin Auth Exception (Login): ' . $e->getMessage());
+                // Security: Avoid exposing sensitive authentication details in logs
+                $this->logSecurityEvent('auth_failure', [
+                    'method' => 'login',
+                    'error_type' => get_class($e)
+                ]);
             }
         }
 
-        error_log('Super Admin Auth Failed: No valid authentication method succeeded');
+        // Security: Log authentication failure securely
+        $this->logSecurityEvent('auth_failure', [
+            'method' => 'all_methods_failed',
+            'available_methods' => array_keys(array_filter([
+                'api_key' => isset($credentials['api_key']),
+                'login' => isset($credentials['email'], $credentials['password'])
+            ]))
+        ]);
         return false;
     }
 
@@ -952,7 +990,7 @@ class AuthManager implements AuthManagerInterface
         $refreshToken = $data['refresh_token'] ?? $data['tokens']['refreshToken'] ?? null;
         $expiresIn = $data['expires_in'] ?? 3600;
 
-        error_log('Storing tokens - Access Token: ' . ($accessToken ? 'present' : 'missing') . ', Refresh Token: ' . ($refreshToken ? 'present' : 'missing'));
+        // Security: Remove sensitive token logging
 
         // Se retornou tokens, armazenar
         if ($accessToken) {

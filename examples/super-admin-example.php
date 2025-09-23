@@ -126,7 +126,7 @@ function getOrCreateOrganization($sdk, $organizationData) {
                                 'admin_email' => $organizationData['admin_email'] ?? "admin@{$tenantId}.local",
                                 'admin_name' => 'Tenant Administrator',
                                 'api_key_name' => 'Auto-generated Admin Key',
-                                'environment' => $EXAMPLE_CONFIG['sdk']['environment'] ?? 'production'
+                                'environment' => $EXAMPLE_CONFIG['sdk']['environment'] ?? 'test'
                             ];
 
                             $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, $provisioningOptions);
@@ -228,7 +228,7 @@ function getOrCreateOrganization($sdk, $organizationData) {
                                 'admin_email' => $organizationData['admin_email'] ?? "admin@{$tenantId}.local",
                                 'admin_name' => 'Tenant Administrator',
                                 'api_key_name' => 'Auto-generated Admin Key',
-                                'environment' => $EXAMPLE_CONFIG['sdk']['environment'] ?? 'production'
+                                'environment' => $EXAMPLE_CONFIG['sdk']['environment'] ?? 'test'
                             ];
 
                             $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, $provisioningOptions);

@@ -16,14 +16,17 @@ use Clubify\Checkout\Core\Cache\CacheManager;
 use Clubify\Checkout\Modules\Organization\OrganizationModule;
 use Clubify\Checkout\Modules\Products\ProductsModule;
 use Clubify\Checkout\Modules\Checkout\CheckoutModule;
+use Clubify\Checkout\Modules\Cart\CartModule;
 use Clubify\Checkout\Modules\Payments\PaymentsModule;
 use Clubify\Checkout\Modules\Customers\CustomersModule;
 use Clubify\Checkout\Modules\Webhooks\WebhooksModule;
 use Clubify\Checkout\Modules\Tracking\TrackingModule;
 use Clubify\Checkout\Modules\UserManagement\UserManagementModule;
+use Clubify\Checkout\Modules\Offer\OfferModule;
 use Clubify\Checkout\Modules\UserManagement\Factories\UserServiceFactory;
 use Clubify\Checkout\Modules\Customers\Factories\CustomersServiceFactory;
 use Clubify\Checkout\Modules\Products\Factories\ProductsServiceFactory;
+use Clubify\Checkout\Modules\Cart\Factories\CartServiceFactory;
 use Clubify\Checkout\Modules\Webhooks\Factories\WebhooksServiceFactory;
 use Clubify\Checkout\Modules\Notifications\Factories\NotificationsServiceFactory;
 use Clubify\Checkout\Modules\Tracking\Factories\TrackingServiceFactory;
@@ -32,6 +35,7 @@ use Clubify\Checkout\Modules\Subscriptions\Factories\SubscriptionsServiceFactory
 use Clubify\Checkout\Modules\Orders\Factories\OrdersServiceFactory;
 use Clubify\Checkout\Modules\Payments\Factories\PaymentsServiceFactory;
 use Clubify\Checkout\Modules\SuperAdmin\SuperAdminModule;
+use Clubify\Checkout\Modules\Offer\Factories\OfferServiceFactory;
 use Clubify\Checkout\Enums\Environment;
 use Clubify\Checkout\Exceptions\ConfigurationException;
 use Clubify\Checkout\Exceptions\SDKException;
@@ -61,6 +65,7 @@ class ClubifyCheckoutSDK
     private ?OrganizationModule $organization = null;
     private ?ProductsModule $products = null;
     private ?CheckoutModule $checkout = null;
+    private ?CartModule $cart = null;
     private ?PaymentsModule $payments = null;
     private ?CustomersModule $customers = null;
     private ?WebhooksModule $webhooks = null;
@@ -68,6 +73,7 @@ class ClubifyCheckoutSDK
     private ?UserManagementModule $userManagement = null;
     private ?SubscriptionsModule $subscriptions = null;
     private ?SuperAdminModule $superAdmin = null;
+    private ?OfferModule $offer = null;
 
     /**
      * Cria nova instância do SDK
@@ -406,6 +412,158 @@ class ClubifyCheckoutSDK
     }
 
     /**
+     * Criar oferta completa (método de conveniência)
+     *
+     * @param array $offerData Dados da oferta
+     * @return array Oferta criada
+     * @throws SDKException
+     */
+    public function createOffer(array $offerData): array
+    {
+        return $this->offer()->createOffer($offerData);
+    }
+
+    /**
+     * Obter oferta pública por slug (método de conveniência)
+     *
+     * @param string $slug Slug da oferta
+     * @return array|null Dados da oferta pública
+     * @throws SDKException
+     */
+    public function getPublicOffer(string $slug): ?array
+    {
+        return $this->offer()->getPublicOffer($slug);
+    }
+
+    /**
+     * Configurar tema de oferta (método de conveniência)
+     *
+     * @param string $offerId ID da oferta
+     * @param array $themeData Dados do tema
+     * @return array Resultado da configuração
+     * @throws SDKException
+     */
+    public function configureOfferTheme(string $offerId, array $themeData): array
+    {
+        return $this->offer()->configureTheme($offerId, $themeData);
+    }
+
+    /**
+     * Configurar layout de oferta (método de conveniência)
+     *
+     * @param string $offerId ID da oferta
+     * @param array $layoutData Dados do layout
+     * @return array Resultado da configuração
+     * @throws SDKException
+     */
+    public function configureOfferLayout(string $offerId, array $layoutData): array
+    {
+        return $this->offer()->configureLayout($offerId, $layoutData);
+    }
+
+    /**
+     * Adicionar upsell à oferta (método de conveniência)
+     *
+     * @param string $offerId ID da oferta
+     * @param array $upsellData Dados do upsell
+     * @return array Upsell criado
+     * @throws SDKException
+     */
+    public function addOfferUpsell(string $offerId, array $upsellData): array
+    {
+        return $this->offer()->addUpsell($offerId, $upsellData);
+    }
+
+    /**
+     * Criar carrinho (método de conveniência)
+     *
+     * @param string $sessionId ID da sessão
+     * @param array $data Dados do carrinho
+     * @return array Carrinho criado
+     * @throws SDKException
+     */
+    public function createCart(string $sessionId, array $data = []): array
+    {
+        return $this->cart()->create($sessionId, $data);
+    }
+
+    /**
+     * Buscar carrinho por ID (método de conveniência)
+     *
+     * @param string $id ID do carrinho
+     * @return array|null Carrinho encontrado
+     * @throws SDKException
+     */
+    public function findCart(string $id): ?array
+    {
+        return $this->cart()->find($id);
+    }
+
+    /**
+     * Adicionar item ao carrinho (método de conveniência)
+     *
+     * @param string $cartId ID do carrinho
+     * @param array $itemData Dados do item
+     * @return array Carrinho atualizado
+     * @throws SDKException
+     */
+    public function addCartItem(string $cartId, array $itemData): array
+    {
+        return $this->cart()->addItem($cartId, $itemData);
+    }
+
+    /**
+     * Aplicar promoção ao carrinho (método de conveniência)
+     *
+     * @param string $cartId ID do carrinho
+     * @param string $promotionCode Código da promoção
+     * @return array Carrinho atualizado
+     * @throws SDKException
+     */
+    public function applyCartPromotion(string $cartId, string $promotionCode): array
+    {
+        return $this->cart()->applyPromotion($cartId, $promotionCode);
+    }
+
+    /**
+     * Processar checkout one-click no carrinho (método de conveniência)
+     *
+     * @param string $cartId ID do carrinho
+     * @param array $paymentData Dados do pagamento
+     * @return array Resultado do processamento
+     * @throws SDKException
+     */
+    public function processCartOneClick(string $cartId, array $paymentData): array
+    {
+        return $this->cart()->processOneClick($cartId, $paymentData);
+    }
+
+    /**
+     * Iniciar navegação de fluxo (método de conveniência)
+     *
+     * @param string $offerId ID da oferta
+     * @param array $context Contexto da navegação
+     * @return array Navegação iniciada
+     * @throws SDKException
+     */
+    public function startCartNavigation(string $offerId, array $context = []): array
+    {
+        return $this->cart()->startFlowNavigation($offerId, $context);
+    }
+
+    /**
+     * Setup completo de carrinho (método de conveniência)
+     *
+     * @param array $cartData Dados do carrinho
+     * @return array Carrinho criado e configurado
+     * @throws SDKException
+     */
+    public function setupCompleteCart(array $cartData): array
+    {
+        return $this->cart()->setupComplete($cartData);
+    }
+
+    /**
      * Acesso ao módulo Organization
      */
     public function organization(): OrganizationModule
@@ -442,6 +600,24 @@ class ClubifyCheckoutSDK
         }
 
         return $this->checkout;
+    }
+
+    /**
+     * Acesso ao módulo Cart
+     */
+    public function cart(): CartModule
+    {
+        if (!$this->cart) {
+            $this->cart = new CartModule();
+            $this->cart->initialize($this->config, $this->getLogger());
+            $this->cart->setDependencies(
+                $this->getHttpClient(),
+                $this->getCache(),
+                $this->getEventDispatcher()
+            );
+        }
+
+        return $this->cart;
     }
 
     /**
@@ -520,6 +696,19 @@ class ClubifyCheckoutSDK
         }
 
         return $this->subscriptions;
+    }
+
+    /**
+     * Acesso ao módulo Offer
+     */
+    public function offer(): OfferModule
+    {
+        if (!$this->offer) {
+            $this->offer = new OfferModule($this);
+            $this->offer->initialize($this->config, $this->getLogger());
+        }
+
+        return $this->offer;
     }
 
     /**
@@ -699,12 +888,14 @@ class ClubifyCheckoutSDK
                 'organization' => $this->organization !== null,
                 'products' => $this->products !== null,
                 'checkout' => $this->checkout !== null,
+                'cart' => $this->cart !== null,
                 'payments' => $this->payments !== null,
                 'customers' => $this->customers !== null,
                 'webhooks' => $this->webhooks !== null,
                 'tracking' => $this->tracking !== null,
                 'user_management' => $this->userManagement !== null,
                 'subscriptions' => $this->subscriptions !== null,
+                'offer' => $this->offer !== null,
             ],
             'memory_usage' => memory_get_usage(true),
             'peak_memory' => memory_get_peak_usage(true),
@@ -769,6 +960,25 @@ class ClubifyCheckoutSDK
     public function createProductsServiceFactory(): ProductsServiceFactory
     {
         return new ProductsServiceFactory(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher()
+        );
+    }
+
+    /**
+     * Criar Cart Service Factory
+     *
+     * Cria uma factory para gerenciar services do Cart
+     * com todas as dependências necessárias injetadas.
+     *
+     * @return CartServiceFactory Factory configurada
+     */
+    public function createCartServiceFactory(): CartServiceFactory
+    {
+        return new CartServiceFactory(
             $this->config,
             $this->getLogger(),
             $this->getHttpClient(),
@@ -876,6 +1086,25 @@ class ClubifyCheckoutSDK
     public function createPaymentsServiceFactory(): PaymentsServiceFactory
     {
         return new PaymentsServiceFactory(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher()
+        );
+    }
+
+    /**
+     * Criar Offer Service Factory
+     *
+     * Cria uma factory para gerenciar services do Offer
+     * com todas as dependências necessárias injetadas.
+     *
+     * @return OfferServiceFactory Factory configurada
+     */
+    public function createOfferServiceFactory(): OfferServiceFactory
+    {
+        return new OfferServiceFactory(
             $this->config,
             $this->getLogger(),
             $this->getHttpClient(),

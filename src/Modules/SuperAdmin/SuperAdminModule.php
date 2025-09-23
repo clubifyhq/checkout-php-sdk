@@ -460,7 +460,7 @@ class SuperAdminModule implements ModuleInterface
             $payload = [
                 'name' => $keyData['name'] ?? 'Tenant Admin API Key',
                 'description' => $keyData['description'] ?? 'API key for tenant admin operations',
-                'environment' => $keyData['environment'] ?? 'production',
+                'environment' => $keyData['environment'] ?? 'test',
                 'allowedOrigins' => $keyData['allowedOrigins'] ?? ['*'],
                 'rateLimiting' => $keyData['rateLimiting'] ?? [
                     'requestsPerMinute' => 120,
@@ -595,18 +595,30 @@ class SuperAdminModule implements ModuleInterface
     }
 
     /**
-     * Gerar senha segura
+     * Gerar senha segura que atende aos critérios da política
      */
     private function generateSecurePassword(int $length = 16): string
     {
-        $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-        $password = '';
+        $uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $lowercase = 'abcdefghijklmnopqrstuvwxyz';
+        $numbers = '0123456789';
+        $specials = '!@#$%^&*';
 
-        for ($i = 0; $i < $length; $i++) {
-            $password .= $characters[random_int(0, strlen($characters) - 1)];
+        // Garantir pelo menos um de cada tipo
+        $password = '';
+        $password .= $uppercase[random_int(0, strlen($uppercase) - 1)];
+        $password .= $lowercase[random_int(0, strlen($lowercase) - 1)];
+        $password .= $numbers[random_int(0, strlen($numbers) - 1)];
+        $password .= $specials[random_int(0, strlen($specials) - 1)];
+
+        // Preencher o resto aleatoriamente
+        $allChars = $uppercase . $lowercase . $numbers . $specials;
+        for ($i = 4; $i < $length; $i++) {
+            $password .= $allChars[random_int(0, strlen($allChars) - 1)];
         }
 
-        return $password;
+        // Embaralhar a senha
+        return str_shuffle($password);
     }
 
     /**

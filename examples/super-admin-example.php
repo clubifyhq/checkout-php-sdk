@@ -3,6 +3,8 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Clubify\Checkout\ClubifyCheckoutSDK;
+use Clubify\Checkout\Exceptions\ConflictException;
+use Clubify\Checkout\Services\ConflictResolverService;
 
 /**
  * EXEMPLO COMPLETO DE CONFIGURAÇÃO DE CHECKOUT VIA SDK
@@ -77,6 +79,31 @@ use Clubify\Checkout\ClubifyCheckoutSDK;
  * @author Clubify Team
  * @since 2024
  */
+
+/**
+ * Logging estruturado com timestamps e ícones visuais
+ */
+function logStep(string $message, string $level = 'info'): void
+{
+    $timestamp = date('Y-m-d H:i:s');
+    $icon = match($level) {
+        'info' => '🔄',
+        'success' => '✅',
+        'warning' => '⚠️',
+        'error' => '❌',
+        'debug' => '🔍'
+    };
+    echo "[{$timestamp}] {$icon} {$message}\n";
+}
+
+/**
+ * Gera chave de idempotência baseada na operação e dados
+ */
+function generateIdempotencyKey(string $operation, array $data): string
+{
+    $identifier = $data['email'] ?? $data['subdomain'] ?? $data['name'] ?? uniqid();
+    return $operation . '_' . md5($identifier . date('Y-m-d'));
+}
 
 /**
  * Helper function para encontrar tenant por domínio
@@ -244,7 +271,7 @@ function getOrCreateOrganization($sdk, $organizationData) {
                                 }
                             }
 
-                            echo "   📝 Usuário não existe - prosseguindo com provisionamento completo...\n";
+                            logStep("Usuário não existe - prosseguindo com provisionamento completo...", 'debug');
                             $provisioningOptions = [
                                 'admin_email' => $adminEmail,
                                 'admin_name' => $organizationData['admin_name'] ?? 'Tenant Administrator',
@@ -252,19 +279,52 @@ function getOrCreateOrganization($sdk, $organizationData) {
                                 'environment' => $EXAMPLE_CONFIG['sdk']['environment'] ?? 'test'
                             ];
 
-                            $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, $provisioningOptions);
+                            // Gerar chave de idempotência para provisionamento
+                            $provisionIdempotencyKey = generateIdempotencyKey('provision_credentials', $provisioningOptions);
+
+                            try {
+                                // Usar novo método com orquestração centralizada se disponível
+                                if (method_exists($sdk->superAdmin(), 'provisionTenantCredentialsV2')) {
+                                    logStep("Usando método V2 com serviços centralizados", 'debug');
+                                    $provisionResult = $sdk->superAdmin()->provisionTenantCredentialsV2($tenantId, $provisioningOptions);
+                                } else {
+                                    logStep("Usando método legado de provisionamento", 'debug');
+                                    $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, $provisioningOptions);
+                                }
+                            } catch (ConflictException $e) {
+                                logStep("Conflito detectado durante provisionamento: " . $e->getMessage(), 'warning');
+
+                                // Tentar resolução automática se disponível
+                                if ($e->isAutoResolvable()) {
+                                    logStep("Tentando resolução automática...", 'info');
+                                    $resolver = new ConflictResolverService($sdk->getHttpClient(), $sdk->getLogger());
+                                    $provisionResult = $resolver->resolve($e);
+                                    logStep("Conflito resolvido automaticamente", 'success');
+                                } else {
+                                    throw $e;
+                                }
+                            }
 
                             if ($provisionResult['success']) {
-                                echo "   ✅ Credenciais provisionadas com sucesso!\n";
-                                echo "   👤 Usuário admin criado: " . $provisionResult['user']['email'] . "\n";
+                                logStep("Credenciais provisionadas com sucesso!", 'success');
+                                logStep("👤 Usuário admin criado: " . $provisionResult['user']['email'], 'success');
                                 $apiKeyString = $provisionResult['api_key']['key'] ?? null;
                                 if ($apiKeyString) {
-                                    echo "   🔑 API Key criada: " . substr($apiKeyString, 0, 20) . "...\n";
+                                    logStep("🔑 API Key criada: " . substr($apiKeyString, 0, 20) . "...", 'success');
                                 } else {
-                                    echo "   🔑 API Key: não disponível na resposta\n";
+                                    logStep("🔑 API Key: não disponível na resposta", 'warning');
                                 }
-                                echo "   🔒 Senha temporária: " . $provisionResult['user']['password'] . "\n";
-                                echo "   ⚠️  IMPORTANTE: Salve essas credenciais em local seguro!\n";
+
+                                // Mostrar informações de orquestração se disponíveis (método V2)
+                                if (isset($provisionResult['orchestration'])) {
+                                    logStep("Orquestração centralizada:", 'info');
+                                    logStep("   - User existed: " . ($provisionResult['orchestration']['user_existed'] ? 'Yes' : 'No'), 'info');
+                                    logStep("   - API Key existed: " . ($provisionResult['orchestration']['api_key_existed'] ? 'Yes' : 'No'), 'info');
+                                    logStep("   - Services used: " . implode(', ', $provisionResult['orchestration']['services_used']), 'info');
+                                }
+
+                                logStep("🔒 Senha temporária: " . $provisionResult['user']['password'], 'info');
+                                logStep("IMPORTANTE: Salve essas credenciais em local seguro!", 'warning');
 
                                 // Marcar que agora tem API key
                                 $hasApiKey = true;
@@ -435,7 +495,7 @@ function getOrCreateOrganization($sdk, $organizationData) {
                                 }
                             }
 
-                            echo "   📝 Usuário não existe - prosseguindo com provisionamento completo...\n";
+                            logStep("Usuário não existe - prosseguindo com provisionamento completo...", 'debug');
                             $provisioningOptions = [
                                 'admin_email' => $adminEmail,
                                 'admin_name' => $organizationData['admin_name'] ?? 'Tenant Administrator',
@@ -443,19 +503,52 @@ function getOrCreateOrganization($sdk, $organizationData) {
                                 'environment' => $EXAMPLE_CONFIG['sdk']['environment'] ?? 'test'
                             ];
 
-                            $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, $provisioningOptions);
+                            // Gerar chave de idempotência para provisionamento
+                            $provisionIdempotencyKey = generateIdempotencyKey('provision_credentials', $provisioningOptions);
+
+                            try {
+                                // Usar novo método com orquestração centralizada se disponível
+                                if (method_exists($sdk->superAdmin(), 'provisionTenantCredentialsV2')) {
+                                    logStep("Usando método V2 com serviços centralizados", 'debug');
+                                    $provisionResult = $sdk->superAdmin()->provisionTenantCredentialsV2($tenantId, $provisioningOptions);
+                                } else {
+                                    logStep("Usando método legado de provisionamento", 'debug');
+                                    $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, $provisioningOptions);
+                                }
+                            } catch (ConflictException $e) {
+                                logStep("Conflito detectado durante provisionamento: " . $e->getMessage(), 'warning');
+
+                                // Tentar resolução automática se disponível
+                                if ($e->isAutoResolvable()) {
+                                    logStep("Tentando resolução automática...", 'info');
+                                    $resolver = new ConflictResolverService($sdk->getHttpClient(), $sdk->getLogger());
+                                    $provisionResult = $resolver->resolve($e);
+                                    logStep("Conflito resolvido automaticamente", 'success');
+                                } else {
+                                    throw $e;
+                                }
+                            }
 
                             if ($provisionResult['success']) {
-                                echo "   ✅ Credenciais provisionadas com sucesso!\n";
-                                echo "   👤 Usuário admin criado: " . $provisionResult['user']['email'] . "\n";
+                                logStep("Credenciais provisionadas com sucesso!", 'success');
+                                logStep("👤 Usuário admin criado: " . $provisionResult['user']['email'], 'success');
                                 $apiKeyString = $provisionResult['api_key']['key'] ?? null;
                                 if ($apiKeyString) {
-                                    echo "   🔑 API Key criada: " . substr($apiKeyString, 0, 20) . "...\n";
+                                    logStep("🔑 API Key criada: " . substr($apiKeyString, 0, 20) . "...", 'success');
                                 } else {
-                                    echo "   🔑 API Key: não disponível na resposta\n";
+                                    logStep("🔑 API Key: não disponível na resposta", 'warning');
                                 }
-                                echo "   🔒 Senha temporária: " . $provisionResult['user']['password'] . "\n";
-                                echo "   ⚠️  IMPORTANTE: Salve essas credenciais em local seguro!\n";
+
+                                // Mostrar informações de orquestração se disponíveis (método V2)
+                                if (isset($provisionResult['orchestration'])) {
+                                    logStep("Orquestração centralizada:", 'info');
+                                    logStep("   - User existed: " . ($provisionResult['orchestration']['user_existed'] ? 'Yes' : 'No'), 'info');
+                                    logStep("   - API Key existed: " . ($provisionResult['orchestration']['api_key_existed'] ? 'Yes' : 'No'), 'info');
+                                    logStep("   - Services used: " . implode(', ', $provisionResult['orchestration']['services_used']), 'info');
+                                }
+
+                                logStep("🔒 Senha temporária: " . $provisionResult['user']['password'], 'info');
+                                logStep("IMPORTANTE: Salve essas credenciais em local seguro!", 'warning');
 
                                 // Marcar que agora tem API key
                                 $hasApiKey = true;
@@ -916,18 +1009,18 @@ try {
         ]
     ];
 
-    echo "=== Exemplo Resiliente de Super Admin ===\n";
-    echo "📋 Configurações:\n";
-    echo "   Organização: {$EXAMPLE_CONFIG['organization']['name']}\n";
-    echo "   Domínio: {$EXAMPLE_CONFIG['organization']['custom_domain']}\n";
-    echo "   Produto: {$EXAMPLE_CONFIG['product']['name']}\n";
-    echo "   Modo resiliente: ✅ Ativo (verifica antes de criar)\n\n";
+    logStep("Iniciando exemplo avançado de Super Admin com resolução de conflitos", 'info');
+    logStep("Configurações:", 'info');
+    logStep("   Organização: {$EXAMPLE_CONFIG['organization']['name']}", 'info');
+    logStep("   Domínio: {$EXAMPLE_CONFIG['organization']['custom_domain']}", 'info');
+    logStep("   Produto: {$EXAMPLE_CONFIG['product']['name']}", 'info');
+    logStep("   Modo resiliente: ✅ Ativo (verifica antes de criar)", 'info');
 
     // ===============================================
     // 1. INICIALIZAÇÃO COMO SUPER ADMIN
     // ===============================================
 
-    echo "=== Inicializando SDK como Super Admin ===\n";
+    logStep("Inicializando SDK como Super Admin", 'info');
 
     // Credenciais do super admin (API key como método primário, email/senha como fallback)
     $superAdminCredentials = [
@@ -941,7 +1034,7 @@ try {
         'tenant_id' => '507f1f77bcf86cd799439011'
     ];
 
-    // Configuração completa do SDK (baseada no test-sdk-simple.php)
+    // Configuração completa do SDK com melhorias de resolução de conflitos
     $config = [
         'credentials' => [
             'tenant_id' => $superAdminCredentials['tenant_id'],
@@ -959,35 +1052,47 @@ try {
         ],
         'cache' => [
             'enabled' => true,
+            'adapter' => 'array',
             'ttl' => 3600
         ],
         'logging' => [
             'enabled' => true,
-            'level' => 'info'
+            'level' => 'info',
+            'channels' => ['console']
+        ],
+        'retry' => [
+            'max_attempts' => 3,
+            'delay' => 1000,
+            'backoff' => 'exponential'
+        ],
+        // Habilita resolução automática de conflitos
+        'conflict_resolution' => [
+            'auto_resolve' => true,
+            'strategy' => 'retrieve_existing'
         ]
     ];
 
-    echo "📋 Configuração do SDK:\n";
-    echo "   Tenant ID: {$config['credentials']['tenant_id']}\n";
-    echo "   API Key: " . substr($config['credentials']['api_key'], 0, 20) . "...\n";
-    echo "   Environment: {$config['environment']}\n";
-    echo "   Base URL: {$config['api']['base_url']}\n\n";
+    logStep("Configuração do SDK:", 'debug');
+    logStep("   Tenant ID: {$config['credentials']['tenant_id']}", 'debug');
+    logStep("   API Key: " . substr($config['credentials']['api_key'], 0, 20) . "...", 'debug');
+    logStep("   Environment: {$config['environment']}", 'debug');
+    logStep("   Base URL: {$config['api']['base_url']}", 'debug');
 
     // Inicializar SDK com configuração completa
     $sdk = new ClubifyCheckoutSDK($config);
-    echo "✅ SDK initialized successfully!\n";
+    logStep("SDK initialized successfully!", 'success');
 
-    echo "   Version: " . $sdk->getVersion() . "\n";
-    echo "   Authenticated: " . ($sdk->isAuthenticated() ? 'Yes' : 'No') . "\n";
-    echo "   Initialized: " . ($sdk->isInitialized() ? 'Yes' : 'No') . "\n\n";
+    logStep("   Version: " . $sdk->getVersion(), 'info');
+    logStep("   Authenticated: " . ($sdk->isAuthenticated() ? 'Yes' : 'No'), 'info');
+    logStep("   Initialized: " . ($sdk->isInitialized() ? 'Yes' : 'No'), 'info');
 
     // Inicializar como super admin
     $initResult = $sdk->initializeAsSuperAdmin($superAdminCredentials);
 
-    echo "✅ SDK inicializado como super admin:\n";
-    echo "   Mode: " . $initResult['mode'] . "\n";
-    echo "   Role: " . $initResult['role'] . "\n";
-    echo "   Authenticated: " . ($initResult['authenticated'] ? 'Yes' : 'No') . "\n\n";
+    logStep("SDK inicializado como super admin:", 'success');
+    logStep("   Mode: " . $initResult['mode'], 'info');
+    logStep("   Role: " . $initResult['role'], 'info');
+    logStep("   Authenticated: " . ($initResult['authenticated'] ? 'Yes' : 'No'), 'info');
 
     // ===============================================
     // 2. CRIAÇÃO DE ORGANIZAÇÃO (COM VERIFICAÇÃO)
@@ -1966,11 +2071,27 @@ try {
     echo "   - Monitore os logs para identificar possíveis melhorias na API\n";
 
 } catch (Exception $e) {
-    echo "\n❌ ERRO CRÍTICO: " . $e->getMessage() . "\n";
-    echo "\n📋 Detalhes do erro:\n";
-    echo "   Tipo: " . get_class($e) . "\n";
-    echo "   Arquivo: " . $e->getFile() . "\n";
-    echo "   Linha: " . $e->getLine() . "\n";
+    logStep("ERRO CRÍTICO: " . $e->getMessage(), 'error');
+
+    logStep("Detalhes do erro:", 'error');
+    logStep("   Tipo: " . get_class($e), 'error');
+    logStep("   Arquivo: " . $e->getFile(), 'error');
+    logStep("   Linha: " . $e->getLine(), 'error');
+
+    // Tratamento específico para ConflictException
+    if ($e instanceof ConflictException) {
+        logStep("Detalhes do conflito:", 'error');
+        logStep("- Tipo: " . $e->getConflictType(), 'error');
+        logStep("- Campos: " . implode(', ', $e->getConflictFields()), 'error');
+
+        if (method_exists($e, 'getCheckEndpoint') && $e->getCheckEndpoint()) {
+            logStep("- Endpoint de verificação: " . $e->getCheckEndpoint(), 'info');
+        }
+
+        if (method_exists($e, 'getRetrievalEndpoint') && $e->getRetrievalEndpoint()) {
+            logStep("- Endpoint de recuperação: " . $e->getRetrievalEndpoint(), 'info');
+        }
+    }
 
     // Verificar se é um erro específico conhecido
     if (strpos($e->getMessage(), 'already in use') !== false) {

@@ -12,6 +12,9 @@ use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
 use Clubify\Checkout\Modules\SuperAdmin\Services\TenantManagementService;
 use Clubify\Checkout\Modules\SuperAdmin\Services\OrganizationCreationService;
+use Clubify\Checkout\Modules\UserManagement\Services\UserService;
+use Clubify\Checkout\Modules\Organization\Services\ApiKeyService;
+use Clubify\Checkout\Modules\Organization\Services\TenantService as OrganizationTenantService;
 use Clubify\Checkout\Exceptions\SDKException;
 
 /**
@@ -31,6 +34,11 @@ class SuperAdminModule implements ModuleInterface
 
     private ?TenantManagementService $tenantManagement = null;
     private ?OrganizationCreationService $organizationCreation = null;
+
+    // Centralized Services (Dependency Injection)
+    private ?UserService $userService = null;
+    private ?ApiKeyService $apiKeyService = null;
+    private ?OrganizationTenantService $organizationTenantService = null;
 
     private ?Client $httpClient = null;
     private ?CacheManagerInterface $cache = null;
@@ -62,6 +70,30 @@ class SuperAdminModule implements ModuleInterface
         $this->httpClient = $httpClient;
         $this->cache = $cache;
         $this->eventDispatcher = $eventDispatcher;
+    }
+
+    /**
+     * Injeta os serviços centralizados (Dependency Injection)
+     *
+     * Esta abordagem remove a duplicação de código e centraliza
+     * a funcionalidade nos módulos apropriados
+     */
+    public function setCentralizedServices(
+        UserService $userService,
+        ApiKeyService $apiKeyService,
+        OrganizationTenantService $organizationTenantService
+    ): void {
+        $this->userService = $userService;
+        $this->apiKeyService = $apiKeyService;
+        $this->organizationTenantService = $organizationTenantService;
+
+        $this->logger->debug('SuperAdmin: Centralized services injected', [
+            'services' => [
+                'user_service' => $userService->getName(),
+                'api_key_service' => get_class($apiKeyService),
+                'tenant_service' => get_class($organizationTenantService)
+            ]
+        ]);
     }
 
     /**
@@ -653,10 +685,11 @@ class SuperAdminModule implements ModuleInterface
             // 2. Verificar se já existe API key para o tenant
             $existingApiKey = $this->checkExistingApiKey($tenantId);
 
-            if ($existingApiKey['exists']) {
+            if ($existingApiKey['exists'] && !empty($existingApiKey['api_key'])) {
                 $this->logger->info('Using existing API key for tenant', [
                     'tenant_id' => $tenantId,
-                    'api_key_id' => $existingApiKey['api_key_id']
+                    'api_key_id' => $existingApiKey['api_key_id'],
+                    'key_preview' => substr($existingApiKey['api_key'], 0, 8) . '...'
                 ]);
 
                 return [
@@ -692,12 +725,54 @@ class SuperAdminModule implements ModuleInterface
             ];
 
             $apiKeyResult = $this->createApiKey($tenantId, $apiKeyData);
+
+            // Debug logging da resposta completa
+            $this->logger->debug('API key creation response structure', [
+                'tenant_id' => $tenantId,
+                'response_keys' => array_keys($apiKeyResult),
+                'response_preview' => array_map(function($value) {
+                    return is_string($value) ? substr($value, 0, 50) . '...' : gettype($value);
+                }, $apiKeyResult)
+            ]);
+
+            // Múltiplas tentativas de parsing da estrutura de resposta
             $apiKeyResponseData = $apiKeyResult['data'] ?? $apiKeyResult;
-            $apiKey = $apiKeyResponseData['key'] ?? null;
-            $apiKeyId = $apiKeyResponseData['id'] ?? null;
+            $apiKey = $apiKeyResponseData['key'] ??
+                     $apiKeyResponseData['apiKey'] ??
+                     $apiKeyResponseData['api_key'] ??
+                     $apiKeyResult['key'] ??
+                     $apiKeyResult['apiKey'] ??
+                     $apiKeyResult['api_key'] ?? null;
+
+            $apiKeyId = $apiKeyResponseData['id'] ??
+                       $apiKeyResponseData['_id'] ??
+                       $apiKeyResponseData['apiKeyId'] ??
+                       $apiKeyResult['id'] ??
+                       $apiKeyResult['_id'] ??
+                       $apiKeyResult['apiKeyId'] ?? null;
+
+            // Se ainda não conseguiu extrair a API key, tentar buscar a recém-criada
+            if (!$apiKey) {
+                $this->logger->warn('Failed to extract API key from creation response, attempting fallback retrieval', [
+                    'tenant_id' => $tenantId,
+                    'response_structure' => json_encode($apiKeyResult, JSON_PRETTY_PRINT)
+                ]);
+
+                // Fallback: buscar a API key recém-criada
+                $fallbackApiKey = $this->retrieveLatestApiKey($tenantId);
+                if ($fallbackApiKey['exists']) {
+                    $apiKey = $fallbackApiKey['api_key'];
+                    $apiKeyId = $fallbackApiKey['api_key_id'];
+
+                    $this->logger->info('API key retrieved via fallback method', [
+                        'tenant_id' => $tenantId,
+                        'api_key_id' => $apiKeyId
+                    ]);
+                }
+            }
 
             if (!$apiKey) {
-                throw new SDKException('Failed to get API key from creation response');
+                throw new SDKException('Failed to get API key from creation response and fallback retrieval');
             }
 
             $this->logger->info('Tenant credentials provisioned successfully', [
@@ -912,6 +987,190 @@ class SuperAdminModule implements ModuleInterface
             ]);
 
             throw new SDKException('Failed to reactivate tenant: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    // ============================================================================
+    // ORCHESTRATION METHODS - Using Centralized Services
+    // ============================================================================
+
+    /**
+     * Provisiona credenciais de tenant usando serviços centralizados
+     *
+     * Esta é a nova implementação que usa os serviços centralizados
+     * ao invés de duplicar código. Mantém backward compatibility.
+     */
+    public function provisionTenantCredentialsV2(string $tenantId, array $options = []): array
+    {
+        $this->ensureInitialized();
+        $this->ensureCentralizedServicesAvailable();
+
+        try {
+            $adminData = $this->prepareAdminUserData($options);
+
+            // 1. Usar UserService centralizado para criar/verificar usuário
+            $userResult = $this->orchestrateUserCreation($adminData);
+
+            // 2. Usar ApiKeyService centralizado para criar/verificar API key
+            $apiKeyResult = $this->orchestrateApiKeyCreation($tenantId, $options);
+
+            // 3. Consolidar e retornar resultado orquestrado
+            return $this->consolidateProvisioningResult($userResult, $apiKeyResult, $tenantId);
+
+        } catch (\Exception $e) {
+            $this->logger->error('SuperAdmin: Failed to provision tenant credentials via centralized services', [
+                'error' => $e->getMessage(),
+                'tenant_id' => $tenantId
+            ]);
+
+            throw new SDKException('Failed to provision tenant credentials: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Orquestra a criação de usuário usando UserService centralizado
+     */
+    private function orchestrateUserCreation(array $adminData): array
+    {
+        // Primeiro verificar se usuário já existe
+        $existingUser = $this->userService->findUserByEmail($adminData['email']);
+
+        if ($existingUser['success'] && $existingUser['user']) {
+            $this->logger->info('SuperAdmin: Using existing user for tenant admin', [
+                'user_id' => $existingUser['user']['id'],
+                'email' => $adminData['email']
+            ]);
+
+            return [
+                'user' => $existingUser['user'],
+                'existed' => true
+            ];
+        }
+
+        // Criar novo usuário usando serviço centralizado
+        $userCreationResult = $this->userService->createUser([
+            'email' => $adminData['email'],
+            'firstName' => $adminData['firstName'],
+            'lastName' => $adminData['lastName'],
+            'password' => $adminData['password'],
+            'roles' => ['tenant_admin'],
+            'status' => 'active',
+            'source' => 'super_admin_provisioning'
+        ]);
+
+        if (!$userCreationResult['success']) {
+            throw new SDKException('Failed to create user via centralized service');
+        }
+
+        return [
+            'user' => $userCreationResult['user'],
+            'existed' => false
+        ];
+    }
+
+    /**
+     * Orquestra a criação de API key usando ApiKeyService centralizado
+     */
+    private function orchestrateApiKeyCreation(string $tenantId, array $options): array
+    {
+        // Verificar se já existe API key para o tenant
+        $existingKeys = $this->apiKeyService->getApiKeysByOrganization($tenantId);
+
+        if ($existingKeys && count($existingKeys) > 0) {
+            $activeKey = null;
+            foreach ($existingKeys as $key) {
+                if (($key['status'] ?? '') === 'active') {
+                    $activeKey = $key;
+                    break;
+                }
+            }
+
+            if ($activeKey) {
+                $this->logger->info('SuperAdmin: Using existing API key for tenant', [
+                    'tenant_id' => $tenantId,
+                    'api_key_id' => $activeKey['id']
+                ]);
+
+                return [
+                    'api_key' => $activeKey,
+                    'existed' => true
+                ];
+            }
+        }
+
+        // Criar nova API key usando serviço centralizado
+        $keyData = [
+            'name' => $options['api_key_name'] ?? 'Tenant Admin API Key',
+            'description' => $options['api_key_description'] ?? 'API key for tenant admin operations',
+            'environment' => $options['environment'] ?? 'production',
+            'permissions' => [
+                'integration:advanced',
+                'customer:read',
+                'customer:write',
+                'analytics:read',
+                'user:write',
+                'api-key:write',
+                'tenant:write',
+                'products:read',
+                'products:write',
+                'checkout:read',
+                'checkout:write'
+            ]
+        ];
+
+        $apiKeyResult = $this->apiKeyService->generateApiKey($tenantId, $keyData);
+
+        if (!$apiKeyResult || !isset($apiKeyResult['key'])) {
+            throw new SDKException('Failed to create API key via centralized service');
+        }
+
+        return [
+            'api_key' => $apiKeyResult,
+            'existed' => false
+        ];
+    }
+
+    /**
+     * Consolida os resultados da orquestração
+     */
+    private function consolidateProvisioningResult(array $userResult, array $apiKeyResult, string $tenantId): array
+    {
+        return [
+            'success' => true,
+            'message' => sprintf(
+                'Tenant credentials provisioned via centralized services - User: %s, API Key: %s',
+                $userResult['existed'] ? 'existed' : 'created',
+                $apiKeyResult['existed'] ? 'existed' : 'created'
+            ),
+            'user' => $userResult['user'],
+            'api_key' => $apiKeyResult['api_key'],
+            'tenant_id' => $tenantId,
+            'orchestration' => [
+                'user_existed' => $userResult['existed'],
+                'api_key_existed' => $apiKeyResult['existed'],
+                'services_used' => [
+                    'user_service' => $this->userService->getName(),
+                    'api_key_service' => get_class($this->apiKeyService)
+                ]
+            ]
+        ];
+    }
+
+    /**
+     * Garante que os serviços centralizados estão disponíveis
+     */
+    private function ensureCentralizedServicesAvailable(): void
+    {
+        if (!$this->userService) {
+            throw new SDKException('UserService not injected. Call setCentralizedServices() first.');
+        }
+
+        if (!$this->apiKeyService) {
+            throw new SDKException('ApiKeyService not injected. Call setCentralizedServices() first.');
+        }
+
+        if (!$this->organizationTenantService) {
+            throw new SDKException('OrganizationTenantService not injected. Call setCentralizedServices() first.');
         }
     }
 

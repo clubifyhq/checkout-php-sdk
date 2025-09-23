@@ -838,9 +838,7 @@ class AuthManager implements AuthManagerInterface
     {
         try {
             // First try to get API keys for this tenant
-            $response = $this->httpClient->get("api-keys", [
-                'query' => ['tenant_id' => $tenantId]
-            ]);
+            $response = $this->httpClient->get("api-keys");
 
             if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
                 $data = json_decode($response->getBody()->getContents(), true);

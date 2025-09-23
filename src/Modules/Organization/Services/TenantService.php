@@ -246,7 +246,7 @@ class TenantService extends BaseService
     public function isSubdomainAvailable(string $subdomain): bool
     {
         try {
-            $response = $this->httpClient->get("/tenants/subdomain/{$subdomain}/availability");
+            $response = $this->httpClient->get("tenants/subdomain/{$subdomain}");
             $data = $response->getData();
             return $data['available'] ?? false;
         } catch (HttpException $e) {
@@ -317,7 +317,7 @@ class TenantService extends BaseService
     private function fetchTenantBySubdomain(string $subdomain): ?array
     {
         try {
-            $response = $this->httpClient->get("/tenants/subdomain/{$subdomain}");
+            $response = $this->httpClient->get("tenants/subdomain/{$subdomain}");
             return $response->getData();
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {

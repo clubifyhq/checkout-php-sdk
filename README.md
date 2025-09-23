@@ -1,138 +1,140 @@
-# Clubify Checkout SDK - PHP
+# Clubify Checkout SDK para PHP
 
-[![PHP Version](https://img.shields.io/badge/PHP-8.2%2B-blue.svg)](https://www.php.net/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Laravel](https://img.shields.io/badge/Laravel-10%2B-red.svg)](https://laravel.com/)
-[![Version](https://img.shields.io/badge/Version-1.0.0-brightgreen.svg)](https://github.com/clubify/checkout-sdk-php)
+[![Latest Stable Version](https://poser.pugx.org/clubify/checkout-sdk-php/v/stable)](https://packagist.org/packages/clubify/checkout-sdk-php)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/clubifyhq/checkout-sdk-php/blob/main/LICENSE)
+[![PHP Version](https://img.shields.io/badge/php-%3E%3D8.2-blue)](https://php.net)
+[![Laravel](https://img.shields.io/badge/laravel-%3E%3D10.0-red)](https://laravel.com)
 
-**SDK oficial para integração completa com a plataforma Clubify Checkout em PHP**
+SDK oficial para integração com a plataforma Clubify Checkout. Uma solução completa para gerenciar organizações, produtos, ofertas e processos de checkout em aplicações PHP e Laravel.
 
-Uma solução enterprise-grade, robusta e intuitiva que oferece paridade completa com o SDK JavaScript, proporcionando uma experiência de desenvolvimento excepcional para integração com a poderosa plataforma de checkout da Clubify.
+## 📋 Índice
 
-## ✨ Por que escolher o SDK PHP?
+- [Instalação e Configuração](#-instalação-e-configuração)
+- [Arquitetura e Estrutura](#-arquitetura-e-estrutura)
+- [Configuração Inicial](#-configuração-inicial)
+- [Sequência de Configuração Completa](#-sequência-de-configuração-completa)
+- [Exemplos de Uso](#-exemplos-de-uso)
+- [Troubleshooting](#-troubleshooting)
+- [Referência da API](#-referência-da-api)
 
-- 🚀 **Pronto para Produção**: Implementação completa com todos os módulos funcionais
-- 💪 **Enterprise-Grade**: Arquitetura robusta seguindo princípios SOLID e Clean Code
-- 🔧 **Developer Experience**: API intuitiva com type hints completos e autocompletar
-- 📦 **Laravel Native**: Integração perfeita com Laravel 10+ incluindo facades, commands e jobs
-- 🌐 **Multi-Platform**: Funciona em qualquer aplicação PHP 8.2+
-- 🔒 **Segurança Avançada**: JWT, criptografia AES, HMAC e conformidade PCI DSS
-- ⚡ **Performance Otimizada**: Cache multi-nível, lazy loading e conexão persistente
-- 🎯 **Validação Brasileira**: Suporte completo a CPF, CNPJ e validações locais
+---
 
-## 🏗️ Status Atual - ✅ COMPLETO
+## 🚀 Instalação e Configuração
 
-O SDK está **100% funcional** e pronto para uso em produção com todos os módulos implementados:
+### Requisitos do Sistema
 
-### ✅ **Core Foundation** (COMPLETO)
-- [x] Estrutura do projeto e Composer otimizada
-- [x] Classe principal ClubifyCheckoutSDK com lazy loading
-- [x] Sistema de configuração centralizada e flexível
-- [x] Cliente HTTP com Guzzle, retry automático e circuit breaker
-- [x] Autenticação JWT completa com refresh automático
-- [x] Sistema de eventos robusto com prioridades
-- [x] Cache manager multi-level com PSR-6
-- [x] Logger PSR-3 estruturado com contexto
+- **PHP**: 8.2+ (recomendado 8.3+)
+- **Extensões**: `curl`, `json`, `mbstring`, `openssl`
+- **Composer**: 2.0+
+- **Memória**: Mínimo 128MB (recomendado 256MB+)
 
-### ✅ **Módulos Funcionais** (COMPLETO - 11 Módulos)
-
-#### **Core Business Modules**
-- [x] **Organization Module**: Setup completo de organizações e tenants multi-tenant
-- [x] **Products Module**: CRUD de produtos, ofertas, order bumps e upsells com temas avançados
-- [x] **Checkout Module**: Sessões, carrinho, one-click e flow navigation dinâmico
-- [x] **Payments Module**: Multi-gateway (Stripe, Pagar.me) com tokenização e digital wallets
-- [x] **Customers Module**: Matching inteligente, perfis e compliance GDPR/LGPD
-- [x] **Webhooks Module**: Sistema robusto com retry, validação e monitoramento
-
-#### **✨ Novos Módulos Enterprise (Sprint 1-3)**
-- [x] **Orders Module**: CRUD completo, analytics avançados, upsells e gestão de status
-- [x] **Subscriptions Module**: Lifecycle completo, billing, métricas e revenue forecasting
-- [x] **Tracking Module**: Analytics de eventos, batch processing e segmentação de usuários
-- [x] **User Management Module**: Passkeys/WebAuthn, RBAC, tenants e audit logging
-- [x] **Notifications Module**: Multi-canal, templates, retry inteligente e estatísticas
-
-### ✅ **Laravel Integration** (COMPLETO)
-- [x] Service Provider completo com binding automático
-- [x] Facades para uso intuitivo
-- [x] Artisan Commands (install, publish, sync)
-- [x] Jobs assíncronos para pagamentos e webhooks
-- [x] Middleware de autenticação e validação
-- [x] Rules de validação customizadas (CPF, CNPJ, cartões)
-
-### ✅ **Sistema de Testes Enterprise (Sprint 4)**
-- [x] **PHPUnit 10+**: Configuração completa com cobertura de código
-- [x] **Testes Unitários**: 150+ testes para todos os módulos
-- [x] **Testes de Integração**: Fluxos completos entre módulos
-- [x] **Testes Feature E2E**: Simulação de cenários reais de uso
-- [x] **Mockery Integration**: Mocks profissionais para APIs externas
-- [x] **TestCase Base**: Helpers e factories para dados de teste
-- [x] **Cobertura 90%+**: Meta de cobertura enterprise-grade
-- [x] **CI/CD Ready**: Configuração para pipelines automáticas
-
-## 📦 Instalação e Configuração
-
-### 1. Instalação via Composer
+### Instalação via Composer
 
 ```bash
+# Instalação padrão
 composer require clubify/checkout-sdk-php
+
+# Para desenvolvimento/testes
+composer require clubify/checkout-sdk-php --dev
 ```
 
-### 2. Requisitos do Sistema
+### Configuração para Laravel
 
-- **PHP**: 8.2 ou superior
-- **Extensões**: `json`, `openssl`, `curl`
-- **Laravel**: 10+ (opcional, para integração completa)
-- **Dependências**: Guzzle 7+, JWT, UUID, Carbon
-
-### 3. Configuração para Laravel
-
-O SDK possui integração nativa com Laravel através de Service Provider auto-registrado:
+#### 1. Instalação Automática (Recomendado)
 
 ```bash
-# Publicar arquivo de configuração
-php artisan vendor:publish --provider="Clubify\Checkout\Laravel\ClubifyCheckoutServiceProvider"
-
-# Instalar e configurar o SDK
+# Executa configuração completa
 php artisan clubify:install
+
+# Opções disponíveis:
+php artisan clubify:install --force              # Sobrescreve arquivos existentes
+php artisan clubify:install --config-only        # Publica apenas configuração
+php artisan clubify:install --no-publish         # Pula publicação de assets
 ```
 
-Adicione as variáveis de ambiente no seu `.env`:
+#### 2. Configuração Manual
+
+```bash
+# Publica arquivo de configuração
+php artisan vendor:publish --provider="Clubify\Checkout\Laravel\ClubifyCheckoutServiceProvider" --tag=clubify-checkout-config
+
+# Publica todos os assets
+php artisan vendor:publish --provider="Clubify\Checkout\Laravel\ClubifyCheckoutServiceProvider"
+```
+
+#### 3. Variáveis de Ambiente
+
+Adicione ao seu arquivo `.env`:
 
 ```env
-CLUBIFY_CHECKOUT_API_KEY=clb_live_your_api_key
-CLUBIFY_CHECKOUT_API_SECRET=your_api_secret
-CLUBIFY_CHECKOUT_TENANT_ID=your_tenant_id
-CLUBIFY_CHECKOUT_ENVIRONMENT=production
+# OBRIGATÓRIO - Autenticação Básica
+CLUBIFY_CHECKOUT_API_KEY=your-api-key-here
+CLUBIFY_CHECKOUT_API_SECRET=your-api-secret-here
+CLUBIFY_CHECKOUT_TENANT_ID=your-tenant-id-here
+
+# OBRIGATÓRIO - Configurações de Ambiente
+CLUBIFY_CHECKOUT_ENVIRONMENT=sandbox
 CLUBIFY_CHECKOUT_BASE_URL=https://checkout.svelve.com/api/v1
+
+# OPCIONAL - Performance e Comportamento
+CLUBIFY_CHECKOUT_TIMEOUT=30
+CLUBIFY_CHECKOUT_CONNECT_TIMEOUT=10
+CLUBIFY_CHECKOUT_RETRY_ATTEMPTS=3
+CLUBIFY_CHECKOUT_RETRY_DELAY=1000
+CLUBIFY_CHECKOUT_DEBUG=false
+
+# OPCIONAL - Cache
+CLUBIFY_CHECKOUT_CACHE_ENABLED=true
+CLUBIFY_CHECKOUT_CACHE_TTL=3600
+CLUBIFY_CHECKOUT_CACHE_PREFIX=clubify_checkout
+CLUBIFY_CHECKOUT_CACHE_STORE=default
+
+# OPCIONAL - Logging
+CLUBIFY_CHECKOUT_LOGGER_ENABLED=true
+CLUBIFY_CHECKOUT_LOGGER_LEVEL=info
+CLUBIFY_CHECKOUT_LOGGER_CHANNEL=single
+
+# OPCIONAL - Webhooks
+CLUBIFY_CHECKOUT_WEBHOOKS_ENABLED=true
+CLUBIFY_CHECKOUT_WEBHOOK_SECRET=your-webhook-secret
+CLUBIFY_CHECKOUT_WEBHOOK_TOLERANCE=300
 ```
 
-### 4. Configuração para PHP Vanilla
+### Configuração para PHP Vanilla
 
 ```php
 <?php
 
+require_once 'vendor/autoload.php';
+
 use Clubify\Checkout\ClubifyCheckoutSDK;
 
 $sdk = new ClubifyCheckoutSDK([
-    'credentials' => [
-        'tenant_id' => 'your_tenant_id',
-        'api_key' => 'clb_live_your_api_key',
-        'api_secret' => 'your_api_secret',
-        'environment' => 'production', // 'development' | 'staging' | 'production'
-    ],
-    'api' => [
-        'base_url' => 'https://checkout.svelve.com/api/v1',
+    'api_key' => 'clb_live_your_api_key',
+    'api_secret' => 'your_api_secret',
+    'tenant_id' => 'your_tenant_id',
+    'environment' => 'sandbox', // 'development', 'sandbox', 'staging', 'production'
+    'base_url' => 'https://checkout.svelve.com/api/v1',
+
+    'http' => [
         'timeout' => 30,
-        'retries' => 3,
+        'connect_timeout' => 10,
+        'retry' => [
+            'enabled' => true,
+            'attempts' => 3,
+            'delay' => 1000,
+        ],
     ],
+
     'cache' => [
         'enabled' => true,
-        'ttl' => 3600,
+        'default_ttl' => 3600,
     ],
-    'logging' => [
+
+    'logger' => [
         'enabled' => true,
         'level' => 'info',
-    ]
+    ],
 ]);
 
 // Inicializar SDK
@@ -140,526 +142,647 @@ $result = $sdk->initialize();
 
 if ($result['success']) {
     echo "✅ SDK inicializado com sucesso!";
+} else {
+    echo "❌ Falha na inicialização: " . $result['message'];
 }
 ```
 
-## 🚀 Guia de Uso Rápido
+---
 
-### Para Laravel (Usando Facades)
+## 🏗️ Arquitetura e Estrutura
+
+### Estrutura de Diretórios
+
+```
+/sdk/php/
+├── src/                          # Código fonte
+│   ├── ClubifyCheckoutSDK.php    # Ponto de entrada principal
+│   ├── Core/                     # Infraestrutura central
+│   │   ├── Auth/                 # Gerenciamento de autenticação
+│   │   ├── Cache/                # Sistema de cache
+│   │   ├── Config/               # Gerenciamento de configuração
+│   │   ├── Events/               # Sistema de eventos
+│   │   ├── Http/                 # Cliente HTTP
+│   │   └── Logger/               # Sistema de logging
+│   ├── Laravel/                  # Integração Laravel
+│   │   ├── ClubifyCheckoutServiceProvider.php
+│   │   ├── Facades/              # Laravel facades
+│   │   ├── Commands/             # Comandos Artisan
+│   │   ├── Jobs/                 # Jobs de fila
+│   │   ├── Middleware/           # Middleware HTTP
+│   │   └── Rules/                # Regras de validação
+│   ├── Modules/                  # Módulos de negócio
+│   │   ├── Cart/                 # Gerenciamento de carrinho
+│   │   ├── Checkout/             # Processo de checkout
+│   │   ├── Customers/            # Gerenciamento de clientes
+│   │   ├── Notifications/        # Sistema de notificação
+│   │   ├── Offer/                # Gerenciamento de ofertas
+│   │   ├── Organization/         # Configuração de organização
+│   │   ├── Payments/             # Processamento de pagamentos
+│   │   ├── Products/             # Catálogo de produtos
+│   │   ├── Subscriptions/        # Gerenciamento de assinaturas
+│   │   └── Webhooks/             # Manipulação de webhooks
+│   ├── Contracts/                # Definições de interface
+│   ├── Data/                     # Objetos de transferência de dados
+│   ├── Enums/                    # Classes de enumeração
+│   ├── Exceptions/               # Exceções customizadas
+│   └── ValueObjects/             # Objetos de valor
+├── config/                       # Arquivos de configuração
+├── resources/                    # Recursos (lang, stubs)
+├── tests/                        # Suite de testes
+└── composer.json                 # Definição do pacote
+```
+
+### Componentes Principais
+
+#### 1. SDK Principal (`ClubifyCheckoutSDK.php`)
+
+- **Lazy Loading**: Componentes inicializados sob demanda
+- **Padrão Module**: Lógica de negócio organizada em módulos
+- **Padrão Factory**: Criação de serviços com injeção de dependência
+- **Gerenciamento de Configuração**: Configuração centralizada com validação
+
+#### 2. Sistema de Configuração (`Core/Config/Configuration.php`)
+
+- **Acesso por Notação de Ponto**: Acesso aninhado usando sintaxe `config.key.subkey`
+- **Suporte Multi-ambiente**: Desenvolvimento, sandbox, staging, produção
+- **Deep Merge**: Merge automático de configurações padrão e customizadas
+- **Validação**: Validação integrada para valores críticos de configuração
+
+#### 3. Integração Laravel (`Laravel/ClubifyCheckoutServiceProvider.php`)
+
+- **Registro de Serviços**: Registro adequado no container de injeção de dependência
+- **Suporte a Facade**: Laravel facade para acesso conveniente
+- **Integração de Comandos**: Comandos Artisan para instalação e gerenciamento
+- **Registro de Middleware**: Middleware HTTP para autenticação e validação de webhook
+
+---
+
+## ⚙️ Configuração Inicial
+
+### Credenciais de Tenant Padrão
+
+Para aplicações single-tenant:
+
+```env
+# Modo tenant padrão
+CLUBIFY_CHECKOUT_API_KEY=clb_live_tenant_api_key
+CLUBIFY_CHECKOUT_API_SECRET=tenant_api_secret
+CLUBIFY_CHECKOUT_TENANT_ID=tenant_12345
+CLUBIFY_CHECKOUT_ENVIRONMENT=production
+```
+
+### Credenciais de Super Admin
+
+Para gerenciamento multi-tenant:
+
+```env
+# Configuração Super Admin
+SUPER_ADMIN_ENABLED=true
+SUPER_ADMIN_DEFAULT_TENANT=default
+SUPER_ADMIN_SESSION_TIMEOUT=3600
+SUPER_ADMIN_MAX_CONCURRENT_SESSIONS=5
+
+# Configuração JWT Super Admin
+SUPER_ADMIN_JWT_SECRET=your-jwt-secret-here
+SUPER_ADMIN_JWT_TTL=3600
+SUPER_ADMIN_JWT_REFRESH_TTL=604800
+SUPER_ADMIN_JWT_BLACKLIST_ENABLED=true
+
+# Configuração API Super Admin
+SUPER_ADMIN_API_PREFIX=api/super-admin
+SUPER_ADMIN_API_MIDDLEWARE=api,auth.super_admin
+SUPER_ADMIN_API_RATE_LIMIT=100
+
+# Segurança Super Admin
+SUPER_ADMIN_REQUIRE_MFA=false
+SUPER_ADMIN_MAX_LOGIN_ATTEMPTS=5
+SUPER_ADMIN_LOCKOUT_DURATION=900
+SUPER_ADMIN_AUDIT_LOG_ENABLED=true
+```
+
+### Teste de Verificação
 
 ```php
 <?php
 
-use ClubifyCheckout; // Facade automática
+require_once 'vendor/autoload.php';
 
-// 1. Configurar organização
-$organization = ClubifyCheckout::setupOrganization([
-    'name' => 'Minha Empresa',
-    'domain' => 'minhaempresa.com.br',
-    'admin' => [
-        'name' => 'Admin User',
-        'email' => 'admin@minhaempresa.com.br'
+use Clubify\Checkout\ClubifyCheckoutSDK;
+
+try {
+    $sdk = new ClubifyCheckoutSDK([
+        'api_key' => 'your_api_key',
+        'api_secret' => 'your_api_secret',
+        'tenant_id' => 'your_tenant_id',
+        'environment' => 'sandbox'
+    ]);
+
+    $result = $sdk->initialize();
+
+    if ($result['success']) {
+        echo "✅ Instalação bem-sucedida!\n";
+        echo "📋 Organização: {$result['organization']['name']}\n";
+        echo "🆔 Tenant ID: {$result['tenant_id']}\n";
+        echo "🌍 Ambiente: {$result['environment']}\n";
+    } else {
+        echo "❌ Falha na inicialização: {$result['message']}\n";
+    }
+
+} catch (Exception $e) {
+    echo "❌ Erro: {$e->getMessage()}\n";
+    echo "💡 Verifique suas credenciais e conexão com a internet.\n";
+}
+```
+
+---
+
+## 🔄 Sequência de Configuração Completa
+
+### Diagrama de Sequência Principal
+
+```mermaid
+sequenceDiagram
+    participant App as Aplicação
+    participant SDK as ClubifySDK
+    participant API as API Clubify
+    participant Tenant as Sistema Tenant
+
+    Note over App,Tenant: 1. Inicialização como Super Admin (3-5s)
+
+    App->>SDK: initializeAsSuperAdmin(credentials)
+    SDK->>API: POST /auth/super-admin
+    API-->>SDK: {access_token, permissions}
+    SDK->>SDK: setupContext(SUPER_ADMIN)
+    SDK-->>App: {success: true, role: "super_admin"}
+
+    Note over App,Tenant: 2. Criação de Organização (5-10s)
+
+    App->>SDK: createOrganization(orgData)
+    SDK->>API: POST /organizations
+    alt Organização já existe
+        API-->>SDK: 409 Conflict
+        SDK->>API: GET /organizations/by-domain/{domain}
+        API-->>SDK: existing organization
+    else Nova organização
+        API-->>SDK: new organization
+    end
+    SDK-->>App: organization object
+
+    Note over App,Tenant: 3. Configuração de Tenant (10-15s)
+
+    App->>SDK: switchToTenant(tenantId)
+    SDK->>API: POST /tenant/switch
+    API-->>SDK: tenant context
+    SDK->>SDK: updateContext(TENANT)
+
+    App->>SDK: createTenantAdmin(userData)
+    SDK->>API: POST /users
+    API-->>SDK: admin user
+
+    App->>SDK: createApiKey(keyData)
+    SDK->>API: POST /api-keys
+    API-->>SDK: api key
+
+    Note over App,Tenant: 4. Configuração de Domínio (2-5s)
+
+    App->>SDK: configureDomain(domainData)
+    SDK->>API: POST /domains
+    API-->>SDK: domain config
+    Note right of API: DNS manual necessário
+
+    Note over App,Tenant: 5. Setup de Webhooks (2-3s)
+
+    App->>SDK: createWebhook(webhookData)
+    SDK->>API: POST /webhooks
+    API-->>SDK: webhook created
+    SDK->>API: POST /webhooks/{id}/test
+    API-->>SDK: test result
+
+    Note over App,Tenant: Total: 20-40 segundos
+```
+
+### 1. Nova Organização sendo Criada na Plataforma Cliente
+
+```php
+<?php
+
+use Clubify\Checkout\ClubifyCheckoutSDK;
+
+// 1. Instalar o SDK PHP via composer apontando para o repositório git
+// composer require clubify/checkout-sdk-php
+
+// 2. Configurar as credenciais do super admin na plataforma
+$config = [
+    'credentials' => [
+        'super_admin_tenant_id' => 'SUPER_ADMIN',
+        'super_admin_api_key' => 'sk_test_super_admin_key_123',
+        'base_url' => 'https://checkout.svelve.com/api/v1'
+    ],
+    'cache' => [
+        'adapter' => 'array',
+        'ttl' => 3600
+    ],
+    'logging' => [
+        'level' => 'info',
+        'channels' => ['file']
+    ],
+    'retry' => [
+        'max_attempts' => 3,
+        'delay' => 1000,
+        'backoff' => 'exponential'
+    ],
+    'conflict_resolution' => [
+        'auto_resolve' => true,
+        'strategy' => 'retrieve_existing'
     ]
+];
+
+// 3. Instanciar o SDK nas classes que vão utilizar
+$sdk = new ClubifyCheckoutSDK($config);
+
+// 4. Inicializar o SDK com as credenciais super admin
+$sdk->initializeAsSuperAdmin(
+    $config['credentials']['super_admin_tenant_id'],
+    $config['credentials']['super_admin_api_key']
+);
+
+// 5. Criar um novo tenant (organization)
+$organizationData = [
+    'name' => 'Nova Empresa Teste',
+    'admin_email' => 'admin@nova-empresa.com',
+    'admin_name' => 'Administrador Teste',
+    'subdomain' => 'nova-empresa-teste',
+    'custom_domain' => 'checkout.nova-empresa.com',
+    'settings' => [
+        'timezone' => 'America/Sao_Paulo',
+        'currency' => 'BRL',
+        'language' => 'pt-BR'
+    ]
+];
+
+$organization = $sdk->organization()->createIdempotent($organizationData, $orgIdempotencyKey);
+$tenantId = $organization['tenant_id'];
+
+// 6. Provisionar o domínio e certificado SSL
+echo "Manual steps required:\n";
+echo "1. Configure DNS to point to Clubify servers\n";
+echo "2. SSL certificate will be auto-provisioned\n";
+
+// 7. Criar usuário com role tenant_admin no novo tenant
+$switchResult = $sdk->switchToTenant($tenantId, [
+    'admin_email' => $organizationData['admin_email'],
+    'admin_name' => $organizationData['admin_name']
 ]);
 
-// 2. Criar produto completo
-$product = ClubifyCheckout::createCompleteProduct([
-    'name' => 'Curso Online',
-    'description' => 'Curso completo de desenvolvimento',
-    'price' => 29900, // R$ 299,00 em centavos
-    'currency' => 'BRL',
+$adminUserData = [
+    'email' => $organizationData['admin_email'],
+    'name' => $organizationData['admin_name'],
+    'role' => 'tenant_admin',
+    'permissions' => [
+        'manage_settings',
+        'manage_users',
+        'manage_products',
+        'manage_offers',
+        'view_analytics'
+    ]
+];
+
+$adminUser = $sdk->userManagement()->createUserIdempotent(
+    $adminUserData,
+    $userIdempotencyKey,
+    true // autoResolveConflicts
+);
+
+// 8. Criar api-key para o novo tenant
+$apiKeyData = [
+    'name' => 'Tenant Admin Key',
+    'user_id' => $adminUser['id'],
+    'permissions' => [
+        'read:users', 'write:users',
+        'read:products', 'write:products',
+        'read:offers', 'write:offers'
+    ],
+    'expires_in' => 86400 * 365 // 1 year
+];
+
+$keyIdempotencyKey = generateIdempotencyKey('create_api_key', $apiKeyData);
+$apiKey = $sdk->userManagement()->createApiKeyIdempotent($apiKeyData, $keyIdempotencyKey);
+
+// 9. Configurar webhooks para o novo tenant
+$webhookData = [
+    'url' => 'https://webhook.site/unique-id-here',
+    'events' => [
+        'order.paid',
+        'order.created',
+        'order.cancelled',
+        'payment.failed',
+        'customer.created',
+        'cart.abandoned'
+    ],
+    'secret' => bin2hex(random_bytes(32)),
+    'active' => true,
+    'timeout' => 30
+];
+
+$webhook = $sdk->webhooks()->createWebhook($webhookData);
+```
+
+### 2. Nova Oferta sendo Cadastrada na Plataforma Cliente
+
+```php
+// Assumindo que já está no contexto do tenant
+
+// 1. Criar um novo produto no tenant
+$productData = [
+    'name' => 'Curso Premium de Desenvolvimento Web 2024',
+    'description' => 'Domine o desenvolvimento web moderno',
+    'price' => [
+        'amount' => 29999, // R$ 299,99 em centavos
+        'currency' => 'BRL'
+    ],
+    'type' => 'digital',
+    'features' => [
+        'React Advanced Concepts',
+        'Node.js Backend Development',
+        'Database Design',
+        '1-on-1 Mentorship'
+    ]
+];
+
+$product = $sdk->products()->create($productData);
+
+// 2. Criar uma nova oferta no tenant
+$offerData = [
+    'name' => 'Oferta Especial - Curso Premium',
+    'slug' => 'curso-premium-2024',
+    'description' => 'Oferta limitada com desconto especial',
+    'type' => 'course',
+    'status' => 'active',
+    'pricing' => [
+        'base_price' => 299.99,
+        'currency' => 'BRL',
+        'discount_price' => 199.99,
+        'discount_type' => 'percentage',
+        'discount_value' => 33.33
+    ]
+];
+
+$offer = $sdk->offer()->createOffer($offerData);
+
+// 3. Associar o produto criado à oferta criada
+$association = $sdk->offer()->associateProduct($offer['id'], $product['id']);
+
+// 4. Receber as urls do checkout para a oferta
+$checkoutUrls = $sdk->offer()->getCheckoutUrls($offer['id']);
+echo "🔗 Checkout URL: " . $checkoutUrls['checkout_url'] . "\n";
+echo "🔗 Landing Page: " . $checkoutUrls['landing_url'] . "\n";
+
+// 5. Criar um novo flow para a oferta
+$flowData = [
+    'name' => 'Fluxo Principal - Curso Premium',
+    'type' => 'sales_funnel',
+    'steps' => [
+        ['type' => 'landing', 'template' => 'course_landing'],
+        ['type' => 'checkout', 'template' => 'modern_checkout'],
+        ['type' => 'upsell', 'template' => 'video_upsell'],
+        ['type' => 'thank_you', 'template' => 'success_page']
+    ]
+];
+
+$flow = $sdk->offer()->createFlow($offer['id'], $flowData);
+
+// 6. Criar novo tema e layout para a oferta
+$themeConfig = [
+    'primary_color' => '#007bff',
+    'secondary_color' => '#6c757d',
+    'font_family' => 'Inter',
+    'layout_style' => 'modern'
+];
+
+$theme = $sdk->offer()->configureTheme($offer['id'], $themeConfig);
+
+$layoutConfig = [
+    'type' => 'sales_page',
+    'template' => 'course_landing',
+    'sections' => ['hero', 'benefits', 'testimonials', 'pricing']
+];
+
+$layout = $sdk->offer()->configureLayout($offer['id'], $layoutConfig);
+
+// 7. Configurar orderbump na oferta
+$orderbumpData = [
+    'name' => 'E-book Bônus: Guia de JavaScript',
+    'description' => 'Guia completo com exemplos práticos',
+    'price' => 29.99,
+    'discount_price' => 9.99,
+    'trigger' => 'checkout_page',
+    'position' => 'below_payment',
+    'design' => [
+        'style' => 'checkbox',
+        'color' => '#28a745'
+    ]
+];
+
+$orderbump = $sdk->offer()->addOrderbump($offer['id'], $orderbumpData);
+
+// 8. Configurar upsell na oferta
+$upsellData = [
+    'name' => 'Mentoria 1:1 - 2 horas',
+    'description' => 'Sessão personalizada de mentoria',
+    'price' => 199.99,
+    'discount_price' => 99.99,
+    'trigger' => 'after_purchase',
+    'video_url' => 'https://vimeo.com/123456789',
+    'timer' => [
+        'enabled' => true,
+        'duration' => 300 // 5 minutos
+    ]
+];
+
+$upsell = $sdk->offer()->addUpsell($offer['id'], $upsellData);
+```
+
+### 3. Validação Final
+
+```php
+// 1. Acesse o checkout através das urls fornecidas
+$checkoutUrls = $sdk->offer()->getCheckoutUrls($offer['id']);
+echo "✅ URLs do Checkout disponíveis:\n";
+echo "🔗 Landing Page: " . $checkoutUrls['landing_url'] . "\n";
+echo "🔗 Checkout: " . $checkoutUrls['checkout_url'] . "\n";
+echo "🔗 Thank You: " . $checkoutUrls['thank_you_url'] . "\n";
+
+// 2. Utilize o ambiente sandbox (https://checkout.svelve.com)
+echo "\n🌍 Ambiente: " . $sdk->getEnvironment() . "\n";
+echo "🔗 Base URL: " . $sdk->getBaseUrl() . "\n";
+
+// 3. Verifique se há erros e busque na ajuda nos erros comuns
+$healthCheck = $sdk->runHealthCheck();
+if ($healthCheck['status'] === 'healthy') {
+    echo "✅ Sistema funcionando corretamente!\n";
+    echo "📋 Verificações realizadas:\n";
+    foreach ($healthCheck['checks'] as $check => $status) {
+        echo "  - " . ucfirst($check) . ": " . ($status ? "✅" : "❌") . "\n";
+    }
+} else {
+    echo "⚠️ Problemas encontrados:\n";
+    foreach ($healthCheck['issues'] as $issue) {
+        echo "  - " . $issue . "\n";
+    }
+}
+```
+
+---
+
+## 📝 Exemplos de Uso
+
+### Uso Básico - Inicialização Rápida
+
+```php
+use Clubify\Checkout\ClubifyCheckoutSDK;
+
+// Configuração mínima
+$sdk = new ClubifyCheckoutSDK([
+    'api_key' => 'clb_live_your_api_key',
+    'api_secret' => 'your_api_secret',
+    'tenant_id' => 'your_tenant_id',
+    'environment' => 'sandbox'
+]);
+
+// Inicializar
+$sdk->initialize();
+
+// Criar produto
+$product = $sdk->products()->create([
+    'name' => 'Curso Digital',
+    'price' => ['amount' => 9999, 'currency' => 'BRL'], // R$ 99,99
     'type' => 'digital'
 ]);
 
-// 3. Criar sessão de checkout
-$session = ClubifyCheckout::createCheckoutSession([
+// Criar sessão de checkout
+$session = $sdk->checkout()->createSession([
     'offer_id' => $product['offer_id'],
     'customer' => [
         'email' => 'cliente@exemplo.com',
-        'name' => 'João Silva',
-        'document' => '12345678900'
+        'name' => 'João Silva'
     ],
     'redirect_urls' => [
-        'success' => 'https://minhaempresa.com.br/sucesso',
-        'cancel' => 'https://minhaempresa.com.br/cancelado'
+        'success' => 'https://meusite.com/sucesso',
+        'cancel' => 'https://meusite.com/cancelar'
     ]
 ]);
 
 echo "🔗 URL do Checkout: " . $session['checkout_url'];
 ```
 
-### Para PHP Vanilla
+### Uso com Laravel - Facade
 
 ```php
-<?php
+use ClubifyCheckout; // Facade
 
-// 1. Setup da organização
-$organization = $sdk->organization()->setupComplete([
-    'name' => 'Minha Empresa',
-    'domain' => 'minhaempresa.com.br'
-]);
+class CheckoutController extends Controller
+{
+    public function criarOrganizacao(Request $request)
+    {
+        $organization = ClubifyCheckout::setupOrganization([
+            'name' => $request->name,
+            'domain' => $request->domain,
+            'admin_email' => $request->admin_email
+        ]);
 
-// 2. Criar produto
-$product = $sdk->products()->createComplete([
-    'name' => 'Produto Digital',
-    'price' => 9900, // R$ 99,00
-    'currency' => 'BRL'
-]);
+        return response()->json($organization);
+    }
 
-// 3. Processamento one-click
-$payment = $sdk->checkout()->oneClick([
-    'product_id' => $product['id'],
-    'customer' => [
-        'email' => 'cliente@exemplo.com',
-        'name' => 'Cliente'
-    ],
-    'payment_method' => [
-        'type' => 'credit_card',
-        'token' => 'card_token_123'
-    ]
-]);
+    public function criarProduto(Request $request)
+    {
+        $product = ClubifyCheckout::createCompleteProduct([
+            'name' => $request->name,
+            'price' => $request->price * 100, // Converter para centavos
+            'currency' => 'BRL',
+            'description' => $request->description
+        ]);
+
+        return response()->json($product);
+    }
+
+    public function criarCheckout(Request $request)
+    {
+        $session = ClubifyCheckout::createCheckoutSession([
+            'offer_id' => $request->offer_id,
+            'customer' => [
+                'email' => $request->email,
+                'name' => $request->name,
+                'document' => $request->cpf
+            ]
+        ]);
+
+        return response()->json([
+            'checkout_url' => $session['checkout_url']
+        ]);
+    }
+}
 ```
 
-## 🧩 Módulos Disponíveis
-
-O SDK está organizado em módulos especializados que cobrem todas as necessidades de integração com checkout:
-
-### 🏢 Organization Module
-**Gestão completa de organizações e tenants**
+### Gerenciamento de Carrinho
 
 ```php
-$org = $sdk->organization();
+// Inicializar módulo de carrinho
+$cartModule = $sdk->cart();
 
-// Setup completo da organização
-$result = $org->setupComplete([
-    'name' => 'Minha Empresa LTDA',
-    'domain' => 'minhaempresa.com.br',
-    'admin' => [
-        'name' => 'João Admin',
-        'email' => 'admin@minhaempresa.com.br'
-    ]
-]);
-
-// Gestão de tenants
-$tenant = $org->tenants()->create([
-    'name' => 'Tenant Produção',
-    'environment' => 'production'
-]);
-
-// Geração de API keys
-$apiKey = $org->apiKeys()->generate([
-    'name' => 'API Key Produção',
-    'permissions' => ['checkout.create', 'payments.process']
-]);
-
-// Configuração de domínios customizados
-$domain = $org->domains()->configure([
-    'domain' => 'checkout.minhaempresa.com.br',
-    'ssl_enabled' => true
-]);
-```
-
-**Funcionalidades:**
-- ✅ Setup automatizado de organizações
-- ✅ Gestão multi-tenant
-- ✅ Criação de usuários admin
-- ✅ Geração e rotação de API keys
-- ✅ Configuração de domínios customizados
-- ✅ Gestão de permissões e roles
-
-### 🛍️ Products Module
-**CRUD completo de produtos e ofertas avançadas**
-
-```php
-$products = $sdk->products();
-
-// Criar produto completo
-$product = $products->createComplete([
-    'name' => 'Curso de PHP Avançado',
-    'description' => 'Aprenda PHP do zero ao avançado',
-    'price' => 19900, // R$ 199,00
+// Criar carrinho
+$cart = $cartModule->create('session_123', [
+    'customer_id' => 'customer_456',
     'currency' => 'BRL',
-    'type' => 'digital',
-    'category' => 'education'
-]);
-
-// Configurar oferta com order bump
-$offer = $products->offers()->create([
-    'product_id' => $product['id'],
-    'name' => 'Oferta Especial',
-    'order_bump' => [
-        'enabled' => true,
-        'product_id' => 'bonus_product_123',
-        'discount_percentage' => 50,
-        'position' => 'after_products'
+    'metadata' => [
+        'source' => 'web',
+        'campaign' => 'promocao_verao'
     ]
 ]);
 
-// Configurar upsell
-$upsell = $products->upsells()->create([
-    'offer_id' => $offer['id'],
-    'upsell_product_id' => 'advanced_course_456',
-    'discount_percentage' => 30,
-    'trigger' => 'after_purchase'
+// Adicionar item
+$item = $cartModule->addItem($cart['id'], [
+    'product_id' => 'prod_123',
+    'quantity' => 2,
+    'price' => 99.99,
+    'metadata' => ['cor' => 'azul', 'tamanho' => 'G']
 ]);
 
-// Gestão de preços dinâmicos
-$pricing = $products->pricing()->update($product['id'], [
-    'price' => 14900, // Novo preço
-    'promotional_price' => 9900,
-    'promotion_expires_at' => '2024-12-31T23:59:59Z'
-]);
+// Atualizar quantidade
+$cartModule->updateItem($cart['id'], $item['id'], ['quantity' => 3]);
 
-// Flow de navegação customizado
-$flow = $products->flows()->create([
-    'name' => 'Flow de Vendas Avançado',
-    'steps' => [
-        ['type' => 'product_selection'],
-        ['type' => 'customer_info'],
-        ['type' => 'order_bump'],
-        ['type' => 'payment'],
-        ['type' => 'upsell']
-    ]
-]);
-```
+// Remover item
+$cartModule->removeItem($cart['id'], $item['id']);
 
-**Funcionalidades:**
-- ✅ CRUD completo de produtos
-- ✅ Gestão avançada de ofertas
-- ✅ Sistema de order bumps inteligente
-- ✅ Upsells pós-compra
-- ✅ Estratégias de preços dinâmicas
-- ✅ Flow navigation customizável
-- ✅ Categorização e organização
-- ✅ Produtos digitais e físicos
-
-### 🛒 Checkout Module
-**Gestão completa de sessões e carrinho**
-
-```php
-$checkout = $sdk->checkout();
-
-// Criar sessão de checkout
-$session = $checkout->createSession([
-    'offer_id' => 'offer_123',
-    'customer' => [
-        'email' => 'cliente@exemplo.com',
-        'name' => 'João Silva',
-        'document' => '12345678900'
-    ],
+// Finalizar carrinho
+$checkout = $cartModule->checkout($cart['id'], [
+    'payment_method' => 'credit_card',
     'redirect_urls' => [
-        'success' => 'https://site.com/sucesso',
-        'cancel' => 'https://site.com/cancelado'
-    ],
-    'expires_in' => 3600 // 1 hora
-]);
-
-// Gestão de carrinho
-$cart = $checkout->cart();
-$cart->addItem([
-    'product_id' => 'product_123',
-    'quantity' => 1,
-    'price' => 19900
-]);
-
-$cart->applyCoupon('DESCONTO10');
-$cart->calculateShipping([
-    'zipcode' => '01310-100',
-    'state' => 'SP'
-]);
-
-// One-click purchase
-$purchase = $checkout->oneClick([
-    'product_id' => 'product_123',
-    'customer_token' => 'saved_customer_token',
-    'payment_token' => 'saved_card_token'
-]);
-
-// Flow navigation
-$flow = $checkout->flow();
-$nextStep = $flow->navigateToNext([
-    'current_step' => 'customer_info',
-    'data' => ['email' => 'cliente@exemplo.com']
-]);
-```
-
-**Funcionalidades:**
-- ✅ Gestão de sessões com expiração
-- ✅ Carrinho com itens múltiplos
-- ✅ Sistema de cupons e desconto
-- ✅ Cálculo de frete automático
-- ✅ One-click purchases
-- ✅ Flow navigation avançado
-- ✅ Redirecionamentos inteligentes
-- ✅ Checkout mobile-optimized
-
-### 💳 Payments Module
-**Processamento multi-gateway com inteligência**
-
-```php
-$payments = $sdk->payments();
-
-// Processar pagamento
-$payment = $payments->process([
-    'amount' => 19900,
-    'currency' => 'BRL',
-    'payment_method' => [
-        'type' => 'credit_card',
-        'card' => [
-            'number' => '4111111111111111',
-            'exp_month' => '12',
-            'exp_year' => '2025',
-            'cvc' => '123',
-            'holder_name' => 'João Silva'
-        ]
-    ],
-    'customer' => [
-        'email' => 'cliente@exemplo.com',
-        'document' => '12345678900'
+        'success' => 'https://meusite.com/sucesso',
+        'cancel' => 'https://meusite.com/cancelar'
     ]
 ]);
-
-// Multi-gateway com fallback
-$gatewayPayment = $payments->gateway('stripe')->process([
-    'amount' => 19900,
-    'currency' => 'BRL',
-    'fallback_gateway' => 'pagarme'
-]);
-
-// Tokenização de cartões
-$token = $payments->tokenization()->createToken([
-    'card' => [
-        'number' => '4111111111111111',
-        'exp_month' => '12',
-        'exp_year' => '2025',
-        'cvc' => '123'
-    ],
-    'customer_id' => 'customer_123'
-]);
-
-// Histórico de transações
-$transactions = $payments->transactions()->list([
-    'customer_id' => 'customer_123',
-    'start_date' => '2024-01-01',
-    'end_date' => '2024-12-31'
-]);
-
-// Retry automático de pagamentos falhados
-$retry = $payments->retry([
-    'transaction_id' => 'failed_transaction_123',
-    'retry_strategy' => 'exponential_backoff'
-]);
 ```
 
-**Funcionalidades:**
-- ✅ Multi-gateway (Stripe, Pagar.me)
-- ✅ Tokenização segura de cartões
-- ✅ Retry automático inteligente
-- ✅ Fallback entre gateways
-- ✅ Histórico completo de transações
-- ✅ Suporte a PIX, boleto e cartões
-- ✅ Conformidade PCI DSS
-- ✅ Análise anti-fraude integrada
-
-### 👥 Customers Module
-**Gestão inteligente de clientes**
-
-```php
-$customers = $sdk->customers();
-
-// Customer matching inteligente
-$customer = $customers->match([
-    'email' => 'cliente@exemplo.com',
-    'document' => '12345678900',
-    'phone' => '+5511999999999'
-]);
-
-// Gestão de perfis
-$profile = $customers->profiles()->update($customer['id'], [
-    'name' => 'João Silva Santos',
-    'birthdate' => '1990-05-15',
-    'preferences' => [
-        'communication' => 'email',
-        'language' => 'pt_BR'
-    ]
-]);
-
-// Histórico de compras
-$history = $customers->history()->get($customer['id'], [
-    'include_analytics' => true,
-    'period' => 'last_12_months'
-]);
-
-// Sistema de recomendações
-$recommendations = $customers->recommendations()->generate($customer['id'], [
-    'based_on' => 'purchase_history',
-    'limit' => 5
-]);
-
-// Segmentação automática
-$segment = $customers->segmentation()->classify($customer['id'], [
-    'criteria' => ['value', 'frequency', 'recency']
-]);
-```
-
-**Funcionalidades:**
-- ✅ Customer matching inteligente
-- ✅ Gestão completa de perfis
-- ✅ Histórico detalhado de compras
-- ✅ Sistema de recomendações
-- ✅ Segmentação automática
-- ✅ Análise de comportamento
-- ✅ Conformidade LGPD
-- ✅ Score de engajamento
-
-### 🔗 Webhooks Module
-**Sistema robusto de webhooks**
-
-```php
-$webhooks = $sdk->webhooks();
-
-// Configurar webhook
-$webhook = $webhooks->configure([
-    'url' => 'https://meusite.com.br/webhooks/clubify',
-    'events' => [
-        'payment.completed',
-        'payment.failed',
-        'customer.created',
-        'order.fulfilled'
-    ],
-    'secret' => 'webhook_secret_key'
-]);
-
-// Validar assinatura do webhook
-$isValid = $webhooks->validateSignature(
-    $payload,
-    $signature,
-    'webhook_secret_key'
-);
-
-// Sistema de retry
-$retryConfig = $webhooks->retry()->configure([
-    'max_attempts' => 5,
-    'backoff_strategy' => 'exponential',
-    'timeout' => 30
-]);
-
-// Testes de webhook
-$test = $webhooks->testing()->simulate([
-    'event' => 'payment.completed',
-    'webhook_id' => 'webhook_123'
-]);
-
-// Estatísticas
-$stats = $webhooks->stats()->get([
-    'period' => 'last_30_days',
-    'include_errors' => true
-]);
-```
-
-**Funcionalidades:**
-- ✅ Configuração flexível de eventos
-- ✅ Validação de assinatura HMAC
-- ✅ Sistema de retry robusto
-- ✅ Utilitários de teste
-- ✅ Monitoramento e estatísticas
-- ✅ Rate limiting inteligente
-- ✅ Logs detalhados
-- ✅ Tolerância a falhas
-
-## 🔧 Laravel Integration
-
-O SDK oferece integração nativa e completa com Laravel, proporcionando uma experiência de desenvolvimento seamless:
-
-### Service Provider Auto-Registrado
-
-```php
-// config/app.php - Registro automático via Package Discovery
-'providers' => [
-    // Outros providers...
-    Clubify\Checkout\Laravel\ClubifyCheckoutServiceProvider::class, // Auto-registrado
-],
-
-'aliases' => [
-    // Outros aliases...
-    'ClubifyCheckout' => Clubify\Checkout\Laravel\Facades\ClubifyCheckout::class, // Auto-registrado
-],
-```
-
-### Comandos Artisan Disponíveis
-
-```bash
-# Instalar e configurar o SDK
-php artisan clubify:install
-
-# Publicar arquivo de configuração
-php artisan clubify:publish --config
-
-# Sincronizar dados com a API
-php artisan clubify:sync --all
-
-# Sincronizar apenas produtos
-php artisan clubify:sync --products
-
-# Sincronizar apenas clientes
-php artisan clubify:sync --customers
-
-# Verificar conectividade
-php artisan clubify:install --test-connection
-```
-
-### Jobs Assíncronos
-
-```php
-// Jobs disponíveis para processamento em background
-
-// 1. Processar pagamento assíncrono
-use Clubify\Checkout\Laravel\Jobs\ProcessPayment;
-
-ProcessPayment::dispatch([
-    'amount' => 19900,
-    'customer_id' => 'customer_123',
-    'payment_method' => 'credit_card'
-])->onQueue('payments-high');
-
-// 2. Enviar webhook
-use Clubify\Checkout\Laravel\Jobs\SendWebhook;
-
-SendWebhook::dispatch([
-    'event' => 'payment.completed',
-    'payload' => $paymentData,
-    'webhook_url' => 'https://cliente.com/webhook'
-])->onQueue('webhooks');
-
-// 3. Sincronizar cliente
-use Clubify\Checkout\Laravel\Jobs\SyncCustomer;
-
-SyncCustomer::dispatch([
-    'customer_id' => 'customer_123',
-    'sync_type' => 'full'
-])->onQueue('customers');
-```
-
-### Middleware Disponíveis
+### Middleware Laravel
 
 ```php
 // routes/api.php
-
 Route::group(['middleware' => ['clubify.auth']], function () {
-    // Rotas protegidas por autenticação SDK
-    Route::post('/checkout/create', [CheckoutController::class, 'create']);
+    // Rotas protegidas que requerem autenticação SDK
+    Route::post('/checkout/criar', [CheckoutController::class, 'create']);
+    Route::get('/produtos', [ProductController::class, 'index']);
 });
 
 Route::group(['middleware' => ['clubify.webhook']], function () {
-    // Rotas para receber webhooks com validação
+    // Rotas de webhook com validação de assinatura
     Route::post('/webhooks/clubify', [WebhookController::class, 'handle']);
 });
 ```
 
-### Rules de Validação
+### Validação com Regras Customizadas
 
 ```php
-// Em um Form Request
 use Clubify\Checkout\Laravel\Rules\CPFRule;
 use Clubify\Checkout\Laravel\Rules\CNPJRule;
 use Clubify\Checkout\Laravel\Rules\CreditCardRule;
@@ -669,418 +792,571 @@ class CreateCustomerRequest extends FormRequest
     public function rules()
     {
         return [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:customers',
             'document' => ['required', new CPFRule()],
             'company_document' => ['nullable', new CNPJRule()],
             'credit_card' => ['required', new CreditCardRule()],
         ];
     }
+
+    public function messages()
+    {
+        return [
+            'document.required' => 'CPF é obrigatório',
+            'email.unique' => 'Este e-mail já está cadastrado',
+        ];
+    }
 }
 ```
 
-### Cache Integration
+---
+
+## 🔧 Troubleshooting
+
+### Erros Comuns e Soluções
+
+#### 1. Erro de Autenticação (401)
+
+**Sintomas:**
+```
+Error: "Authentication failed"
+Status: 401
+Message: "Invalid API key"
+```
+
+**Soluções:**
+1. Verificar se a API key existe no ambiente
+2. Conferir formato da chave (deve ser base64 encoded)
+3. Garantir ambiente correto (sandbox vs production)
+4. Validar se a chave não expirou
+
+**Código de verificação:**
+```php
+// Verificar credenciais
+try {
+    $result = $sdk->initialize();
+    if ($result['success']) {
+        echo "✅ Credenciais válidas";
+    }
+} catch (AuthenticationException $e) {
+    echo "❌ Erro de autenticação: " . $e->getMessage();
+    echo "💡 Verificar variáveis de ambiente:";
+    echo "   - CLUBIFY_CHECKOUT_API_KEY";
+    echo "   - CLUBIFY_CHECKOUT_API_SECRET";
+    echo "   - CLUBIFY_CHECKOUT_TENANT_ID";
+}
+```
+
+#### 2. Erro de Rate Limiting (429)
+
+**Sintomas:**
+```
+HTTP 429 Too Many Requests
+Retry-After: 60
+```
+
+**Soluções:**
+1. Implementar backoff exponencial
+2. Respeitar header Retry-After
+3. Reduzir frequência de requisições
+4. Usar filas de requisições
+
+**Implementação:**
+```php
+// Estratégia de retry com backoff
+$retryStrategy = new ExponentialBackoffStrategy([
+    'max_attempts' => 5,
+    'initial_delay' => 1000, // 1 segundo
+    'max_delay' => 60000,    // 60 segundos
+    'multiplier' => 2
+]);
+
+try {
+    $result = $sdk->products()->create($data);
+} catch (RateLimitException $e) {
+    $retryAfter = $e->getRetryAfter();
+    sleep($retryAfter);
+    // Retry operation
+}
+```
+
+#### 3. Conflito de Recursos (409)
+
+**Sintomas:**
+```
+HTTP 409 Conflict
+Message: "Domain 'example.com' already exists"
+```
+
+**Soluções:**
+1. Usar parâmetro `checkExisting=true`
+2. Implementar resolução automática de conflitos
+3. Verificar recursos existentes antes de criar
+
+**Padrão de resolução:**
+```php
+try {
+    $organization = $sdk->organization()->createIdempotent($data, $idempotencyKey);
+} catch (ConflictException $e) {
+    if ($e->isAutoResolvable()) {
+        // Resolver automaticamente buscando recurso existente
+        $existing = $sdk->organization()->getByDomain($data['domain']);
+        return $existing;
+    }
+
+    // Mostrar sugestões de resolução
+    foreach ($e->getResolutionSuggestions() as $suggestion) {
+        echo "💡 Sugestão: " . $suggestion;
+    }
+}
+```
+
+#### 4. Falha de Conexão com Database
+
+**Sintomas:**
+```
+MongoNetworkError: failed to connect
+Redis connection timeout
+```
+
+**Diagnóstico:**
+```bash
+# Verificar status dos serviços
+docker-compose ps mongodb redis
+
+# Verificar logs
+docker-compose logs mongodb
+docker-compose logs redis
+
+# Testar conectividade
+docker-compose exec payment-service ping mongodb
+docker-compose exec payment-service ping redis
+```
+
+**Soluções:**
+1. Verificar se serviços estão executando
+2. Conferir strings de conexão
+3. Verificar conectividade de rede
+4. Ajustar configurações de pool de conexão
+
+#### 5. Erro de Validação de Webhook
+
+**Sintomas:**
+```
+Webhook signature validation failed
+Invalid webhook payload
+```
+
+**Verificação:**
+```php
+// Validar webhook manualmente
+public function validateWebhook(Request $request)
+{
+    $payload = $request->getContent();
+    $signature = $request->header('X-Clubify-Signature');
+    $secret = config('clubify-checkout.webhook_secret');
+
+    $expectedSignature = hash_hmac('sha256', $payload, $secret);
+
+    if (!hash_equals($expectedSignature, $signature)) {
+        throw new SecurityException('Invalid webhook signature');
+    }
+
+    return json_decode($payload, true);
+}
+```
+
+**Soluções:**
+1. Verificar secret do webhook
+2. Conferir algoritmo de hash (sha256)
+3. Validar headers HTTP
+4. Verificar tolerância de tempo
+
+### Diagnóstico Avançado
+
+#### Script de Verificação Completa
 
 ```php
-// O SDK utiliza automaticamente o cache configurado no Laravel
-// config/clubify-checkout.php
+<?php
 
-'cache' => [
-    'adapter' => 'laravel', // Usa o sistema de cache do Laravel
-    'store' => 'redis', // Ou qualquer store configurado
-    'ttls' => [
-        'auth_token' => 3600,
-        'products' => 1800,
-        'organization' => 7200,
+class ClubifyDiagnostic
+{
+    private $sdk;
+    private $results = [];
+
+    public function __construct($config)
+    {
+        $this->sdk = new ClubifyCheckoutSDK($config);
+    }
+
+    public function runDiagnostic(): array
+    {
+        $this->testConnection();
+        $this->testModules();
+        $this->testPermissions();
+        $this->testPerformance();
+
+        return $this->results;
+    }
+
+    private function testConnection(): void
+    {
+        try {
+            $start = microtime(true);
+            $result = $this->sdk->initialize();
+            $duration = (microtime(true) - $start) * 1000;
+
+            $this->results['connection'] = [
+                'status' => 'success',
+                'duration_ms' => round($duration, 2),
+                'details' => $result
+            ];
+        } catch (Exception $e) {
+            $this->results['connection'] = [
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'code' => $e->getCode()
+            ];
+        }
+    }
+
+    private function testModules(): void
+    {
+        $modules = [
+            'organization', 'products', 'checkout',
+            'payments', 'customers', 'webhooks'
+        ];
+
+        foreach ($modules as $module) {
+            try {
+                $service = $this->sdk->$module();
+                $this->results['modules'][$module] = 'available';
+            } catch (Exception $e) {
+                $this->results['modules'][$module] = 'error: ' . $e->getMessage();
+            }
+        }
+    }
+
+    private function testPermissions(): void
+    {
+        $permissions = [
+            'read_organization' => fn() => $this->sdk->organization()->get(),
+            'list_products' => fn() => $this->sdk->products()->list(['limit' => 1]),
+            'create_checkout' => fn() => $this->sdk->checkout()->validateAccess(),
+        ];
+
+        foreach ($permissions as $permission => $test) {
+            try {
+                $test();
+                $this->results['permissions'][$permission] = 'granted';
+            } catch (Exception $e) {
+                $this->results['permissions'][$permission] = 'denied: ' . $e->getMessage();
+            }
+        }
+    }
+
+    private function testPerformance(): void
+    {
+        $start = microtime(true);
+
+        try {
+            // Teste de múltiplas requisições
+            for ($i = 0; $i < 5; $i++) {
+                $this->sdk->organization()->get();
+            }
+
+            $duration = (microtime(true) - $start) * 1000;
+            $avgDuration = $duration / 5;
+
+            $this->results['performance'] = [
+                'total_duration_ms' => round($duration, 2),
+                'avg_duration_ms' => round($avgDuration, 2),
+                'requests_per_second' => round(5000 / $duration, 2)
+            ];
+        } catch (Exception $e) {
+            $this->results['performance'] = [
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+}
+
+// Executar diagnóstico
+$config = [
+    'api_key' => getenv('CLUBIFY_CHECKOUT_API_KEY'),
+    'api_secret' => getenv('CLUBIFY_CHECKOUT_API_SECRET'),
+    'tenant_id' => getenv('CLUBIFY_CHECKOUT_TENANT_ID'),
+    'environment' => 'sandbox'
+];
+
+$diagnostic = new ClubifyDiagnostic($config);
+$results = $diagnostic->runDiagnostic();
+
+echo "🔍 Resultados do Diagnóstico:\n\n";
+echo json_encode($results, JSON_PRETTY_PRINT);
+```
+
+### Logs e Monitoramento
+
+#### Configuração de Logging
+
+```php
+// Logging estruturado
+function logStep(string $message, string $level = 'info'): void {
+    $timestamp = date('Y-m-d H:i:s');
+    $icon = match($level) {
+        'info' => '🔄',
+        'success' => '✅',
+        'warning' => '⚠️',
+        'error' => '❌',
+        'debug' => '🔍'
+    };
+
+    echo "[{$timestamp}] {$icon} {$message}\n";
+
+    // Log estruturado para análise
+    error_log(json_encode([
+        'timestamp' => $timestamp,
+        'level' => $level,
+        'message' => $message,
+        'memory_usage' => memory_get_usage(true),
+        'peak_memory' => memory_get_peak_usage(true)
+    ]));
+}
+```
+
+#### Monitoramento de Performance
+
+```bash
+# Monitor de recursos
+docker stats
+
+# Profile de queries de database
+db.setProfilingLevel(2, { slowms: 100 })
+db.system.profile.find().sort({ts: -1}).limit(5)
+
+# Verificar tempos de resposta da API
+curl -w "@curl-format.txt" -s -o /dev/null https://api.clubify.me/v1/health
+```
+
+---
+
+## 📚 Referência da API
+
+### Métodos Principais do SDK
+
+#### SDK Core
+```php
+$sdk->initialize(bool $skipHealthCheck = false): array
+$sdk->initializeAsSuperAdmin(array $credentials): array
+$sdk->switchToTenant(string $tenantId): array
+$sdk->switchToSuperAdmin(): void
+$sdk->getCurrentContext(): array
+$sdk->isAuthenticated(): bool
+$sdk->isInitialized(): bool
+$sdk->getEnvironment(): string
+$sdk->getBaseUrl(): string
+```
+
+#### Módulo Super Admin
+```php
+$sdk->superAdmin()->listTenants(): array
+$sdk->superAdmin()->getTenantByDomain(string $domain): array
+$sdk->superAdmin()->getTenantCredentials(string $tenantId): array
+$sdk->superAdmin()->provisionTenantCredentials(string $tenantId, array $options): array
+$sdk->superAdmin()->createTenantApiKey(string $tenantId, array $data): array
+$sdk->superAdmin()->getSystemStats(int $limit = 10): array
+```
+
+#### Módulo Organization
+```php
+$sdk->organization()->createIdempotent(array $data, string $key): array
+$sdk->createOrganization(array $data): array
+$sdk->registerExistingTenant(string $tenantId, array $data): array
+$sdk->organization()->get(): array
+$sdk->organization()->update(array $data): array
+```
+
+#### Módulo Products
+```php
+$sdk->products()->list(array $filters = []): array
+$sdk->products()->get(string $productId): array
+$sdk->products()->create(array $data): array
+$sdk->products()->update(string $productId, array $data): array
+$sdk->products()->delete(string $productId): bool
+$sdk->createCompleteProduct(array $data): array
+```
+
+#### Módulo Offers
+```php
+$sdk->offer()->createOffer(array $data): array
+$sdk->offer()->getCheckoutUrls(string $offerId): array
+$sdk->offer()->configureTheme(string $offerId, array $config): array
+$sdk->offer()->configureLayout(string $offerId, array $config): array
+$sdk->offer()->addUpsell(string $offerId, array $data): array
+$sdk->offer()->addOrderbump(string $offerId, array $data): array
+$sdk->offer()->createFlow(string $offerId, array $data): array
+```
+
+#### Módulo Cart
+```php
+$sdk->cart()->create(string $sessionId, array $data): array
+$sdk->cart()->get(string $cartId): array
+$sdk->cart()->addItem(string $cartId, array $item): array
+$sdk->cart()->updateItem(string $cartId, string $itemId, array $data): array
+$sdk->cart()->removeItem(string $cartId, string $itemId): bool
+$sdk->cart()->clear(string $cartId): bool
+$sdk->cart()->checkout(string $cartId, array $data): array
+```
+
+#### Módulo Checkout
+```php
+$sdk->checkout()->createSession(array $data): array
+$sdk->checkout()->getSession(string $sessionId): array
+$sdk->checkout()->updateSession(string $sessionId, array $data): array
+$sdk->checkout()->processPayment(string $sessionId, array $paymentData): array
+$sdk->checkout()->validateAccess(): bool
+```
+
+#### Módulo Webhooks
+```php
+$sdk->webhooks()->validateUrl(string $url): array
+$sdk->webhooks()->createWebhook(array $data): array
+$sdk->webhooks()->testWebhook(string $webhookId): array
+$sdk->webhooks()->listWebhooks(array $filters = []): array
+$sdk->webhooks()->updateWebhook(string $webhookId, array $data): array
+$sdk->webhooks()->deleteWebhook(string $webhookId): bool
+```
+
+#### Módulo Customers
+```php
+$sdk->customers()->create(array $data): array
+$sdk->customers()->get(string $customerId): array
+$sdk->customers()->update(string $customerId, array $data): array
+$sdk->customers()->list(array $filters = []): array
+$sdk->customers()->delete(string $customerId): bool
+```
+
+#### Módulo Payments
+```php
+$sdk->payments()->process(array $data): array
+$sdk->payments()->get(string $paymentId): array
+$sdk->payments()->refund(string $paymentId, array $data = []): array
+$sdk->payments()->capture(string $paymentId): array
+$sdk->payments()->list(array $filters = []): array
+```
+
+### Estruturas de Dados
+
+#### Organization Data
+```php
+[
+    'name' => 'string',
+    'admin_email' => 'email',
+    'admin_name' => 'string',
+    'subdomain' => 'string',
+    'custom_domain' => 'string|null',
+    'settings' => [
+        'timezone' => 'string',
+        'currency' => 'string',
+        'language' => 'string'
     ]
 ]
 ```
 
-## 🛠️ Utilitários Inclusos
-
-### Criptografia e Segurança
-
+#### Product Data
 ```php
-use Clubify\Checkout\Utils\Crypto\AESEncryption;
-use Clubify\Checkout\Utils\Crypto\HMACSignature;
-
-// Criptografia AES
-$encryption = new AESEncryption('secret_key');
-$encrypted = $encryption->encrypt('dados sensíveis');
-$decrypted = $encryption->decrypt($encrypted);
-
-// Assinatura HMAC
-$hmac = new HMACSignature('secret_key');
-$signature = $hmac->sign('payload_data');
-$isValid = $hmac->verify('payload_data', $signature);
+[
+    'name' => 'string',
+    'description' => 'string',
+    'price' => [
+        'amount' => 'integer', // em centavos
+        'currency' => 'string'
+    ],
+    'type' => 'physical|digital|service',
+    'features' => 'array',
+    'metadata' => 'array'
+]
 ```
 
-### Formatadores
-
+#### Offer Data
 ```php
-use Clubify\Checkout\Utils\Formatters\CurrencyFormatter;
-use Clubify\Checkout\Utils\Formatters\DocumentFormatter;
-use Clubify\Checkout\Utils\Formatters\PhoneFormatter;
-
-// Formatação de moeda
-$currency = new CurrencyFormatter();
-echo $currency->format(19900, 'BRL'); // R$ 199,00
-
-// Formatação de documentos
-$document = new DocumentFormatter();
-echo $document->formatCPF('12345678900'); // 123.456.789-00
-echo $document->formatCNPJ('12345678000195'); // 12.345.678/0001-95
-
-// Formatação de telefones
-$phone = new PhoneFormatter();
-echo $phone->format('+5511999999999'); // (11) 99999-9999
+[
+    'name' => 'string',
+    'slug' => 'string',
+    'description' => 'string',
+    'type' => 'string',
+    'status' => 'active|inactive|draft',
+    'pricing' => [
+        'base_price' => 'float',
+        'currency' => 'string',
+        'discount_price' => 'float|null',
+        'discount_type' => 'percentage|fixed|null',
+        'discount_value' => 'float|null'
+    ]
+]
 ```
 
-### Validadores
-
-```php
-use Clubify\Checkout\Utils\Validators\CPFValidator;
-use Clubify\Checkout\Utils\Validators\CNPJValidator;
-use Clubify\Checkout\Utils\Validators\CreditCardValidator;
-
-// Validação CPF
-$cpf = new CPFValidator();
-$isValid = $cpf->validate('12345678900'); // true/false
-
-// Validação CNPJ
-$cnpj = new CNPJValidator();
-$isValid = $cnpj->validate('12345678000195'); // true/false
-
-// Validação Cartão de Crédito
-$card = new CreditCardValidator();
-$result = $card->validate('4111111111111111'); // ['valid' => true, 'brand' => 'visa']
-```
-
-### Value Objects
-
-```php
-use Clubify\Checkout\ValueObjects\Money;
-
-// Objeto Money para manipulação segura de valores monetários
-$price = new Money(19900, 'BRL'); // R$ 199,00
-echo $price->getAmount(); // 19900 (centavos)
-echo $price->getFormatted(); // R$ 199,00
-echo $price->getCurrency(); // BRL
-
-$newPrice = $price->add(new Money(5000, 'BRL')); // R$ 249,00
-$discounted = $price->multiplyBy(0.9); // R$ 179,10
-```
-
-## 🏗️ Arquitetura e Padrões
-
-### Componentes Core
-
-- **Configuration System**: Merge inteligente de configurações com validação automática
-- **HTTP Client**: Baseado em Guzzle com retry exponential backoff e circuit breaker
-- **Authentication Manager**: JWT com refresh automático e multi-tenant support
-- **Event Dispatcher**: Sistema de eventos com prioridades e subscribers
-- **Cache Manager**: PSR-6 compatível com TTL inteligente e invalidação
-- **Logger PSR-3**: Logging estruturado com contexto e formatação
-
-### Design Patterns Implementados
-
-- ✅ **Factory Pattern**: Para criação de gateways de pagamento
-- ✅ **Strategy Pattern**: Para estratégias de retry e cache
-- ✅ **Observer Pattern**: Para sistema de eventos
-- ✅ **Decorator Pattern**: Para interceptors HTTP
-- ✅ **Repository Pattern**: Para abstração de dados
-- ✅ **Command Pattern**: Para operações complexas
-- ✅ **Builder Pattern**: Para construção de objetos complexos
-
-### PHP 8.2+ Features
-
-- ✅ **Readonly Properties**: Para imutabilidade de dados
-- ✅ **Enums**: Para constantes tipadas
-- ✅ **Union Types**: Para flexibilidade de tipos
-- ✅ **Named Arguments**: Para clareza nas chamadas
-- ✅ **Constructor Property Promotion**: Para código conciso
-- ✅ **Attributes**: Para metadados e validação
-
-## 🧪 Desenvolvimento e Qualidade
-
-### Scripts de Desenvolvimento
+### Comandos Artisan
 
 ```bash
-# Setup inicial
-composer install
-composer setup
+# Instalação e configuração
+php artisan clubify:install          # Instalação completa
+php artisan clubify:publish          # Publicar arquivos de configuração
+php artisan clubify:sync             # Sincronizar dados com API
 
-# Verificação de qualidade
-composer cs-check               # Verificar code style (PHP-CS-Fixer)
-composer cs-fix                 # Corrigir code style automaticamente
-composer phpstan                # Static analysis (Level 8)
-composer psalm                  # Additional static analysis
-composer insights               # PHP Insights quality analysis
+# Sincronização específica
+php artisan clubify:sync --products   # Sincronizar apenas produtos
+php artisan clubify:sync --customers  # Sincronizar apenas clientes
+php artisan clubify:sync --all        # Sincronizar tudo
 
-# Testes (quando implementados)
-composer test                   # Executar todos os testes
-composer test-unit              # Apenas unit tests
-composer test-integration       # Apenas integration tests
-composer test-feature           # Apenas feature tests
-composer test-coverage          # Testes com coverage report
+# Testes e diagnósticos
+php artisan clubify:test             # Testar conexão e configuração
+php artisan clubify:status           # Mostrar status atual
+php artisan clubify:health           # Verificação de saúde completa
 
-# Validação completa
-composer quality                # Todos os checks de qualidade
-composer check                  # Alias para quality
+# Utilitários
+php artisan clubify:clear-cache      # Limpar cache do SDK
+php artisan clubify:generate-key     # Gerar nova API key
 ```
-
-### Padrões de Qualidade Implementados
-
-- **PSR-12**: Code style padronizado
-- **PHPStan Level 8**: Análise estática máxima
-- **Psalm**: Análise adicional de tipos
-- **PHP Insights**: Métricas de qualidade de código
-- **SOLID Principles**: Arquitetura limpa e extensível
-- **Clean Code**: Código legível e manutenível
-
-### Estrutura de Diretórios
-
-```
-sdk/php/
-├── src/
-│   ├── ClubifyCheckoutSDK.php           # Classe principal ✅
-│   ├── Core/                            # Componentes centrais ✅
-│   │   ├── Config/                      # Sistema de configuração ✅
-│   │   ├── Http/                        # Cliente HTTP com retry ✅
-│   │   ├── Auth/                        # Autenticação JWT ✅
-│   │   ├── Events/                      # Sistema de eventos ✅
-│   │   ├── Cache/                       # Gerenciamento de cache ✅
-│   │   └── Logger/                      # Logging PSR-3 ✅
-│   ├── Modules/                         # Módulos funcionais ✅
-│   │   ├── Organization/                # Gestão de organizações ✅
-│   │   ├── Products/                    # CRUD de produtos ✅
-│   │   ├── Checkout/                    # Sessões e carrinho ✅
-│   │   ├── Payments/                    # Multi-gateway ✅
-│   │   ├── Customers/                   # Gestão de clientes ✅
-│   │   └── Webhooks/                    # Sistema de webhooks ✅
-│   ├── Laravel/                         # Integração Laravel ✅
-│   │   ├── Commands/                    # Artisan commands ✅
-│   │   ├── Jobs/                        # Background jobs ✅
-│   │   ├── Middleware/                  # HTTP middleware ✅
-│   │   ├── Rules/                       # Validation rules ✅
-│   │   └── Facades/                     # Laravel facades ✅
-│   ├── Utils/                           # Utilitários ✅
-│   │   ├── Crypto/                      # Criptografia ✅
-│   │   ├── Formatters/                  # Formatadores ✅
-│   │   └── Validators/                  # Validadores ✅
-│   ├── Exceptions/                      # Exceções estruturadas ✅
-│   ├── Enums/                           # Enumerações PHP 8+ ✅
-│   ├── Data/                            # Data Transfer Objects ✅
-│   ├── ValueObjects/                    # Value Objects ✅
-│   └── Contracts/                       # Interfaces ✅
-├── config/                              # Arquivos de configuração ✅
-├── resources/lang/                      # Traduções ✅
-├── examples/                            # Exemplos de uso ✅
-├── tests/                               # Testes (preparado)
-├── docs/                                # Documentação
-└── composer.json                        # Configuração Composer ✅
-```
-
-## 📊 Status de Desenvolvimento - 100% Completo
-
-### ✅ **Todas as Fases Concluídas**
-
-- **✅ Core Foundation**: Arquitetura robusta com lazy loading e componentes PSR
-- **✅ Módulos Funcionais**: 6 módulos completos e operacionais
-- **✅ Laravel Integration**: Service provider, facades, commands, jobs e middleware
-- **✅ Utilitários**: Criptografia, formatadores, validadores e value objects
-- **✅ Qualidade**: Code style, static analysis e arquitetura enterprise-grade
-
-## 🔒 Segurança e Conformidade
-
-### Recursos de Segurança
-
-- **✅ Autenticação JWT**: Com refresh automático e storage seguro
-- **✅ Criptografia AES**: Para dados sensíveis
-- **✅ Assinatura HMAC**: Para integridade de dados
-- **✅ Tokenização**: Para dados de pagamento
-- **✅ Validação de Entrada**: Sanitização e validação rigorosa
-- **✅ Rate Limiting**: Proteção contra abuso
-- **✅ Audit Logs**: Rastreamento de ações sensíveis
-
-### Conformidade
-
-- **PCI DSS**: Práticas seguras para manipulação de dados de pagamento
-- **LGPD**: Conformidade com lei brasileira de proteção de dados
-- **PSR Standards**: Seguindo padrões da comunidade PHP
-- **OAuth 2.0**: Protocolos de autorização seguros
-
-## 🚀 Performance e Otimização
-
-### Recursos de Performance
-
-- **Lazy Loading**: Componentes carregados sob demanda
-- **Cache Multi-Level**: L1 (Memory), L2 (Redis), L3 (Database)
-- **Connection Pooling**: Reutilização de conexões HTTP
-- **Request Batching**: Agrupamento de requisições
-- **Async Processing**: Jobs em background para operações pesadas
-
-### Métricas de Performance
-
-- **Cold Start**: < 50ms para inicialização
-- **API Response**: < 200ms para operações típicas
-- **Memory Usage**: < 16MB para operações padrão
-- **Cache Hit Rate**: > 90% em operações repetidas
-
-## 📈 Monitoramento e Observabilidade
-
-### Recursos de Monitoramento
-
-- **Health Checks**: Verificação automática de conectividade
-- **Métricas**: Estatísticas detalhadas de uso
-- **Logging Estruturado**: Logs JSON com contexto
-- **Error Tracking**: Rastreamento detalhado de erros
-- **Performance Metrics**: Métricas de latência e throughput
-
-## 📚 Recursos Adicionais
-
-### Documentação Completa
-
-- 📖 **[Plano de Desenvolvimento](docs/technical-strategies/clubify-checkout-sdk-php-development-plan.md)**: Estratégia técnica detalhada
-- 🔧 **[Exemplos Práticos](examples/)**: Casos de uso reais implementados
-- 🎯 **[Configuração Avançada](config/clubify-checkout.php)**: Todas as opções disponíveis
-- 🏗️ **[Arquitetura](docs/architecture.md)**: Decisões técnicas e padrões
-- 🛡️ **[Segurança](docs/security.md)**: Práticas e conformidade
-
-### Suporte da Comunidade
-
-- **Stack Overflow**: Tag `clubify-checkout-php`
-- **GitHub Discussions**: Perguntas e discussões
-- **Discord**: Comunidade de desenvolvedores
-- **Blog Técnico**: Artigos e tutoriais
-
-## 📦 Versionamento e Releases
-
-O SDK segue **Semantic Versioning (SemVer)**:
-
-- **Major (1.x.x)**: Breaking changes
-- **Minor (x.1.x)**: Novas funcionalidades (backward compatible)
-- **Patch (x.x.1)**: Bug fixes e melhorias
-
-### Roadmap Futuro
-
-- **v1.1.0**: Novos gateways de pagamento (Mercado Pago, PayPal)
-- **v1.2.0**: Suporte a subscriptions e billing recorrente
-- **v1.3.0**: Integração com marketplaces
-- **v1.4.0**: Analytics avançados e business intelligence
-- **v2.0.0**: Reescrita com PHP 8.3+ e recursos modernos
-
-## 🧪 Executando Testes
-
-O SDK possui um sistema de testes enterprise-grade com cobertura de 90%+:
-
-### Configuração de Testes
-
-```bash
-# Instalar dependências de desenvolvimento
-composer install --dev
-
-# Criar diretórios de cache e logs
-mkdir -p var/{cache/phpunit,coverage,logs/phpunit}
-```
-
-### Executar Testes
-
-```bash
-# Todos os testes
-composer test
-
-# Testes com cobertura
-composer test-coverage
-
-# Testes por categoria
-composer test-unit        # Testes unitários
-composer test-integration # Testes de integração
-composer test-feature     # Testes feature/E2E
-
-# Testes por módulo
-./vendor/bin/phpunit --testsuite="Orders Module"
-./vendor/bin/phpunit --testsuite="Subscriptions Module"
-./vendor/bin/phpunit --testsuite="Notifications Module"
-```
-
-### Estrutura de Testes
-
-```
-tests/
-├── TestCase.php              # Base class com helpers
-├── Unit/                     # Testes unitários (150+ testes)
-│   ├── Orders/              # OrdersModule, OrderService, DTOs
-│   ├── Subscriptions/       # SubscriptionsModule, Services
-│   ├── Tracking/            # TrackingModule, Analytics
-│   ├── UserManagement/      # UserManagement, Passkeys
-│   ├── Notifications/       # NotificationsModule, Services
-│   └── Core/                # Core classes
-├── Integration/             # Testes de integração
-│   ├── OrdersIntegrationTest.php
-│   ├── SubscriptionsIntegrationTest.php
-│   └── UserManagementIntegrationTest.php
-└── Feature/                 # Testes E2E
-    ├── CompleteCheckoutFlowTest.php
-    ├── SubscriptionLifecycleTest.php
-    └── PasskeyAuthenticationTest.php
-```
-
-### Relatórios de Cobertura
-
-```bash
-# Gerar relatório HTML (disponível em var/coverage/html/)
-composer test-coverage
-
-# Relatório em texto no terminal
-./vendor/bin/phpunit --coverage-text
-```
-
-### Qualidade de Código
-
-```bash
-# Análise estática
-composer phpstan
-
-# Verificação de estilo
-composer cs-check
-
-# Correção automática de estilo
-composer cs-fix
-
-# Execução completa de qualidade
-composer quality
-```
-
-## 📄 Licença
-
-Este projeto está licenciado sob a **[Licença MIT](LICENSE)** - veja o arquivo LICENSE para detalhes.
-
-## 🆘 Suporte e Ajuda
-
-### Canais de Suporte
-
-- 📚 **Documentação Oficial**: [docs.clubify.com/sdk/php](https://docs.clubify.com/sdk/php)
-- 🐛 **GitHub Issues**: [Issues do Projeto](https://github.com/clubify/checkout-sdk-php/issues)
-- 💬 **Discord**: [Comunidade Clubify](https://discord.gg/clubify)
-- 📧 **Email**: [sdk-support@clubify.com](mailto:sdk-support@clubify.com)
-- 📞 **Suporte Enterprise**: [enterprise@clubify.com](mailto:enterprise@clubify.com)
-
-### SLA de Suporte
-
-- **Issues Críticos**: < 4 horas
-- **Issues Altos**: < 24 horas
-- **Issues Médios**: < 3 dias úteis
-- **Features Requests**: < 1 semana
 
 ---
 
-<div align="center">
+## 📞 Suporte
 
-## 🌟 **O SDK PHP mais completo para checkout do Brasil**
+### Links Úteis
 
-**Desenvolvido com ❤️ pela equipe Clubify seguindo os mais altos padrões de qualidade**
+- **Documentação da API**: [https://docs.clubify.com](https://docs.clubify.com)
+- **GitHub**: [https://github.com/clubifyhq/checkout-sdk-php](https://github.com/clubifyhq/checkout-sdk-php)
+- **Suporte**: [suporte@clubify.com](mailto:suporte@clubify.com)
 
-[![Website](https://img.shields.io/badge/Website-clubify.com-blue)](https://clubify.com) • [![Docs](https://img.shields.io/badge/Docs-docs.clubify.com-green)](https://docs.clubify.com) • [![Blog](https://img.shields.io/badge/Blog-blog.clubify.com-orange)](https://blog.clubify.com)
+### Reportar Problemas
 
-**Transforme sua plataforma com o poder do Clubify Checkout SDK PHP**
+Para reportar bugs ou solicitar funcionalidades:
 
-</div>
+1. Verifique se o problema já foi reportado
+2. Inclua informações do ambiente (PHP version, Laravel version, etc.)
+3. Forneça logs de erro e códigos de reprodução
+4. Abra uma issue no GitHub com template apropriado
+
+### Contribuição
+
+Contribuições são bem-vindas! Por favor:
+
+1. Fork o repositório
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
+3. Commit suas mudanças (`git commit -am 'Adicionar nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/nova-funcionalidade`)
+5. Abra um Pull Request
+
+---
+
+## 📄 Licença
+
+Este projeto está licenciado sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+---
+
+**© 2025 Clubify. Todos os direitos reservados.**

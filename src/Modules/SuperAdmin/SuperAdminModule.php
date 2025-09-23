@@ -243,47 +243,64 @@ class SuperAdminModule implements ModuleInterface
     }
 
     /**
-     * Regenerar API key de tenant
+     * Buscar tenant por domínio
      */
-    public function regenerateApiKey(string $tenantId): array
+    public function getTenantByDomain(string $domain): ?array
     {
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->post("tenants/{$tenantId}/regenerate-api-key");
+            $response = $this->httpClient->get("tenants/domain/{$domain}");
 
             $statusCode = $response->getStatusCode();
+            if ($statusCode === 404) {
+                // Tenant não encontrado
+                return null;
+            }
+
             if ($statusCode < 200 || $statusCode >= 300) {
-                throw new SDKException('Failed to regenerate API key');
+                throw new SDKException('Failed to get tenant by domain');
             }
 
             $result = json_decode($response->getBody()->getContents(), true);
 
-            $this->logger->info('API key regenerated successfully', [
-                'tenant_id' => $tenantId
+            $this->logger->info('Tenant found by domain', [
+                'domain' => $domain,
+                'tenant_id' => $result['data']['_id'] ?? $result['id'] ?? 'unknown'
             ]);
 
             return $result;
 
         } catch (\Exception $e) {
-            $this->logger->error('Failed to regenerate API key', [
+            // Se for 404, retorna null (tenant não encontrado)
+            if (strpos($e->getMessage(), '404') !== false) {
+                return null;
+            }
+
+            $this->logger->error('Failed to get tenant by domain', [
                 'error' => $e->getMessage(),
-                'tenant_id' => $tenantId
+                'domain' => $domain
             ]);
 
-            throw new SDKException('Failed to regenerate API key: ' . $e->getMessage(), 0, $e);
+            throw new SDKException('Failed to get tenant by domain: ' . $e->getMessage(), 0, $e);
         }
     }
+
+    // Nota: O endpoint regenerate-api-key foi movido para o módulo de API Keys
+    // Usar: POST /api-keys/{keyId}/rotate no módulo ApiKeys quando implementado
 
     /**
      * Obter estatísticas gerais
      */
-    public function getSystemStats(): array
+    public function getSystemStats(int $timeoutSeconds = 10): array
     {
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->get('super-admin/stats');
+            // Usar timeout customizado para esta operação específica
+            $response = $this->httpClient->get('tenants/stats', [
+                'timeout' => $timeoutSeconds
+            ]);
 
             $statusCode = $response->getStatusCode();
             if ($statusCode < 200 || $statusCode >= 300) {
@@ -296,7 +313,8 @@ class SuperAdminModule implements ModuleInterface
 
         } catch (\Exception $e) {
             $this->logger->error('Failed to get system stats', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'timeout' => $timeoutSeconds
             ]);
 
             throw new SDKException('Failed to get system stats: ' . $e->getMessage(), 0, $e);

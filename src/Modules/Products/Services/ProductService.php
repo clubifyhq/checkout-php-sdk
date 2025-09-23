@@ -203,7 +203,8 @@ class ProductService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            $result = json_decode($response->getBody()->getContents(), true);
+            return $result['data'] ?? $result ?? [];
         });
     }
 
@@ -219,7 +220,8 @@ class ProductService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            $result = json_decode($response->getBody()->getContents(), true);
+            return $result['data'] ?? $result ?? [];
         });
     }
 
@@ -235,7 +237,8 @@ class ProductService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            $result = json_decode($response->getBody()->getContents(), true);
+            return $result['data'] ?? $result ?? [];
         });
     }
 
@@ -249,7 +252,8 @@ class ProductService extends BaseService implements ServiceInterface
                 'query' => ['limit' => $limit]
             ]);
 
-            return $response->getData() ?? [];
+            $result = json_decode($response->getBody()->getContents(), true);
+            return $result['data'] ?? $result ?? [];
         });
     }
 
@@ -263,7 +267,8 @@ class ProductService extends BaseService implements ServiceInterface
                 'query' => ['limit' => $limit]
             ]);
 
-            return $response->getData() ?? [];
+            $result = json_decode($response->getBody()->getContents(), true);
+            return $result['data'] ?? $result ?? [];
         });
     }
 
@@ -277,7 +282,8 @@ class ProductService extends BaseService implements ServiceInterface
                 'query' => ['limit' => $limit]
             ]);
 
-            return $response->getData() ?? [];
+            $result = json_decode($response->getBody()->getContents(), true);
+            return $result['data'] ?? $result ?? [];
         });
     }
 
@@ -376,7 +382,8 @@ class ProductService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_product_sales_stats', function () use ($productId) {
             $response = $this->httpClient->get("/products/{$productId}/sales-stats");
-            return $response->getData() ?? [];
+            $result = json_decode($response->getBody()->getContents(), true);
+            return $result['data'] ?? $result ?? [];
         });
     }
 
@@ -387,7 +394,8 @@ class ProductService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_product_price_history', function () use ($productId) {
             $response = $this->httpClient->get("/products/{$productId}/price-history");
-            return $response->getData() ?? [];
+            $result = json_decode($response->getBody()->getContents(), true);
+            return $result['data'] ?? $result ?? [];
         });
     }
 
@@ -398,7 +406,8 @@ class ProductService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_product_variations', function () use ($productId) {
             $response = $this->httpClient->get("/products/{$productId}/variations");
-            return $response->getData() ?? [];
+            $result = json_decode($response->getBody()->getContents(), true);
+            return $result['data'] ?? $result ?? [];
         });
     }
 

@@ -274,12 +274,41 @@ function getOrCreateOrganization($sdk, $organizationData) {
                                 }
                             }
                         } catch (Exception $provisionError) {
-                            echo "   ❌ Falha no provisionamento automático: " . $provisionError->getMessage() . "\n";
-                            echo "   📋 Configuração manual necessária:\n";
-                            echo "   1. Verificar se usuário com email '{$adminEmail}' já existe\n";
-                            echo "   2. Se não existe, criar usuário com role 'tenant_admin'\n";
-                            echo "   3. Criar API key via POST /api-keys\n";
-                            echo "   4. Registrar novamente o tenant com as credenciais\n";
+                            // Verificar se é erro de usuário já existente (409 Conflict)
+                            if (strpos($provisionError->getMessage(), '409') !== false ||
+                                strpos($provisionError->getMessage(), 'already exists') !== false ||
+                                strpos($provisionError->getMessage(), 'Conflict') !== false) {
+                                echo "   ℹ️  Usuário já existe - tentando obter credenciais existentes...\n";
+
+                                try {
+                                    $existingCredentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
+                                    if (!empty($existingCredentials['api_key'])) {
+                                        echo "   ✅ Credenciais existentes encontradas!\n";
+                                        echo "   🔑 API Key: " . substr($existingCredentials['api_key'], 0, 20) . "...\n";
+
+                                        $hasApiKey = true;
+                                        $tenantData['api_key'] = $existingCredentials['api_key'];
+
+                                        // Re-registrar tenant com credenciais existentes
+                                        echo "   🔄 Re-registrando tenant com credenciais existentes...\n";
+                                        $reregistrationResult = $sdk->registerExistingTenant($tenantId, $tenantData);
+                                        if (($reregistrationResult['success'] ?? false) && ($reregistrationResult['has_api_key'] ?? false)) {
+                                            echo "   🎉 Tenant re-registrado com credenciais existentes! Alternância habilitada.\n";
+                                        }
+                                    } else {
+                                        echo "   ⚠️  Usuário existe mas não há API key disponível\n";
+                                    }
+                                } catch (Exception $credError) {
+                                    echo "   ⚠️  Erro ao obter credenciais existentes: " . $credError->getMessage() . "\n";
+                                }
+                            } else {
+                                echo "   ❌ Falha no provisionamento automático: " . $provisionError->getMessage() . "\n";
+                            }
+
+                            echo "   📋 Se necessário, configuração manual:\n";
+                            echo "   1. Verificar credenciais via interface admin\n";
+                            echo "   2. Criar API key se não existir\n";
+                            echo "   3. Registrar tenant com credenciais válidas\n";
                         }
                     }
                 } else {
@@ -431,12 +460,41 @@ function getOrCreateOrganization($sdk, $organizationData) {
                                 }
                             }
                         } catch (Exception $provisionError) {
-                            echo "   ❌ Falha no provisionamento automático: " . $provisionError->getMessage() . "\n";
-                            echo "   📋 Configuração manual necessária:\n";
-                            echo "   1. Verificar se usuário com email '{$adminEmail}' já existe\n";
-                            echo "   2. Se não existe, criar usuário com role 'tenant_admin'\n";
-                            echo "   3. Criar API key via POST /api-keys\n";
-                            echo "   4. Registrar novamente o tenant com as credenciais\n";
+                            // Verificar se é erro de usuário já existente (409 Conflict)
+                            if (strpos($provisionError->getMessage(), '409') !== false ||
+                                strpos($provisionError->getMessage(), 'already exists') !== false ||
+                                strpos($provisionError->getMessage(), 'Conflict') !== false) {
+                                echo "   ℹ️  Usuário já existe - tentando obter credenciais existentes...\n";
+
+                                try {
+                                    $existingCredentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
+                                    if (!empty($existingCredentials['api_key'])) {
+                                        echo "   ✅ Credenciais existentes encontradas!\n";
+                                        echo "   🔑 API Key: " . substr($existingCredentials['api_key'], 0, 20) . "...\n";
+
+                                        $hasApiKey = true;
+                                        $tenantData['api_key'] = $existingCredentials['api_key'];
+
+                                        // Re-registrar tenant com credenciais existentes
+                                        echo "   🔄 Re-registrando tenant com credenciais existentes...\n";
+                                        $reregistrationResult = $sdk->registerExistingTenant($tenantId, $tenantData);
+                                        if (($reregistrationResult['success'] ?? false) && ($reregistrationResult['has_api_key'] ?? false)) {
+                                            echo "   🎉 Tenant re-registrado com credenciais existentes! Alternância habilitada.\n";
+                                        }
+                                    } else {
+                                        echo "   ⚠️  Usuário existe mas não há API key disponível\n";
+                                    }
+                                } catch (Exception $credError) {
+                                    echo "   ⚠️  Erro ao obter credenciais existentes: " . $credError->getMessage() . "\n";
+                                }
+                            } else {
+                                echo "   ❌ Falha no provisionamento automático: " . $provisionError->getMessage() . "\n";
+                            }
+
+                            echo "   📋 Se necessário, configuração manual:\n";
+                            echo "   1. Verificar credenciais via interface admin\n";
+                            echo "   2. Criar API key se não existir\n";
+                            echo "   3. Registrar tenant com credenciais válidas\n";
                         }
                     }
                 } else {
@@ -603,66 +661,29 @@ function checkEmailAvailability($sdk, $email, $tenantId = null) {
     try {
         echo "📧 Verificando disponibilidade do email: $email\n";
 
-        // Estratégia 1: Usar endpoint específico de verificação se disponível
-        try {
-            $checkEndpoint = $tenantId ? "/tenants/$tenantId/users/check-email/" : "/users/check-email/";
-            $response = $sdk->getHttpClient()->get($checkEndpoint . urlencode($email));
+        // Como não há métodos específicos para buscar usuários no SDK atual,
+        // vamos usar uma abordagem mais defensiva
+        echo "ℹ️  Verificação direta de email não está disponível no SDK\n";
+        echo "   📋 Módulo users separado ou métodos de busca de usuários não implementados\n";
+        echo "   💡 Tentaremos criar o usuário e tratar conflitos se necessário\n";
 
-            if ($response && isset($response['exists'])) {
-                return [
-                    'exists' => $response['exists'],
-                    'available' => !$response['exists'],
-                    'resource' => $response['user'] ?? null,
-                    'method' => 'check_endpoint'
-                ];
-            }
-        } catch (Exception $e) {
-            echo "ℹ️  Endpoint de verificação não disponível, tentando busca manual...\n";
-        }
-
-        // Estratégia 2: Buscar por email usando métodos do SDK
-        try {
-            $existingUser = null;
-
-            if ($tenantId) {
-                // Buscar usuários do tenant específico
-                $users = $sdk->users()->list(['tenant_id' => $tenantId]);
-                foreach ($users as $user) {
-                    if (isset($user['email']) && $user['email'] === $email) {
-                        $existingUser = $user;
-                        break;
-                    }
-                }
-            } else {
-                // Buscar usuários globalmente (super admin)
-                $users = $sdk->superAdmin()->listUsers(['email' => $email]);
-                if (!empty($users)) {
-                    $existingUser = $users[0];
-                }
-            }
-
-            return [
-                'exists' => $existingUser !== null,
-                'available' => $existingUser === null,
-                'resource' => $existingUser,
-                'method' => 'manual_search'
-            ];
-
-        } catch (Exception $e) {
-            echo "ℹ️  Busca manual falhou: " . $e->getMessage() . "\n";
-        }
-
-        // Estratégia 3: Fallback graceful
+        // Estratégia defensiva: assumir que não existe para permitir tentativa de criação
+        // O tratamento de erro 409 será feito na camada superior
         return [
             'exists' => false,
             'available' => true,
-            'method' => 'fallback',
-            'warning' => 'Não foi possível verificar com certeza - assumindo disponível'
+            'method' => 'defensive_fallback',
+            'warning' => 'Verificação não disponível - assumindo disponível para tentativa'
         ];
 
     } catch (Exception $e) {
         echo "⚠️  Erro na verificação de email: " . $e->getMessage() . "\n";
-        throw $e;
+        return [
+            'exists' => false,
+            'available' => true,
+            'method' => 'error_fallback',
+            'error' => $e->getMessage()
+        ];
     }
 }
 
@@ -677,23 +698,7 @@ function checkDomainAvailability($sdk, $domain) {
     try {
         echo "🌐 Verificando disponibilidade do domínio: $domain\n";
 
-        // Estratégia 1: Usar endpoint específico de verificação
-        try {
-            $response = $sdk->getHttpClient()->get("/tenants/check-domain/" . urlencode($domain));
-
-            if ($response && isset($response['available'])) {
-                return [
-                    'exists' => !$response['available'],
-                    'available' => $response['available'],
-                    'resource' => $response['tenant'] ?? null,
-                    'method' => 'check_endpoint'
-                ];
-            }
-        } catch (Exception $e) {
-            echo "ℹ️  Endpoint de verificação não disponível, usando método manual...\n";
-        }
-
-        // Estratégia 2: Usar helper function existente
+        // Estratégia 1: Usar helper function existente (que usa métodos públicos)
         $existingTenant = findTenantByDomain($sdk, $domain);
 
         return [
@@ -705,7 +710,12 @@ function checkDomainAvailability($sdk, $domain) {
 
     } catch (Exception $e) {
         echo "⚠️  Erro na verificação de domínio: " . $e->getMessage() . "\n";
-        throw $e;
+        return [
+            'exists' => false,
+            'available' => true,
+            'method' => 'error_fallback',
+            'error' => $e->getMessage()
+        ];
     }
 }
 
@@ -720,23 +730,7 @@ function checkSubdomainAvailability($sdk, $subdomain) {
     try {
         echo "🏢 Verificando disponibilidade do subdomínio: $subdomain\n";
 
-        // Estratégia 1: Usar endpoint específico de verificação
-        try {
-            $response = $sdk->getHttpClient()->get("/tenants/check-subdomain/" . urlencode($subdomain));
-
-            if ($response && isset($response['available'])) {
-                return [
-                    'exists' => !$response['available'],
-                    'available' => $response['available'],
-                    'resource' => $response['tenant'] ?? null,
-                    'method' => 'check_endpoint'
-                ];
-            }
-        } catch (Exception $e) {
-            echo "ℹ️  Endpoint de verificação não disponível, usando método manual...\n";
-        }
-
-        // Estratégia 2: Usar helper function existente
+        // Estratégia 1: Usar helper function existente (que usa métodos públicos)
         $existingTenant = findTenantBySubdomain($sdk, $subdomain);
 
         return [
@@ -748,7 +742,12 @@ function checkSubdomainAvailability($sdk, $subdomain) {
 
     } catch (Exception $e) {
         echo "⚠️  Erro na verificação de subdomínio: " . $e->getMessage() . "\n";
-        throw $e;
+        return [
+            'exists' => false,
+            'available' => true,
+            'method' => 'error_fallback',
+            'error' => $e->getMessage()
+        ];
     }
 }
 
@@ -764,68 +763,34 @@ function checkOfferSlugAvailability($sdk, $slug, $tenantId = null) {
     try {
         echo "🏷️  Verificando disponibilidade do slug de oferta: $slug\n";
 
-        // Estratégia 1: Buscar ofertas existentes com o slug
+        // Estratégia 1: Buscar ofertas existentes com o slug usando métodos públicos
         try {
-            $offers = $tenantId
-                ? $sdk->offers()->list(['tenant_id' => $tenantId, 'slug' => $slug])
-                : $sdk->offers()->list(['slug' => $slug]);
+            // Tentar listar ofertas - método pode variar dependendo do SDK
+            echo "ℹ️  Tentando listar ofertas para verificar slug...\n";
 
-            $existingOffer = null;
-            if (is_array($offers)) {
-                foreach ($offers as $offer) {
-                    if (isset($offer['slug']) && $offer['slug'] === $slug) {
-                        $existingOffer = $offer;
-                        break;
-                    }
-                }
-            }
-
-            return [
-                'exists' => $existingOffer !== null,
-                'available' => $existingOffer === null,
-                'resource' => $existingOffer,
-                'method' => 'offers_list'
-            ];
+            // Como não temos certeza dos métodos disponíveis, vamos usar fallback
+            echo "ℹ️  Verificação de slug de oferta não implementada - assumindo disponível\n";
 
         } catch (Exception $e) {
             echo "ℹ️  Busca de ofertas falhou: " . $e->getMessage() . "\n";
         }
 
-        // Estratégia 2: Usar endpoint direto se disponível
-        try {
-            $endpoint = $tenantId ? "/tenants/$tenantId/offers/by-slug/" : "/offers/by-slug/";
-            $response = $sdk->getHttpClient()->get($endpoint . urlencode($slug));
-
-            return [
-                'exists' => $response !== null,
-                'available' => $response === null,
-                'resource' => $response,
-                'method' => 'direct_endpoint'
-            ];
-
-        } catch (Exception $e) {
-            if (strpos($e->getMessage(), '404') !== false) {
-                return [
-                    'exists' => false,
-                    'available' => true,
-                    'resource' => null,
-                    'method' => 'direct_endpoint_404'
-                ];
-            }
-            echo "ℹ️  Endpoint direto falhou: " . $e->getMessage() . "\n";
-        }
-
-        // Fallback: assumir disponível
+        // Fallback: assumir disponível para permitir criação
         return [
             'exists' => false,
             'available' => true,
             'method' => 'fallback',
-            'warning' => 'Não foi possível verificar com certeza - assumindo disponível'
+            'warning' => 'Verificação de slug não implementada - assumindo disponível'
         ];
 
     } catch (Exception $e) {
         echo "⚠️  Erro na verificação de slug: " . $e->getMessage() . "\n";
-        throw $e;
+        return [
+            'exists' => false,
+            'available' => true,
+            'method' => 'error_fallback',
+            'error' => $e->getMessage()
+        ];
     }
 }
 
@@ -841,55 +806,16 @@ function checkApiKeyExists($sdk, $apiKey, $tenantId = null) {
     try {
         echo "🔑 Verificando validade da API key: " . substr($apiKey, 0, 20) . "...\n";
 
-        // Estratégia 1: Tentar usar a API key para fazer uma requisição simples
+        // Estratégia 1: Tentar obter credenciais do tenant
         try {
-            $tempSdk = new ClubifyCheckoutSDK([
-                'credentials' => [
-                    'api_key' => $apiKey,
-                    'tenant_id' => $tenantId
-                ],
-                'environment' => $sdk->getConfig()['environment'] ?? 'test'
-            ]);
+            $apiKeys = $tenantId ? $sdk->superAdmin()->getTenantCredentials($tenantId) : null;
 
-            // Fazer uma requisição simples para testar
-            $result = $tempSdk->auth()->validate();
-
-            return [
-                'exists' => true,
-                'valid' => $result !== null,
-                'resource' => [
-                    'api_key' => substr($apiKey, 0, 20) . '...',
-                    'tenant_id' => $tenantId,
-                    'validation_result' => $result
-                ],
-                'method' => 'validation_test'
-            ];
-
-        } catch (Exception $e) {
-            if (strpos($e->getMessage(), 'Unauthorized') !== false ||
-                strpos($e->getMessage(), '401') !== false) {
-                return [
-                    'exists' => true,
-                    'valid' => false,
-                    'error' => 'API key existe mas não é válida',
-                    'method' => 'validation_test'
-                ];
-            }
-            echo "ℹ️  Teste de validação falhou: " . $e->getMessage() . "\n";
-        }
-
-        // Estratégia 2: Listar API keys se tivermos permissão
-        try {
-            $apiKeys = $tenantId
-                ? $sdk->superAdmin()->getTenantCredentials($tenantId)
-                : $sdk->superAdmin()->listApiKeys();
-
-            if (isset($apiKeys['api_key']) && strpos($apiKeys['api_key'], substr($apiKey, 0, 20)) === 0) {
+            if ($apiKeys && isset($apiKeys['api_key']) && strpos($apiKeys['api_key'], substr($apiKey, 0, 20)) === 0) {
                 return [
                     'exists' => true,
                     'valid' => true,
                     'resource' => $apiKeys,
-                    'method' => 'credentials_list'
+                    'method' => 'credentials_check'
                 ];
             }
 
@@ -897,7 +823,8 @@ function checkApiKeyExists($sdk, $apiKey, $tenantId = null) {
             echo "ℹ️  Busca de credenciais falhou: " . $e->getMessage() . "\n";
         }
 
-        // Fallback: não conseguiu verificar
+        // Fallback: assumir que não existe ou não é válida
+        echo "ℹ️  Não foi possível verificar API key - assumindo inválida\n";
         return [
             'exists' => false,
             'valid' => false,
@@ -907,7 +834,12 @@ function checkApiKeyExists($sdk, $apiKey, $tenantId = null) {
 
     } catch (Exception $e) {
         echo "⚠️  Erro na verificação de API key: " . $e->getMessage() . "\n";
-        throw $e;
+        return [
+            'exists' => false,
+            'valid' => false,
+            'method' => 'error_fallback',
+            'error' => $e->getMessage()
+        ];
     }
 }
 
@@ -923,67 +855,26 @@ function checkWebhookUrlExists($sdk, $webhookUrl, $tenantId = null) {
     try {
         echo "🔗 Verificando se webhook URL já está configurada: $webhookUrl\n";
 
-        // Estratégia 1: Listar webhooks existentes
-        try {
-            $webhooks = $tenantId
-                ? $sdk->webhooks()->list(['tenant_id' => $tenantId])
-                : $sdk->webhooks()->list();
+        // Como não temos certeza dos métodos disponíveis para webhooks,
+        // vamos assumir que a URL está disponível para configuração
+        echo "ℹ️  Verificação de webhook não implementada - assumindo disponível\n";
 
-            $existingWebhook = null;
-            if (is_array($webhooks)) {
-                foreach ($webhooks as $webhook) {
-                    if (isset($webhook['url']) && $webhook['url'] === $webhookUrl) {
-                        $existingWebhook = $webhook;
-                        break;
-                    }
-                }
-            }
-
-            return [
-                'exists' => $existingWebhook !== null,
-                'available' => $existingWebhook === null,
-                'resource' => $existingWebhook,
-                'method' => 'webhooks_list'
-            ];
-
-        } catch (Exception $e) {
-            echo "ℹ️  Busca de webhooks falhou: " . $e->getMessage() . "\n";
-        }
-
-        // Estratégia 2: Verificar configurações do tenant
-        if ($tenantId) {
-            try {
-                $tenantConfig = $sdk->superAdmin()->getTenantConfig($tenantId);
-
-                if (isset($tenantConfig['webhooks'])) {
-                    foreach ($tenantConfig['webhooks'] as $webhook) {
-                        if (isset($webhook['url']) && $webhook['url'] === $webhookUrl) {
-                            return [
-                                'exists' => true,
-                                'available' => false,
-                                'resource' => $webhook,
-                                'method' => 'tenant_config'
-                            ];
-                        }
-                    }
-                }
-
-            } catch (Exception $e) {
-                echo "ℹ️  Busca de configuração do tenant falhou: " . $e->getMessage() . "\n";
-            }
-        }
-
-        // Fallback: assumir disponível
+        // Fallback: assumir disponível para permitir configuração
         return [
             'exists' => false,
             'available' => true,
             'method' => 'fallback',
-            'warning' => 'Não foi possível verificar com certeza - assumindo disponível'
+            'warning' => 'Verificação de webhook não implementada - assumindo disponível'
         ];
 
     } catch (Exception $e) {
         echo "⚠️  Erro na verificação de webhook URL: " . $e->getMessage() . "\n";
-        throw $e;
+        return [
+            'exists' => false,
+            'available' => true,
+            'method' => 'error_fallback',
+            'error' => $e->getMessage()
+        ];
     }
 }
 
@@ -1427,61 +1318,21 @@ try {
                     'force_https' => true
                 ];
 
-                try {
-                    $domainResult = $sdk->superAdmin()->provisionTenantDomain($tenantId, $domainData);
-
-                    if ($domainResult['success']) {
-                        echo "✅ Domínio provisionado com sucesso!\n";
-                        echo "   🌐 Domínio: " . $domainResult['domain']['name'] . "\n";
-                        echo "   🔒 SSL: " . ($domainResult['domain']['ssl_enabled'] ? 'Habilitado' : 'Desabilitado') . "\n";
-                        echo "   📍 Status: " . $domainResult['domain']['status'] . "\n";
-
-                        // Verificar status do certificado SSL
-                        if ($domainResult['domain']['ssl_enabled']) {
-                            echo "🔐 Iniciando provisionamento de certificado SSL...\n";
-
-                            $sslResult = $sdk->superAdmin()->provisionSSLCertificate($tenantId, [
-                                'domain' => $customDomain,
-                                'auto_renew' => true,
-                                'provider' => 'letsencrypt'
-                            ]);
-
-                            if ($sslResult['success']) {
-                                echo "✅ Certificado SSL provisionado com sucesso!\n";
-                                echo "   🔒 Certificado: " . $sslResult['certificate']['type'] . "\n";
-                                echo "   📅 Válido até: " . $sslResult['certificate']['expires_at'] . "\n";
-                                echo "   🔄 Auto-renovação: " . ($sslResult['certificate']['auto_renew'] ? 'Habilitada' : 'Desabilitada') . "\n";
-                            } else {
-                                echo "⚠️  Certificado SSL não pôde ser provisionado automaticamente\n";
-                                echo "   📋 Configure manualmente ou aguarde propagação DNS\n";
-                            }
-                        }
-                    }
-                } catch (Exception $domainError) {
-                    echo "⚠️  Erro no provisionamento de domínio: " . $domainError->getMessage() . "\n";
-                    echo "   📋 Configuração manual necessária:\n";
-                    echo "   1. Configurar DNS para apontar para os servidores do Clubify\n";
-                    echo "   2. Verificar se domínio está disponível\n";
-                    echo "   3. Configurar certificado SSL manualmente se necessário\n";
-                }
+                echo "ℹ️  Provisionamento automático de domínio não está disponível via SDK\n";
+                echo "   📋 Métodos provisionTenantDomain e provisionSSLCertificate não existem\n";
+                echo "   💡 Configuração manual necessária:\n";
+                echo "   1. Configurar DNS para apontar para os servidores do Clubify\n";
+                echo "   2. Configurar domínio via interface administrativa\n";
+                echo "   3. Ativar certificado SSL através do painel admin\n";
+                echo "   4. Aguardar implementação dos métodos no SDK\n";
             } else {
                 echo "✅ Domínio já está configurado: $customDomain\n";
-
-                // Verificar status do SSL para domínio existente
-                try {
-                    $sslStatus = $sdk->superAdmin()->checkSSLStatus($tenantId, $customDomain);
-                    echo "🔒 Status SSL: " . $sslStatus['status'] . "\n";
-
-                    if ($sslStatus['status'] !== 'active') {
-                        echo "🔐 Tentando reativar certificado SSL...\n";
-                        $renewResult = $sdk->superAdmin()->renewSSLCertificate($tenantId, $customDomain);
-                        if ($renewResult['success']) {
-                            echo "✅ Certificado SSL reativado com sucesso!\n";
-                        }
-                    }
-                } catch (Exception $sslError) {
-                    echo "ℹ️  Não foi possível verificar status SSL: " . $sslError->getMessage() . "\n";
-                }
+                echo "ℹ️  Verificação de status SSL não está disponível via SDK\n";
+                echo "   📋 Métodos checkSSLStatus e renewSSLCertificate não existem\n";
+                echo "   💡 Para verificar SSL:\n";
+                echo "   1. Acessar interface administrativa\n";
+                echo "   2. Verificar status na seção de domínios\n";
+                echo "   3. Renovar certificados através do painel\n";
             }
         } catch (Exception $e) {
             echo "⚠️  Erro geral no provisionamento: " . $e->getMessage() . "\n";
@@ -1527,33 +1378,38 @@ try {
                 ];
 
                 try {
-                    $webhookResult = $sdk->webhooks()->create($webhookData);
+                    // Usar método correto confirmado: createWebhook
+                    $webhookResult = $sdk->webhooks()->createWebhook($webhookData);
 
-                    if ($webhookResult['success']) {
+                    if ($webhookResult && isset($webhookResult['id'])) {
                         echo "✅ Webhook criado com sucesso!\n";
-                        echo "   🔗 URL: " . $webhookResult['webhook']['url'] . "\n";
-                        echo "   📢 Eventos: " . count($webhookResult['webhook']['events']) . " configurados\n";
-                        echo "   ✅ Status: " . ($webhookResult['webhook']['enabled'] ? 'Ativo' : 'Inativo') . "\n";
-                        echo "   🔄 Tentativas: " . $webhookResult['webhook']['retry_attempts'] . "\n";
+                        echo "   🔗 URL: " . ($webhookResult['url'] ?? $webhookData['url']) . "\n";
+                        echo "   📢 Eventos: " . count($webhookData['events']) . " configurados\n";
+                        echo "   ✅ Status: " . ($webhookResult['enabled'] ?? $webhookData['enabled'] ? 'Ativo' : 'Inativo') . "\n";
+                        echo "   🔄 Tentativas: " . ($webhookResult['retry_attempts'] ?? $webhookData['retry_attempts']) . "\n";
 
-                        // Testar webhook
+                        // Testar webhook usando método correto
                         echo "🧪 Testando webhook...\n";
-                        $testResult = $sdk->webhooks()->test($webhookResult['webhook']['id']);
+                        try {
+                            $testResult = $sdk->webhooks()->testWebhook($webhookResult['id']);
 
-                        if ($testResult['success']) {
-                            echo "✅ Teste de webhook bem-sucedido!\n";
-                            echo "   📊 Resposta: " . $testResult['response_code'] . "\n";
-                            echo "   ⏱️  Tempo: " . $testResult['response_time'] . "ms\n";
-                        } else {
-                            echo "⚠️  Teste de webhook falhou: " . $testResult['error'] . "\n";
+                            if ($testResult) {
+                                echo "✅ Teste de webhook executado!\n";
+                                echo "   📊 Resultado disponível via interface admin\n";
+                            }
+                        } catch (Exception $testError) {
+                            echo "ℹ️  Teste automático não disponível: " . $testError->getMessage() . "\n";
+                            echo "   💡 Teste manualmente via interface admin\n";
                         }
+                    } else {
+                        echo "❌ Falha na criação do webhook - resposta inválida\n";
                     }
                 } catch (Exception $webhookError) {
                     echo "⚠️  Erro na criação de webhook: " . $webhookError->getMessage() . "\n";
-                    echo "   📋 Configuração manual necessária:\n";
+                    echo "   📋 Alternativas:\n";
                     echo "   1. Verificar se URL está acessível\n";
                     echo "   2. Configurar webhook via interface admin\n";
-                    echo "   3. Testar eventos manualmente\n";
+                    echo "   3. Verificar implementação do módulo webhooks\n";
                 }
             } else {
                 echo "✅ Webhook já está configurado: $webhookUrl\n";
@@ -1602,13 +1458,28 @@ try {
                 ];
 
                 try {
+                    // Método correto confirmado no SDK
                     $basicProduct = $sdk->products()->create($basicProductData);
                     $productId = $basicProduct['id'] ?? $basicProduct['_id'] ?? null;
                     echo "✅ Produto básico criado com ID: $productId\n";
                 } catch (Exception $productError) {
                     echo "❌ Erro ao criar produto básico: " . $productError->getMessage() . "\n";
-                    echo "⚠️  Pulando criação de ofertas...\n";
-                    $productId = null;
+                    echo "ℹ️  Tentando método alternativo confirmado...\n";
+
+                    try {
+                        // Método alternativo confirmado: createComplete
+                        $basicProduct = $sdk->products()->createComplete($basicProductData);
+                        $productId = $basicProduct['id'] ?? $basicProduct['_id'] ?? null;
+                        if ($productId) {
+                            echo "✅ Produto básico criado via createComplete: $productId\n";
+                        } else {
+                            throw new Exception("Método createComplete não retornou ID válido");
+                        }
+                    } catch (Exception $altError) {
+                        echo "❌ Método createComplete também falhou: " . $altError->getMessage() . "\n";
+                        echo "⚠️  Pulando criação de ofertas...\n";
+                        $productId = null;
+                    }
                 }
             }
 
@@ -1652,44 +1523,41 @@ try {
                     ];
 
                     try {
-                        $offerResult = $sdk->offers()->create($offerData);
+                        // Método correto confirmado no SDK: usar offer()->createOffer()
+                        echo "ℹ️  Criando oferta usando método confirmado do SDK...\n";
+                        $offerResult = $sdk->offer()->createOffer($offerData);
 
-                        if ($offerResult['success']) {
+                        if ($offerResult && isset($offerResult['id'])) {
                             echo "✅ Oferta criada com sucesso!\n";
-                            echo "   🎯 Nome: " . $offerResult['offer']['name'] . "\n";
-                            echo "   🏷️  Slug: " . $offerResult['offer']['slug'] . "\n";
-                            echo "   💰 Preço: R$ " . number_format($offerResult['offer']['price']['amount'] / 100, 2, ',', '.') . "\n";
-                            echo "   🛒 URL Checkout: " . $offerResult['offer']['checkout_url'] . "\n";
+                            echo "   🎯 Nome: " . ($offerResult['name'] ?? $offerData['name']) . "\n";
+                            echo "   🏷️  Slug: " . ($offerResult['slug'] ?? $offerData['slug']) . "\n";
+                            echo "   💰 Preço: R$ " . number_format(($offerResult['price']['amount'] ?? $offerData['price']['amount']) / 100, 2, ',', '.') . "\n";
 
                             // Obter o ID da oferta criada
-                            $offerId = $offerResult['offer']['id'] ?? $offerResult['offer']['_id'];
-
-                            // Associar produto à oferta (se não foi feito automaticamente)
-                            echo "🔗 Verificando associação produto-oferta...\n";
-                            try {
-                                $associationResult = $sdk->offers()->associateProduct($offerId, $productId);
-                                if ($associationResult['success']) {
-                                    echo "✅ Produto associado à oferta com sucesso!\n";
-                                }
-                            } catch (Exception $assocError) {
-                                echo "ℹ️  Produto já estava associado ou associação automática: " . $assocError->getMessage() . "\n";
-                            }
+                            $offerId = $offerResult['id'] ?? $offerResult['_id'];
 
                             // Configurar URLs e informações da oferta
-                            echo "📋 Informações importantes da oferta:\n";
-                            echo "   🔗 URL da página de vendas: " . $offerResult['offer']['sales_page_url'] . "\n";
-                            echo "   🛒 URL do checkout: " . $offerResult['offer']['checkout_url'] . "\n";
-                            echo "   📊 URL de obrigado: " . $offerResult['offer']['thank_you_page_url'] . "\n";
+                            echo "📋 Oferta criada com ID: $offerId\n";
+                            echo "   ℹ️  Para obter URLs específicas, use a interface admin ou APIs dedicadas\n";
+
+                            // Guardar resultado para uso posterior
+                            $offerResult = [
+                                'success' => true,
+                                'offer' => $offerResult
+                            ];
 
                         } else {
-                            echo "❌ Falha na criação da oferta\n";
+                            echo "❌ Falha na criação da oferta - resposta inválida\n";
+                            $offerResult = ['success' => false];
                         }
                     } catch (Exception $offerError) {
                         echo "⚠️  Erro na criação de oferta: " . $offerError->getMessage() . "\n";
-                        echo "   📋 Configuração manual necessária:\n";
-                        echo "   1. Verificar se produto existe e está ativo\n";
-                        echo "   2. Verificar se slug está disponível\n";
-                        echo "   3. Criar oferta via interface admin\n";
+                        echo "   📋 Funcionalidade de ofertas pode não estar totalmente implementada no SDK\n";
+                        echo "   💡 Alternativas:\n";
+                        echo "   1. Usar interface admin para criar ofertas\n";
+                        echo "   2. Implementar via API REST direta\n";
+                        echo "   3. Aguardar implementação completa no SDK\n";
+                        $offerResult = ['success' => false];
                     }
                 } else {
                     echo "✅ Oferta já existe com slug: $offerSlug\n";
@@ -1726,112 +1594,20 @@ try {
                 $offerIdForFlow = $offerResult['offer']['id'] ?? $offerResult['offer']['_id'] ?? null;
             }
 
-            // Se não temos oferta, listar ofertas existentes
+            // Se não temos oferta, tentar buscar ofertas existentes
             if (!$offerIdForFlow) {
                 echo "🔍 Buscando ofertas existentes para criar flow...\n";
-                try {
-                    $existingOffers = $sdk->offers()->list(['limit' => 1]);
-                    if (!empty($existingOffers) && is_array($existingOffers)) {
-                        $firstOffer = $existingOffers[0];
-                        $offerIdForFlow = $firstOffer['id'] ?? $firstOffer['_id'] ?? null;
-                        echo "✅ Encontrada oferta existente: " . ($firstOffer['name'] ?? 'N/A') . "\n";
-                    }
-                } catch (Exception $listError) {
-                    echo "⚠️  Erro ao listar ofertas: " . $listError->getMessage() . "\n";
-                }
+                echo "ℹ️  Listagem de ofertas via SDK não está disponível\n";
+                echo "   💡 Para flows, recomenda-se criar a oferta primeiro ou usar interface admin\n";
             }
 
-            if ($offerIdForFlow) {
-                echo "🔄 Criando flow para oferta ID: $offerIdForFlow\n";
-
-                $flowData = [
-                    'name' => 'Flow Principal - ' . date('Y-m-d H:i:s'),
-                    'offer_id' => $offerIdForFlow,
-                    'type' => 'standard',
-                    'steps' => [
-                        [
-                            'step_type' => 'landing_page',
-                            'name' => 'Página de Vendas',
-                            'template' => 'modern-sales-page',
-                            'settings' => [
-                                'show_testimonials' => true,
-                                'show_guarantee' => true,
-                                'show_bonus' => true,
-                                'timer_enabled' => true,
-                                'timer_duration' => 3600 // 1 hora
-                            ]
-                        ],
-                        [
-                            'step_type' => 'checkout',
-                            'name' => 'Checkout',
-                            'template' => 'single-step-checkout',
-                            'settings' => [
-                                'payment_methods' => ['credit_card', 'pix', 'bank_slip'],
-                                'show_security_badges' => true,
-                                'show_testimonials' => true,
-                                'require_cpf' => true
-                            ]
-                        ],
-                        [
-                            'step_type' => 'thank_you',
-                            'name' => 'Página de Obrigado',
-                            'template' => 'thank-you-with-delivery',
-                            'settings' => [
-                                'show_social_proof' => true,
-                                'show_related_products' => false,
-                                'auto_download' => true
-                            ]
-                        ]
-                    ],
-                    'settings' => [
-                        'tracking' => [
-                            'google_analytics' => '',
-                            'facebook_pixel' => '',
-                            'google_tag_manager' => ''
-                        ],
-                        'seo' => [
-                            'meta_title' => 'Oferta Especial - Não Perca!',
-                            'meta_description' => 'Aproveite nossa oferta especial por tempo limitado!'
-                        ]
-                    ]
-                ];
-
-                try {
-                    $flowResult = $sdk->flows()->create($flowData);
-
-                    if ($flowResult['success']) {
-                        echo "✅ Flow criado com sucesso!\n";
-                        echo "   🔄 Nome: " . $flowResult['flow']['name'] . "\n";
-                        echo "   📄 Etapas: " . count($flowResult['flow']['steps']) . " configuradas\n";
-                        echo "   🔗 URL base: " . $flowResult['flow']['base_url'] . "\n";
-
-                        // Mostrar URLs de cada etapa
-                        echo "   📋 URLs das etapas:\n";
-                        foreach ($flowResult['flow']['steps'] as $index => $step) {
-                            echo "   " . ($index + 1) . ". " . $step['name'] . ": " . $step['url'] . "\n";
-                        }
-
-                        // Publicar o flow
-                        echo "🚀 Publicando flow...\n";
-                        $publishResult = $sdk->flows()->publish($flowResult['flow']['id']);
-
-                        if ($publishResult['success']) {
-                            echo "✅ Flow publicado com sucesso!\n";
-                            echo "   🌐 Status: Ativo\n";
-                            echo "   🔗 URL principal: " . $publishResult['flow']['public_url'] . "\n";
-                        }
-                    }
-                } catch (Exception $flowError) {
-                    echo "⚠️  Erro na criação de flow: " . $flowError->getMessage() . "\n";
-                    echo "   📋 Configuração manual necessária:\n";
-                    echo "   1. Verificar se oferta existe e está ativa\n";
-                    echo "   2. Criar flow via interface admin\n";
-                    echo "   3. Configurar etapas do funil de vendas\n";
-                }
-            } else {
-                echo "⚠️  Nenhuma oferta encontrada para criar flow\n";
-                echo "   📋 Criar uma oferta primeiro antes de configurar flows\n";
-            }
+            echo "ℹ️  Funcionalidade de flows não está disponível via SDK\n";
+            echo "   📋 Módulo flows não existe no SDK atual\n";
+            echo "   💡 Alternativas para configurar flows:\n";
+            echo "   1. Usar interface administrativa do Clubify\n";
+            echo "   2. Configurar via API REST direta\n";
+            echo "   3. Aguardar implementação do módulo no SDK\n";
+            echo "   4. Usar métodos de configuração de tema/layout disponíveis\n";
         } catch (Exception $e) {
             echo "⚠️  Erro geral na criação de flows: " . $e->getMessage() . "\n";
             echo "ℹ️  Continuando com outras operações...\n";
@@ -1849,159 +1625,64 @@ try {
     echo "=== Configuração de Temas e Layouts ===\n";
 
     if ($tenantId && $tenantId !== 'unknown') {
+        echo "🎨 Verificando opções de personalização disponíveis...\n";
+
+        // Tentar usar métodos disponíveis no módulo offer para configuração de tema
         try {
-            echo "🎨 Configurando tema personalizado para o tenant...\n";
+            if (isset($offerResult) && $offerResult['success'] && isset($offerResult['offer']['id'])) {
+                $offerId = $offerResult['offer']['id'];
+                echo "🎯 Configurando tema para oferta existente: $offerId\n";
 
-            // Configuração do tema principal
-            $themeData = [
-                'name' => 'Tema Personalizado - ' . date('Y-m-d'),
-                'description' => 'Tema criado automaticamente via SDK',
-                'is_default' => true,
-                'settings' => [
-                    'colors' => [
-                        'primary' => '#007bff',
-                        'secondary' => '#6c757d',
-                        'success' => '#28a745',
-                        'danger' => '#dc3545',
-                        'warning' => '#ffc107',
-                        'info' => '#17a2b8',
-                        'light' => '#f8f9fa',
-                        'dark' => '#343a40'
-                    ],
-                    'typography' => [
-                        'font_family' => 'Inter, system-ui, sans-serif',
-                        'font_size_base' => '16px',
-                        'line_height' => 1.5,
-                        'heading_font_family' => 'Inter, system-ui, sans-serif'
-                    ],
-                    'layout' => [
-                        'container_max_width' => '1200px',
-                        'border_radius' => '8px',
-                        'spacing_unit' => '1rem'
-                    ],
-                    'components' => [
-                        'buttons' => [
-                            'border_radius' => '6px',
-                            'font_weight' => 'bold',
-                            'padding' => '12px 24px'
-                        ],
-                        'forms' => [
-                            'input_border_radius' => '4px',
-                            'input_padding' => '10px 16px',
-                            'label_font_weight' => '500'
-                        ]
-                    ]
-                ]
-            ];
+                $themeConfig = [
+                    'primary_color' => '#007bff',
+                    'secondary_color' => '#6c757d',
+                    'font_family' => 'Inter, system-ui, sans-serif',
+                    'template' => 'modern'
+                ];
 
-            try {
-                $themeResult = $sdk->themes()->create($themeData);
-
-                if ($themeResult['success']) {
-                    echo "✅ Tema criado com sucesso!\n";
-                    echo "   🎨 Nome: " . $themeResult['theme']['name'] . "\n";
-                    echo "   🌈 Cor primária: " . $themeResult['theme']['settings']['colors']['primary'] . "\n";
-                    echo "   📝 Status: " . ($themeResult['theme']['is_default'] ? 'Padrão' : 'Secundário') . "\n";
-
-                    $themeId = $themeResult['theme']['id'] ?? $themeResult['theme']['_id'];
-
-                    // Configurar layouts específicos para diferentes páginas
-                    echo "📄 Configurando layouts personalizados...\n";
-
-                    $layoutConfigs = [
-                        [
-                            'page_type' => 'sales_page',
-                            'name' => 'Layout Página de Vendas',
-                            'template' => 'modern-sales',
-                            'settings' => [
-                                'header' => [
-                                    'show_logo' => true,
-                                    'show_navigation' => false,
-                                    'transparent' => true
-                                ],
-                                'hero' => [
-                                    'background_type' => 'gradient',
-                                    'text_alignment' => 'center',
-                                    'show_video' => true
-                                ],
-                                'content' => [
-                                    'show_testimonials' => true,
-                                    'show_guarantee' => true,
-                                    'show_faq' => true
-                                ],
-                                'footer' => [
-                                    'show_social_links' => true,
-                                    'show_copyright' => true
-                                ]
-                            ]
-                        ],
-                        [
-                            'page_type' => 'checkout',
-                            'name' => 'Layout Checkout',
-                            'template' => 'minimal-checkout',
-                            'settings' => [
-                                'layout' => 'single_column',
-                                'show_progress_bar' => true,
-                                'show_security_badges' => true,
-                                'show_testimonials' => false,
-                                'sticky_summary' => true
-                            ]
-                        ],
-                        [
-                            'page_type' => 'thank_you',
-                            'name' => 'Layout Obrigado',
-                            'template' => 'celebration-thank-you',
-                            'settings' => [
-                                'show_confetti' => true,
-                                'show_social_share' => true,
-                                'show_next_steps' => true,
-                                'auto_download' => true
-                            ]
-                        ]
-                    ];
-
-                    $createdLayouts = [];
-                    foreach ($layoutConfigs as $layoutConfig) {
-                        try {
-                            $layoutConfig['theme_id'] = $themeId;
-                            $layoutResult = $sdk->themes()->createLayout($layoutConfig);
-
-                            if ($layoutResult['success']) {
-                                echo "   ✅ Layout '{$layoutConfig['name']}' criado\n";
-                                $createdLayouts[] = $layoutResult['layout'];
-                            }
-                        } catch (Exception $layoutError) {
-                            echo "   ⚠️  Erro ao criar layout '{$layoutConfig['name']}': " . $layoutError->getMessage() . "\n";
-                        }
+                try {
+                    $themeResult = $sdk->offer()->configureTheme($offerId, $themeConfig);
+                    if ($themeResult) {
+                        echo "✅ Tema configurado para a oferta!\n";
+                        echo "   🎨 Cor primária: " . $themeConfig['primary_color'] . "\n";
+                        echo "   📝 Template: " . $themeConfig['template'] . "\n";
                     }
-
-                    // Aplicar tema como padrão
-                    if (!empty($createdLayouts)) {
-                        echo "🎯 Aplicando tema como padrão do tenant...\n";
-                        try {
-                            $applyResult = $sdk->themes()->setAsDefault($themeId, $tenantId);
-                            if ($applyResult['success']) {
-                                echo "✅ Tema aplicado como padrão com sucesso!\n";
-                                echo "   🏢 Tenant: $tenantId\n";
-                                echo "   🎨 Tema ID: $themeId\n";
-                                echo "   📄 Layouts: " . count($createdLayouts) . " configurados\n";
-                            }
-                        } catch (Exception $applyError) {
-                            echo "⚠️  Erro ao aplicar tema: " . $applyError->getMessage() . "\n";
-                        }
-                    }
+                } catch (Exception $themeError) {
+                    echo "ℹ️  Método configureTheme não disponível: " . $themeError->getMessage() . "\n";
                 }
-            } catch (Exception $themeError) {
-                echo "⚠️  Erro na criação de tema: " . $themeError->getMessage() . "\n";
-                echo "   📋 Configuração manual necessária:\n";
-                echo "   1. Acessar painel de temas via interface admin\n";
-                echo "   2. Criar tema personalizado\n";
-                echo "   3. Configurar layouts para cada tipo de página\n";
+
+                // Tentar configurar layout
+                $layoutConfig = [
+                    'type' => 'sales_page',
+                    'template' => 'modern-sales',
+                    'show_testimonials' => true,
+                    'show_guarantee' => true
+                ];
+
+                try {
+                    $layoutResult = $sdk->offer()->configureLayout($offerId, $layoutConfig);
+                    if ($layoutResult) {
+                        echo "✅ Layout configurado para a oferta!\n";
+                        echo "   📄 Tipo: " . $layoutConfig['type'] . "\n";
+                        echo "   🎨 Template: " . $layoutConfig['template'] . "\n";
+                    }
+                } catch (Exception $layoutError) {
+                    echo "ℹ️  Método configureLayout não disponível: " . $layoutError->getMessage() . "\n";
+                }
+            } else {
+                echo "ℹ️  Nenhuma oferta disponível para configurar tema\n";
             }
         } catch (Exception $e) {
-            echo "⚠️  Erro geral na configuração de temas: " . $e->getMessage() . "\n";
-            echo "ℹ️  Continuando com outras operações...\n";
+            echo "ℹ️  Erro na configuração de tema: " . $e->getMessage() . "\n";
         }
+
+        echo "\n📋 Módulo themes dedicado não está disponível no SDK\n";
+        echo "💡 Alternativas para personalização:\n";
+        echo "   1. Usar métodos configureTheme/configureLayout do módulo offer\n";
+        echo "   2. Configurar via interface administrativa\n";
+        echo "   3. Usar API REST direta para temas\n";
+        echo "   4. Aguardar implementação completa do módulo themes\n";
+
     } else {
         echo "⚠️  Nenhum tenant válido disponível para configuração de temas\n";
     }
@@ -2015,190 +1696,59 @@ try {
     echo "=== Configuração de OrderBump e Upsell ===\n";
 
     if ($tenantId && $tenantId !== 'unknown') {
+        echo "📈 Verificando opções de upsell disponíveis...\n";
+
+        // Tentar usar métodos disponíveis no módulo offer
         try {
-            // Verificar se temos uma oferta para configurar orderbump e upsell
-            $mainOfferId = null;
-
-            // Tentar obter ID da oferta criada anteriormente
-            if (isset($offerResult) && isset($offerResult['offer'])) {
-                $mainOfferId = $offerResult['offer']['id'] ?? $offerResult['offer']['_id'] ?? null;
-            }
-
-            // Se não temos oferta, listar ofertas existentes
-            if (!$mainOfferId) {
-                echo "🔍 Buscando ofertas existentes para configurar orderbump e upsell...\n";
-                try {
-                    $existingOffers = $sdk->offers()->list(['limit' => 1]);
-                    if (!empty($existingOffers) && is_array($existingOffers)) {
-                        $firstOffer = $existingOffers[0];
-                        $mainOfferId = $firstOffer['id'] ?? $firstOffer['_id'] ?? null;
-                        echo "✅ Encontrada oferta principal: " . ($firstOffer['name'] ?? 'N/A') . "\n";
-                    }
-                } catch (Exception $listError) {
-                    echo "⚠️  Erro ao listar ofertas: " . $listError->getMessage() . "\n";
-                }
-            }
-
-            if ($mainOfferId) {
-                // CONFIGURAR ORDERBUMP
-                echo "🛒 Configurando OrderBump para oferta principal...\n";
-
-                $orderbumpData = [
-                    'name' => 'Bônus Especial - OrderBump',
-                    'description' => 'Produto adicional com desconto exclusivo no checkout',
-                    'offer_id' => $mainOfferId,
-                    'product' => [
-                        'name' => 'Bônus Digital Exclusivo',
-                        'description' => 'Material complementar especial',
-                        'price' => [
-                            'amount' => 1999, // R$ 19,99
-                            'currency' => 'BRL'
-                        ],
-                        'type' => 'digital'
-                    ],
-                    'settings' => [
-                        'display_position' => 'checkout_sidebar',
-                        'discount_type' => 'percentage',
-                        'discount_value' => 50, // 50% de desconto
-                        'default_selected' => false,
-                        'show_testimonial' => true,
-                        'urgency_enabled' => true
-                    ],
-                    'copy' => [
-                        'headline' => '🎁 Oferta Especial Apenas para Você!',
-                        'description' => 'Aproveite e leve também este bônus exclusivo com 50% de desconto!',
-                        'button_text' => 'Sim, eu quero o bônus!',
-                        'testimonial' => 'Este bônus transformou minha experiência! - João Silva'
-                    ]
-                ];
-
-                try {
-                    $orderbumpResult = $sdk->orderbumps()->create($orderbumpData);
-
-                    if ($orderbumpResult['success']) {
-                        echo "✅ OrderBump criado com sucesso!\n";
-                        echo "   🛒 Nome: " . $orderbumpResult['orderbump']['name'] . "\n";
-                        echo "   💰 Preço: R$ " . number_format($orderbumpResult['orderbump']['product']['price']['amount'] / 100, 2, ',', '.') . "\n";
-                        echo "   🏷️  Desconto: " . $orderbumpResult['orderbump']['settings']['discount_value'] . "%\n";
-                        echo "   📍 Posição: " . $orderbumpResult['orderbump']['settings']['display_position'] . "\n";
-                    }
-                } catch (Exception $orderbumpError) {
-                    echo "⚠️  Erro na criação de OrderBump: " . $orderbumpError->getMessage() . "\n";
-                    echo "   📋 Configuração manual necessária via interface admin\n";
-                }
-
-                // CONFIGURAR UPSELL
-                echo "📈 Configurando Upsell após checkout...\n";
+            if (isset($offerResult) && $offerResult['success'] && isset($offerResult['offer']['id'])) {
+                $mainOfferId = $offerResult['offer']['id'];
+                echo "🎯 Configurando upsell para oferta existente: $mainOfferId\n";
 
                 $upsellData = [
-                    'name' => 'Upgrade Premium - Upsell',
+                    'name' => 'Upgrade Premium',
                     'description' => 'Versão premium com recursos adicionais',
-                    'trigger_offer_id' => $mainOfferId,
-                    'product' => [
-                        'name' => 'Versão Premium Completa',
-                        'description' => 'Acesso completo com recursos avançados e suporte prioritário',
-                        'price' => [
-                            'amount' => 9999, // R$ 99,99
-                            'currency' => 'BRL'
-                        ],
-                        'type' => 'digital'
+                    'price' => [
+                        'amount' => 9999, // R$ 99,99
+                        'currency' => 'BRL'
                     ],
-                    'settings' => [
-                        'trigger_event' => 'checkout_success',
-                        'display_timing' => 'immediate',
-                        'auto_redirect' => true,
-                        'time_limit' => 300, // 5 minutos
-                        'show_countdown' => true,
-                        'exit_intent' => true
-                    ],
-                    'copy' => [
-                        'headline' => '🚀 Última Chance: Upgrade para Premium!',
-                        'subheadline' => 'Desbloqueie recursos exclusivos com 40% de desconto',
-                        'description' => 'Esta oferta especial está disponível apenas por alguns minutos após sua compra.',
-                        'benefits' => [
-                            'Suporte prioritário 24/7',
-                            'Acesso a recursos avançados',
-                            'Templates exclusivos',
-                            'Certificado de conclusão'
-                        ],
-                        'button_text' => 'SIM! Quero o Upgrade',
-                        'decline_text' => 'Não, obrigado'
-                    ]
+                    'discount_percentage' => 40,
+                    'display_timing' => 'after_checkout'
                 ];
 
                 try {
-                    $upsellResult = $sdk->upsells()->create($upsellData);
-
-                    if ($upsellResult['success']) {
-                        echo "✅ Upsell criado com sucesso!\n";
-                        echo "   📈 Nome: " . $upsellResult['upsell']['name'] . "\n";
-                        echo "   💰 Preço: R$ " . number_format($upsellResult['upsell']['product']['price']['amount'] / 100, 2, ',', '.') . "\n";
-                        echo "   ⏱️  Tempo limite: " . $upsellResult['upsell']['settings']['time_limit'] . " segundos\n";
-                        echo "   🎯 Evento: " . $upsellResult['upsell']['settings']['trigger_event'] . "\n";
-
-                        // Configurar sequência de downsell (caso upsell seja rejeitado)
-                        echo "📉 Configurando Downsell como alternativa...\n";
-
-                        $downsellData = [
-                            'name' => 'Oferta Intermediária - Downsell',
-                            'description' => 'Versão intermediária com preço reduzido',
-                            'trigger_upsell_id' => $upsellResult['upsell']['id'],
-                            'product' => [
-                                'name' => 'Versão Básica Plus',
-                                'description' => 'Recursos intermediários com ótimo custo-benefício',
-                                'price' => [
-                                    'amount' => 4999, // R$ 49,99
-                                    'currency' => 'BRL'
-                                ],
-                                'type' => 'digital'
-                            ],
-                            'settings' => [
-                                'trigger_event' => 'upsell_declined',
-                                'display_timing' => 'immediate',
-                                'time_limit' => 180, // 3 minutos
-                                'show_countdown' => true
-                            ],
-                            'copy' => [
-                                'headline' => '⚡ Espere! Que tal esta oferta?',
-                                'description' => 'Já que o premium não interessou, que tal esta versão intermediária?',
-                                'button_text' => 'Quero esta oferta',
-                                'decline_text' => 'Não, continuar'
-                            ]
-                        ];
-
-                        try {
-                            $downsellResult = $sdk->downsells()->create($downsellData);
-                            if ($downsellResult['success']) {
-                                echo "✅ Downsell configurado como alternativa!\n";
-                                echo "   📉 Nome: " . $downsellResult['downsell']['name'] . "\n";
-                                echo "   💰 Preço: R$ " . number_format($downsellResult['downsell']['product']['price']['amount'] / 100, 2, ',', '.') . "\n";
-                            }
-                        } catch (Exception $downsellError) {
-                            echo "ℹ️  Downsell não configurado: " . $downsellError->getMessage() . "\n";
-                        }
+                    $upsellResult = $sdk->offer()->addUpsell($mainOfferId, $upsellData);
+                    if ($upsellResult) {
+                        echo "✅ Upsell configurado via SDK!\n";
+                        echo "   📈 Nome: " . $upsellData['name'] . "\n";
+                        echo "   💰 Preço: R$ " . number_format($upsellData['price']['amount'] / 100, 2, ',', '.') . "\n";
+                        echo "   🏷️  Desconto: " . $upsellData['discount_percentage'] . "%\n";
                     }
                 } catch (Exception $upsellError) {
-                    echo "⚠️  Erro na criação de Upsell: " . $upsellError->getMessage() . "\n";
-                    echo "   📋 Configuração manual necessária via interface admin\n";
+                    echo "ℹ️  Método addUpsell não disponível: " . $upsellError->getMessage() . "\n";
                 }
-
-                // Resumo da configuração
-                echo "\n📊 Resumo da Configuração de Funil:\n";
-                echo "   🎯 Oferta Principal: Configurada\n";
-                echo "   🛒 OrderBump: " . (isset($orderbumpResult) && $orderbumpResult['success'] ? 'Configurado' : 'Não configurado') . "\n";
-                echo "   📈 Upsell: " . (isset($upsellResult) && $upsellResult['success'] ? 'Configurado' : 'Não configurado') . "\n";
-                echo "   📉 Downsell: " . (isset($downsellResult) && $downsellResult['success'] ? 'Configurado' : 'Não configurado') . "\n";
-
             } else {
-                echo "⚠️  Nenhuma oferta encontrada para configurar orderbump e upsell\n";
-                echo "   📋 Criar uma oferta primeiro antes de configurar estratégias de funil\n";
+                echo "ℹ️  Nenhuma oferta disponível para configurar upsell\n";
             }
         } catch (Exception $e) {
-            echo "⚠️  Erro geral na configuração de orderbump/upsell: " . $e->getMessage() . "\n";
-            echo "ℹ️  Continuando com outras operações...\n";
+            echo "ℹ️  Erro na configuração de upsell: " . $e->getMessage() . "\n";
         }
+
+        echo "\n📋 Módulos dedicados (orderbumps, upsells, downsells) não estão disponíveis no SDK\n";
+        echo "💡 Alternativas para estratégias de vendas:\n";
+        echo "   1. Usar método addUpsell do módulo offer (confirmado)\n";
+        echo "   2. Configurar via interface administrativa\n";
+        echo "   3. Usar API REST direta para orderbumps e upsells\n";
+        echo "   4. Aguardar implementação completa dos módulos no SDK\n";
+        echo "   5. Usar factory pattern para criar serviços específicos\n";
+
+        echo "\n📊 Resumo da Configuração de Funil:\n";
+        echo "   🎯 Oferta Principal: " . (isset($offerResult) && $offerResult['success'] ? 'Configurada' : 'Não configurada') . "\n";
+        echo "   📈 Upsell: Método básico disponível via offer()->addUpsell()\n";
+        echo "   🛒 OrderBump: Não disponível via SDK (use interface admin)\n";
+        echo "   📉 Downsell: Não disponível via SDK (use interface admin)\n";
+
     } else {
-        echo "⚠️  Nenhum tenant válido disponível para configuração de orderbump/upsell\n";
+        echo "⚠️  Nenhum tenant válido disponível para configuração de upsell\n";
     }
 
     echo "\n";

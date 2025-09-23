@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Modules\Organization\Services;
 
 use Clubify\Checkout\Services\BaseService;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Exceptions\ValidationException;
 use Clubify\Checkout\Exceptions\HttpException;
 
@@ -66,7 +67,7 @@ class TenantService extends BaseService
 
             // Criar tenant via API
             $response = $this->httpClient->post('/tenants', $data);
-            $tenant = $response->getData();
+            $tenant = ResponseHelper::getData($response);
 
             // Cache do tenant
             $this->cache->set($this->getCacheKey("tenant:{$tenant['id']}"), $tenant, 3600);
@@ -136,7 +137,7 @@ class TenantService extends BaseService
                 'settings' => $settings
             ]);
 
-            $tenant = $response->getData();
+            $tenant = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->cache->delete($this->getCacheKey("tenant:{$tenantId}"));
@@ -160,7 +161,7 @@ class TenantService extends BaseService
             $this->validateResourceLimits($limits);
 
             $response = $this->httpClient->put("/tenants/{$tenantId}/limits", $limits);
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Cache dos limites
             $this->cache->set($this->getCacheKey("tenant_limits:{$tenantId}"), $limits, 7200);
@@ -194,7 +195,7 @@ class TenantService extends BaseService
     {
         return $this->executeWithMetrics('get_resource_usage', function () use ($tenantId) {
             $response = $this->httpClient->get("/tenants/{$tenantId}/usage");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -247,7 +248,7 @@ class TenantService extends BaseService
     {
         try {
             $response = $this->httpClient->get("tenants/subdomain/{$subdomain}");
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['available'] ?? false;
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -264,7 +265,7 @@ class TenantService extends BaseService
     {
         return $this->executeWithMetrics('list_tenants_by_organization', function () use ($organizationId) {
             $response = $this->httpClient->get("/organizations/{$organizationId}/tenants");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -275,7 +276,7 @@ class TenantService extends BaseService
     {
         return $this->executeWithMetrics('get_tenant_stats', function () use ($tenantId) {
             $response = $this->httpClient->get("/tenants/{$tenantId}/stats");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -286,7 +287,7 @@ class TenantService extends BaseService
     {
         try {
             $response = $this->httpClient->get("/tenants/{$tenantId}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -302,7 +303,7 @@ class TenantService extends BaseService
     {
         try {
             $response = $this->httpClient->get("/organizations/{$organizationId}/tenant");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -318,7 +319,7 @@ class TenantService extends BaseService
     {
         try {
             $response = $this->httpClient->get("tenants/subdomain/{$subdomain}");
-            return $response->getData();
+            return ResponseHelper::getDataIfSuccessful($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -334,7 +335,7 @@ class TenantService extends BaseService
     {
         try {
             $response = $this->httpClient->get("/tenants/{$tenantId}/limits");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return $this->getDefaultResourceLimits();

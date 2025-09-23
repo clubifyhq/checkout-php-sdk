@@ -1028,6 +1028,53 @@ class SuperAdminModule implements ModuleInterface
     }
 
     /**
+     * Prepara dados do usuário admin a partir das opções fornecidas
+     */
+    private function prepareAdminUserData(array $options): array
+    {
+        // Campos obrigatórios para criação de usuário admin
+        $requiredFields = ['admin_email', 'admin_name'];
+
+        foreach ($requiredFields as $field) {
+            if (empty($options[$field])) {
+                throw new SDKException("Missing required field for admin user: {$field}");
+            }
+        }
+
+        // Extrair firstName e lastName do admin_name
+        $nameParts = explode(' ', trim($options['admin_name']), 2);
+        $firstName = $nameParts[0];
+        $lastName = isset($nameParts[1]) ? $nameParts[1] : '';
+
+        // Usar senha fornecida ou gerar uma temporária
+        $password = $options['admin_password'] ?? $this->generateTemporaryPassword();
+
+        return [
+            'email' => $options['admin_email'],
+            'firstName' => $firstName,
+            'lastName' => $lastName,
+            'password' => $password,
+            'fullName' => $options['admin_name']
+        ];
+    }
+
+    /**
+     * Gera uma senha temporária segura
+     */
+    private function generateTemporaryPassword(): string
+    {
+        $length = 16;
+        $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        $password = '';
+
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $characters[random_int(0, strlen($characters) - 1)];
+        }
+
+        return $password;
+    }
+
+    /**
      * Orquestra a criação de usuário usando UserService centralizado
      */
     private function orchestrateUserCreation(array $adminData): array

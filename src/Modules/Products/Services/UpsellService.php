@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Products\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Exceptions\ValidationException;
@@ -64,7 +65,7 @@ class UpsellService extends BaseService implements ServiceInterface
 
             // Criar upsell via API
             $response = $this->httpClient->post('/upsells', $data);
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Cache do upsell
             $this->cache->set($this->getCacheKey("upsell:{$upsell['id']}"), $upsell, 3600);
@@ -109,7 +110,7 @@ class UpsellService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/upsells', [
                 'query' => ['flow_id' => $flowId, 'order_by' => 'sequence_order']
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -122,7 +123,7 @@ class UpsellService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/upsells', [
                 'query' => ['type' => $type]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -143,7 +144,7 @@ class UpsellService extends BaseService implements ServiceInterface
             $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->httpClient->put("/upsells/{$upsellId}", $data);
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateUpsellCache($upsellId);
@@ -170,7 +171,7 @@ class UpsellService extends BaseService implements ServiceInterface
                 'sequence' => $upsellSequence
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Invalidar cache dos upsells afetados
             foreach ($upsellSequence as $upsellConfig) {
@@ -201,7 +202,7 @@ class UpsellService extends BaseService implements ServiceInterface
                 'targeting_rules' => $targetingRules
             ]);
 
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateUpsellCache($upsellId);
@@ -225,7 +226,7 @@ class UpsellService extends BaseService implements ServiceInterface
             $this->validateTemplateConfig($templateConfig);
 
             $response = $this->httpClient->put("/upsells/{$upsellId}/template", $templateConfig);
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateUpsellCache($upsellId);
@@ -249,7 +250,7 @@ class UpsellService extends BaseService implements ServiceInterface
             $this->validateAbTestConfig($testConfig);
 
             $response = $this->httpClient->put("/upsells/{$upsellId}/ab-testing", $testConfig);
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateUpsellCache($upsellId);
@@ -272,7 +273,7 @@ class UpsellService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_upsell_ab_test_results', function () use ($upsellId) {
             $response = $this->httpClient->get("/upsells/{$upsellId}/ab-testing/results");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -288,7 +289,7 @@ class UpsellService extends BaseService implements ServiceInterface
                 'automation_rules' => $automationRules
             ]);
 
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateUpsellCache($upsellId);
@@ -313,7 +314,7 @@ class UpsellService extends BaseService implements ServiceInterface
                 'order_mapping' => $orderMapping
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Invalidar cache dos upsells afetados
             foreach ($orderMapping as $upsellId => $newOrder) {
@@ -361,7 +362,7 @@ class UpsellService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('duplicate_upsell', function () use ($upsellId, $overrideData) {
             $response = $this->httpClient->post("/upsells/{$upsellId}/duplicate", $overrideData);
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('upsell.duplicated', [
@@ -382,7 +383,7 @@ class UpsellService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/upsells/{$upsellId}/analytics", [
                 'query' => $filters
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -393,7 +394,7 @@ class UpsellService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_upsell_sequence_performance', function () use ($flowId) {
             $response = $this->httpClient->get("/flows/{$flowId}/upsell-sequence/performance");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -406,7 +407,7 @@ class UpsellService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/upsells/{$upsellId}/conversion-report", [
                 'query' => $dateRange
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -419,7 +420,7 @@ class UpsellService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/upsells/top-performing', [
                 'query' => ['limit' => $limit]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -438,7 +439,7 @@ class UpsellService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -479,7 +480,7 @@ class UpsellService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/upsells/count', [
                 'query' => ['status' => 'active']
             ]);
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['count'] ?? 0;
         } catch (HttpException $e) {
             $this->logger->error('Failed to count active upsells', [
@@ -498,7 +499,7 @@ class UpsellService extends BaseService implements ServiceInterface
             $this->validateConversionTestConfig($testConfig);
 
             $response = $this->httpClient->post("/upsells/{$upsellId}/conversion-test", $testConfig);
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('upsell.conversion_test_executed', [
@@ -518,7 +519,7 @@ class UpsellService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_upsell_optimization_recommendations', function () use ($upsellId) {
             $response = $this->httpClient->get("/upsells/{$upsellId}/optimization-recommendations");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -532,7 +533,7 @@ class UpsellService extends BaseService implements ServiceInterface
                 'optimization_rules' => $optimizationRules
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateUpsellCache($upsellId);
@@ -559,7 +560,7 @@ class UpsellService extends BaseService implements ServiceInterface
                 'restrictions' => $restrictions
             ]);
 
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateUpsellCache($upsellId);
@@ -589,7 +590,7 @@ class UpsellService extends BaseService implements ServiceInterface
                 'options' => $options
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('upsell.activation_scheduled', [
@@ -609,7 +610,7 @@ class UpsellService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('export_upsell_configuration', function () use ($upsellId) {
             $response = $this->httpClient->get("/upsells/{$upsellId}/export-configuration");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -625,7 +626,7 @@ class UpsellService extends BaseService implements ServiceInterface
                 'configuration' => $configuration
             ]);
 
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateUpsellCache($upsellId);
@@ -647,7 +648,7 @@ class UpsellService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/upsells/{$upsellId}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

@@ -21,6 +21,7 @@
 
 namespace Clubify\Checkout\Modules\Subscriptions\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Repository\BaseRepository;
 use Clubify\Checkout\Modules\Subscriptions\Contracts\SubscriptionRepositoryInterface;
 use Clubify\Checkout\Modules\Subscriptions\Exceptions\SubscriptionNotFoundException;
@@ -94,17 +95,17 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                     'email' => $fieldValue
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find subscription by email: " . $response->getError(),
+                        "Failed to find subscription by email: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['subscriptions'][0] ?? null;
             },
             300 // 5 minutes cache
@@ -130,7 +131,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                 'status' => $status
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($subscriptionId);
 
@@ -163,14 +164,14 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get subscription stats: " . $response->getError(),
+                        "Failed to get subscription stats: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             600 // 10 minutes cache for stats
         );
@@ -186,14 +187,14 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                 'subscriptions' => $subscriptionsData
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk create subscriptions: " . $response->getError(),
+                    "Failed to bulk create subscriptions: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch event
             $this->eventDispatcher?->dispatch('Clubify.Checkout.Subscription.BulkCreated', [
@@ -216,14 +217,14 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                 'updates' => $updates
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk update subscriptions: " . $response->getError(),
+                    "Failed to bulk update subscriptions: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Clear cache for updated subscriptions
             foreach (array_keys($updates) as $subscriptionId) {
@@ -254,14 +255,14 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                 $payload = array_merge(['criteria' => $criteria], $options);
                 $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to search subscriptions: " . $response->getError(),
+                        "Failed to search subscriptions: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             180 // 3 minutes cache for search results
         );
@@ -275,7 +276,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
         return $this->executeWithMetrics('archive_subscription', function () use ($subscriptionId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$subscriptionId}/archive");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($subscriptionId);
 
@@ -300,7 +301,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
         return $this->executeWithMetrics('restore_subscription', function () use ($subscriptionId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$subscriptionId}/restore");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($subscriptionId);
 
@@ -334,17 +335,17 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         throw new SubscriptionNotFoundException("No history found for subscription ID: {$subscriptionId}");
                     }
                     throw new HttpException(
-                        "Failed to get subscription history: " . $response->getError(),
+                        "Failed to get subscription history: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             900 // 15 minutes cache for history
         );
@@ -371,14 +372,14 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get related {$relationType}: " . $response->getError(),
+                        "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             300 // 5 minutes cache for relationships
         );
@@ -395,7 +396,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                 'metadata' => $metadata
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("subscription:related:{$subscriptionId}:{$relationType}:*"));
 
@@ -414,7 +415,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
         return $this->executeWithMetrics('remove_relationship', function () use ($subscriptionId, $relatedId, $relationType) {
             $response = $this->httpClient->delete("{$this->getEndpoint()}/{$subscriptionId}/{$relationType}/{$relatedId}");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("subscription:related:{$subscriptionId}:{$relationType}:*"));
 

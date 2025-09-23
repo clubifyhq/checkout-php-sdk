@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Products\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Exceptions\ValidationException;
@@ -63,7 +64,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
 
             // Criar order bump via API
             $response = $this->httpClient->post('/order-bumps', $data);
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Cache do order bump
             $this->cache->set($this->getCacheKey("order_bump:{$bump['id']}"), $bump, 3600);
@@ -108,7 +109,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/order-bumps', [
                 'query' => ['offer_id' => $offerId]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -121,7 +122,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/order-bumps', [
                 'query' => ['position' => $position]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -142,7 +143,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
             $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->httpClient->put("/order-bumps/{$bumpId}", $data);
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderBumpCache($bumpId);
@@ -171,7 +172,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
             ]);
 
             $response = $this->httpClient->put("/order-bumps/{$bumpId}/position", $data);
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderBumpCache($bumpId);
@@ -196,7 +197,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
             $this->validateDiscountConfig($discountConfig);
 
             $response = $this->httpClient->put("/order-bumps/{$bumpId}/discount", $discountConfig);
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderBumpCache($bumpId);
@@ -221,7 +222,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
             $this->validateAppearanceConfig($appearanceConfig);
 
             $response = $this->httpClient->put("/order-bumps/{$bumpId}/appearance", $appearanceConfig);
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderBumpCache($bumpId);
@@ -249,7 +250,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
                 'targeting_rules' => $targetingRules
             ]);
 
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderBumpCache($bumpId);
@@ -273,7 +274,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
             $this->validateAbTestConfig($testConfig);
 
             $response = $this->httpClient->put("/order-bumps/{$bumpId}/ab-testing", $testConfig);
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderBumpCache($bumpId);
@@ -296,7 +297,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_order_bump_ab_test_results', function () use ($bumpId) {
             $response = $this->httpClient->get("/order-bumps/{$bumpId}/ab-testing/results");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -331,7 +332,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('duplicate_order_bump', function () use ($bumpId, $overrideData) {
             $response = $this->httpClient->post("/order-bumps/{$bumpId}/duplicate", $overrideData);
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('order_bump.duplicated', [
@@ -352,7 +353,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/order-bumps/{$bumpId}/analytics", [
                 'query' => $filters
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -365,7 +366,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/order-bumps/{$bumpId}/conversion-report", [
                 'query' => $dateRange
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -378,7 +379,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/order-bumps/top-performing', [
                 'query' => ['limit' => $limit]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -397,7 +398,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -438,7 +439,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/order-bumps/count', [
                 'query' => ['status' => 'active']
             ]);
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['count'] ?? 0;
         } catch (HttpException $e) {
             $this->logger->error('Failed to count active order bumps', [
@@ -458,7 +459,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
                 'optimization_criteria' => $optimizationCriteria
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderBumpCache($bumpId);
@@ -485,7 +486,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
                 'triggers' => $triggers
             ]);
 
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderBumpCache($bumpId);
@@ -512,7 +513,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
                 'limits' => $limits
             ]);
 
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderBumpCache($bumpId);
@@ -539,7 +540,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
                 'animation_config' => $animationConfig
             ]);
 
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderBumpCache($bumpId);
@@ -569,7 +570,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
                 'options' => $options
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('order_bump.activation_scheduled', [
@@ -592,7 +593,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
                 'query' => $criteria
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -608,7 +609,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
                 'positions' => $positions
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('order_bump.position_test_executed', [
@@ -627,7 +628,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('export_order_bump_configuration', function () use ($bumpId) {
             $response = $this->httpClient->get("/order-bumps/{$bumpId}/export-configuration");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -643,7 +644,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
                 'configuration' => $configuration
             ]);
 
-            $bump = $response->getData();
+            $bump = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderBumpCache($bumpId);
@@ -665,7 +666,7 @@ class OrderBumpService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/order-bumps/{$bumpId}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

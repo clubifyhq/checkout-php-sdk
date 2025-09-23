@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Products\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Exceptions\ValidationException;
@@ -82,7 +83,7 @@ class ProductService extends BaseService implements ServiceInterface
 
             // Criar produto via API
             $response = $this->httpClient->post('/products', $data);
-            $product = $response->getData();
+            $product = ResponseHelper::getData($response);
 
             // Cache do produto
             $this->cache->set($this->getCacheKey("product:{$product['id']}"), $product, 3600);
@@ -173,7 +174,7 @@ class ProductService extends BaseService implements ServiceInterface
             $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->httpClient->put("/products/{$productId}", $data);
-            $product = $response->getData();
+            $product = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateProductCache($productId);
@@ -327,7 +328,7 @@ class ProductService extends BaseService implements ServiceInterface
                 'query' => ['quantity' => $quantity]
             ]);
 
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['available'] ?? false;
         });
     }
@@ -363,7 +364,7 @@ class ProductService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('duplicate_product', function () use ($productId, $overrideData) {
             $response = $this->httpClient->post("/products/{$productId}/duplicate", $overrideData);
-            $product = $response->getData();
+            $product = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('product.duplicated', [
@@ -448,7 +449,7 @@ class ProductService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/products/count', [
                 'query' => $filters
             ]);
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['count'] ?? 0;
         } catch (HttpException $e) {
             $this->logger->error('Failed to count products', [
@@ -466,7 +467,7 @@ class ProductService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/products/{$productId}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -482,7 +483,7 @@ class ProductService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/products/slug/{$slug}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -498,7 +499,7 @@ class ProductService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/products/sku/{$sku}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

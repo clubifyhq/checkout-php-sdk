@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Orders\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Exceptions\ValidationException;
 use Clubify\Checkout\Exceptions\HttpException;
@@ -176,7 +177,7 @@ class OrderService extends BaseService implements ServiceInterface
 
             // Criar pedido via API
             $response = $this->httpClient->post('/orders', $data);
-            $order = $response->getData();
+            $order = ResponseHelper::getData($response);
 
             // Cache do pedido
             $this->cache->set($this->getCacheKey("order:{$order['id']}"), $order, 3600);
@@ -241,7 +242,7 @@ class OrderService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -272,7 +273,7 @@ class OrderService extends BaseService implements ServiceInterface
             $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->httpClient->put("/orders/{$orderId}", $data);
-            $order = $response->getData();
+            $order = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOrderCache($orderId);
@@ -347,7 +348,7 @@ class OrderService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -363,7 +364,7 @@ class OrderService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -379,7 +380,7 @@ class OrderService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -398,7 +399,7 @@ class OrderService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -411,7 +412,7 @@ class OrderService extends BaseService implements ServiceInterface
             $this->validateOrderItemData($itemData);
 
             $response = $this->httpClient->post("/orders/{$orderId}/items", $itemData);
-            $item = $response->getData();
+            $item = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
             $this->invalidateOrderCache($orderId);
@@ -457,7 +458,7 @@ class OrderService extends BaseService implements ServiceInterface
             $this->validateOrderItemUpdateData($itemData);
 
             $response = $this->httpClient->put("/orders/{$orderId}/items/{$itemId}", $itemData);
-            $item = $response->getData();
+            $item = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
             $this->invalidateOrderCache($orderId);
@@ -480,7 +481,7 @@ class OrderService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_order_items', function () use ($orderId) {
             $response = $this->httpClient->get("/orders/{$orderId}/items");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -493,7 +494,7 @@ class OrderService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/orders/count', [
                 'query' => $filters
             ]);
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['count'] ?? 0;
         } catch (HttpException $e) {
             $this->logger->error('Failed to count orders', [
@@ -511,7 +512,7 @@ class OrderService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/orders/{$orderId}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -527,7 +528,7 @@ class OrderService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/orders/number/{$orderNumber}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

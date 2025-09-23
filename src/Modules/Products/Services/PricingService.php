@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Products\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Exceptions\ValidationException;
@@ -64,7 +65,7 @@ class PricingService extends BaseService implements ServiceInterface
 
             // Criar estratégia via API
             $response = $this->httpClient->post('/pricing-strategies', $data);
-            $strategy = $response->getData();
+            $strategy = ResponseHelper::getData($response);
 
             // Cache da estratégia
             $this->cache->set($this->getCacheKey("pricing_strategy:{$strategy['id']}"), $strategy, 3600);
@@ -108,7 +109,7 @@ class PricingService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/pricing-strategies', [
                 'query' => ['product_id' => $productId]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -123,7 +124,7 @@ class PricingService extends BaseService implements ServiceInterface
                 'context' => $context
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch evento para tracking
             $this->dispatch('pricing.calculated', [
@@ -155,7 +156,7 @@ class PricingService extends BaseService implements ServiceInterface
             $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->httpClient->put("/pricing-strategies/{$strategyId}", $data);
-            $strategy = $response->getData();
+            $strategy = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateStrategyCache($strategyId);
@@ -182,7 +183,7 @@ class PricingService extends BaseService implements ServiceInterface
                 'rules' => $rules
             ]);
 
-            $strategy = $response->getData();
+            $strategy = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateStrategyCache($strategyId);
@@ -209,7 +210,7 @@ class PricingService extends BaseService implements ServiceInterface
                 'location_rules' => $locationRules
             ]);
 
-            $strategy = $response->getData();
+            $strategy = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateStrategyCache($strategyId);
@@ -236,7 +237,7 @@ class PricingService extends BaseService implements ServiceInterface
                 'segment_rules' => $segmentRules
             ]);
 
-            $strategy = $response->getData();
+            $strategy = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateStrategyCache($strategyId);
@@ -260,7 +261,7 @@ class PricingService extends BaseService implements ServiceInterface
             $this->validateAbTestConfig($testConfig);
 
             $response = $this->httpClient->put("/pricing-strategies/{$strategyId}/ab-testing", $testConfig);
-            $strategy = $response->getData();
+            $strategy = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateStrategyCache($strategyId);
@@ -283,7 +284,7 @@ class PricingService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_pricing_ab_test_results', function () use ($strategyId) {
             $response = $this->httpClient->get("/pricing-strategies/{$strategyId}/ab-testing/results");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -296,7 +297,7 @@ class PricingService extends BaseService implements ServiceInterface
             $this->validateSmartPricingConfig($mlConfig);
 
             $response = $this->httpClient->put("/pricing-strategies/{$strategyId}/smart-pricing", $mlConfig);
-            $strategy = $response->getData();
+            $strategy = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateStrategyCache($strategyId);
@@ -322,7 +323,7 @@ class PricingService extends BaseService implements ServiceInterface
                 'price_range' => $priceRange
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -337,7 +338,7 @@ class PricingService extends BaseService implements ServiceInterface
                 'criteria' => $criteria
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -353,7 +354,7 @@ class PricingService extends BaseService implements ServiceInterface
                 'promotion_rules' => $promotionRules
             ]);
 
-            $strategy = $response->getData();
+            $strategy = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateStrategyCache($strategyId);
@@ -399,7 +400,7 @@ class PricingService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('duplicate_pricing_strategy', function () use ($strategyId, $overrideData) {
             $response = $this->httpClient->post("/pricing-strategies/{$strategyId}/duplicate", $overrideData);
-            $strategy = $response->getData();
+            $strategy = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('pricing_strategy.duplicated', [
@@ -420,7 +421,7 @@ class PricingService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/pricing-strategies/{$strategyId}/analytics", [
                 'query' => $filters
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -433,7 +434,7 @@ class PricingService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/products/{$productId}/price-history", [
                 'query' => $dateRange
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -446,7 +447,7 @@ class PricingService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/pricing-strategies/{$strategyId}/performance", [
                 'query' => ['metrics' => $metrics]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -465,7 +466,7 @@ class PricingService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -504,7 +505,7 @@ class PricingService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get('/pricing-strategies/count');
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['count'] ?? 0;
         } catch (HttpException $e) {
             $this->logger->error('Failed to count pricing strategies', [
@@ -521,7 +522,7 @@ class PricingService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/pricing-strategies/{$strategyId}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

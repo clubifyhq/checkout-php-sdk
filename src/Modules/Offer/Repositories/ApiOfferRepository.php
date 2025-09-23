@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Offer\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Http\Client;
@@ -52,7 +53,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
             $this->logger->info('Creating offer', ['data_keys' => array_keys($data)]);
 
             $response = $this->httpClient->post('/offers', $data);
-            $offer = $response->getData();
+            $offer = ResponseHelper::getData($response);
 
             $this->logger->info('Offer created successfully', [
                 'offer_id' => $offer['id'] ?? null
@@ -81,7 +82,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
             }
 
             $response = $this->httpClient->get("/offers/{$id}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -104,7 +105,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
             }
 
             $response = $this->httpClient->get("/offers/slug/{$slug}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -132,7 +133,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
             ]);
 
             $response = $this->httpClient->put("/offers/{$id}", $data);
-            $offer = $response->getData();
+            $offer = ResponseHelper::getData($response);
 
             $this->logger->info('Offer updated successfully', [
                 'offer_id' => $id
@@ -191,7 +192,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to list offers', [
                 'filters' => $filters,
@@ -210,7 +211,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
             $response = $this->httpClient->get('/offers/count', [
                 'query' => $filters
             ]);
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['count'] ?? 0;
         } catch (HttpException $e) {
             $this->logger->error('Failed to count offers', [
@@ -230,7 +231,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
             $response = $this->httpClient->get('/offers', [
                 'query' => ['organization_id' => $organizationId]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to find offers by organization', [
                 'organization_id' => $organizationId,
@@ -249,7 +250,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
             $response = $this->httpClient->get('/offers', [
                 'query' => ['status' => 'active']
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to find active offers', [
                 'error' => $e->getMessage()
@@ -273,7 +274,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 'theme' => $themeConfig
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             $this->logger->info('Offer theme updated successfully', [
                 'offer_id' => $id
@@ -305,7 +306,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 'layout' => $layoutConfig
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             $this->logger->info('Offer layout updated successfully', [
                 'offer_id' => $id
@@ -329,7 +330,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
     {
         try {
             $response = $this->httpClient->get("/offers/{$offerId}/upsells");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get offer upsells', [
                 'offer_id' => $offerId,
@@ -351,7 +352,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
             ]);
 
             $response = $this->httpClient->post("/offers/{$offerId}/upsells", $upsellData);
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             $this->logger->info('Upsell added to offer successfully', [
                 'offer_id' => $offerId,
@@ -408,7 +409,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
     {
         try {
             $response = $this->httpClient->get("/offers/{$offerId}/subscription/plans");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get offer subscription plans', [
                 'offer_id' => $offerId,
@@ -430,7 +431,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
             ]);
 
             $response = $this->httpClient->post("/offers/{$offerId}/subscription/plans", $planData);
-            $plan = $response->getData();
+            $plan = ResponseHelper::getData($response);
 
             $this->logger->info('Subscription plan added to offer successfully', [
                 'offer_id' => $offerId,
@@ -455,7 +456,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
     {
         try {
             $response = $this->httpClient->get("/offers/{$id}/stats");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get offer stats', [
                 'offer_id' => $id,
@@ -472,7 +473,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
     {
         try {
             $response = $this->httpClient->get("/offers/public/{$slug}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

@@ -21,6 +21,7 @@
 
 namespace Clubify\Checkout\Modules\Customers\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Repository\BaseRepository;
 use Clubify\Checkout\Modules\Customers\Contracts\CustomerRepositoryInterface;
 use Clubify\Checkout\Modules\Customers\Exceptions\CustomerNotFoundException;
@@ -94,17 +95,17 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                     'email' => $fieldValue
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find customer by email: " . $response->getError(),
+                        "Failed to find customer by email: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['customers'][0] ?? null;
             },
             300 // 5 minutes cache
@@ -130,7 +131,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 'status' => $status
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($customerId);
 
@@ -163,14 +164,14 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get customer stats: " . $response->getError(),
+                        "Failed to get customer stats: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             600 // 10 minutes cache for stats
         );
@@ -186,14 +187,14 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 'customers' => $customersData
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk create customers: " . $response->getError(),
+                    "Failed to bulk create customers: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch event
             $this->eventDispatcher?->dispatch('Clubify.Checkout.Customer.BulkCreated', [
@@ -216,14 +217,14 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 'updates' => $updates
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk update customers: " . $response->getError(),
+                    "Failed to bulk update customers: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Clear cache for updated customers
             foreach (array_keys($updates) as $customerId) {
@@ -258,14 +259,14 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 ]);
                 $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to search customers: " . $response->getError(),
+                        "Failed to search customers: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             180 // 3 minutes cache for search results
         );
@@ -279,7 +280,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
         return $this->executeWithMetrics('archive_customer', function () use ($customerId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$customerId}/archive");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($customerId);
 
@@ -304,7 +305,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
         return $this->executeWithMetrics('restore_customer', function () use ($customerId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$customerId}/restore");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($customerId);
 
@@ -338,17 +339,17 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         throw new CustomerNotFoundException("No history found for customer ID: {$customerId}");
                     }
                     throw new HttpException(
-                        "Failed to get customer history: " . $response->getError(),
+                        "Failed to get customer history: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             900 // 15 minutes cache for history
         );
@@ -375,14 +376,14 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get related {$relationType}: " . $response->getError(),
+                        "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             300 // 5 minutes cache for relationships
         );
@@ -399,7 +400,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 'metadata' => $metadata
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("customer:related:{$customerId}:{$relationType}:*"));
 
@@ -418,7 +419,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
         return $this->executeWithMetrics('remove_relationship', function () use ($customerId, $relatedId, $relationType) {
             $response = $this->httpClient->delete("{$this->getEndpoint()}/{$customerId}/{$relationType}/{$relatedId}");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("customer:related:{$customerId}:{$relationType}:*"));
 

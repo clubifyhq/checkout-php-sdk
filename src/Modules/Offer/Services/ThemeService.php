@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Offer\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Exceptions\ValidationException;
@@ -54,7 +55,7 @@ class ThemeService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/themes', [
                 'query' => $filters
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -88,7 +89,7 @@ class ThemeService extends BaseService implements ServiceInterface
 
             // Criar tema via API
             $response = $this->httpClient->post('/themes', $data);
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Cache do tema
             $this->cache->set($this->getCacheKey("theme:{$theme['id']}"), $theme, 3600);
@@ -126,7 +127,7 @@ class ThemeService extends BaseService implements ServiceInterface
             $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->httpClient->put("/themes/{$themeId}", $data);
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -153,7 +154,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'theme' => $themeData
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('theme.applied_to_offer', [
@@ -178,7 +179,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'layout' => $layoutData
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('layout.configured', [
@@ -199,7 +200,7 @@ class ThemeService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/themes/{$themeId}/preview", [
                 'query' => $options
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -210,7 +211,7 @@ class ThemeService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('duplicate_theme', function () use ($themeId, $overrideData) {
             $response = $this->httpClient->post("/themes/{$themeId}/duplicate", $overrideData);
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('theme.duplicated', [
@@ -229,7 +230,7 @@ class ThemeService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('export_theme', function () use ($themeId) {
             $response = $this->httpClient->get("/themes/{$themeId}/export");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -242,7 +243,7 @@ class ThemeService extends BaseService implements ServiceInterface
             $this->validateImportData($themeData);
 
             $response = $this->httpClient->post('/themes/import', $themeData);
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Cache do tema
             $this->cache->set($this->getCacheKey("theme:{$theme['id']}"), $theme, 3600);
@@ -268,7 +269,7 @@ class ThemeService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/themes/predefined', [
                 'query' => $query
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -284,7 +285,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'colors' => $colors
             ]);
 
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -311,7 +312,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'fonts' => $fonts
             ]);
 
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -366,7 +367,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'responsive_config' => $responsiveConfig
             ]);
 
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -393,7 +394,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'grid_config' => $gridConfig
             ]);
 
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -421,7 +422,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'components' => $components
             ]);
 
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -448,7 +449,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'spacing_config' => $spacingConfig
             ]);
 
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -475,7 +476,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'typography_config' => $typographyConfig
             ]);
 
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -502,7 +503,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'color_system' => $colorSystem
             ]);
 
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -529,7 +530,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'animation_config' => $animationConfig
             ]);
 
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -557,7 +558,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'options' => $options
             ]);
 
-            $theme = $response->getData();
+            $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -585,7 +586,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'variation_rules' => $variationRules
             ]);
 
-            $variations = $response->getData();
+            $variations = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('theme.variations_generated', [
@@ -607,7 +608,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'optimization_options' => $optimizationOptions
             ]);
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateThemeCache($themeId);
@@ -635,7 +636,7 @@ class ThemeService extends BaseService implements ServiceInterface
                 'devices' => $testDevices
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -646,7 +647,7 @@ class ThemeService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('generate_accessibility_report', function () use ($themeId) {
             $response = $this->httpClient->get("/themes/{$themeId}/accessibility-report");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -657,7 +658,7 @@ class ThemeService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/themes/{$themeId}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

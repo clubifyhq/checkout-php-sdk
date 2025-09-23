@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Products\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Repositories\BaseRepository;
 use Clubify\Checkout\Modules\Products\Repositories\ProductRepositoryInterface;
 use Clubify\Checkout\Exceptions\ValidationException;
@@ -42,7 +43,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $response = $this->httpClient->get($this->getEndpoint(), [
                 'query' => $queryParams
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to find products by category', [
                 'category_id' => $categoryId,
@@ -63,7 +64,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $response = $this->httpClient->get($this->getEndpoint(), [
                 'query' => $queryParams
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to find products by type', [
                 'type' => $type,
@@ -83,7 +84,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $response = $this->httpClient->get($this->getEndpoint(), [
                 'query' => ['status' => $status]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to find products by status', [
                 'status' => $status,
@@ -110,7 +111,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $response = $this->httpClient->get($this->getEndpoint(), [
                 'query' => ['organization_id' => $organizationId]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to find products by organization', [
                 'organization_id' => $organizationId,
@@ -127,7 +128,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     {
         try {
             $response = $this->httpClient->get("{$this->getEndpoint()}/slug/{$slug}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -143,7 +144,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     {
         try {
             $response = $this->httpClient->get("{$this->getEndpoint()}/sku/{$sku}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -162,7 +163,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
                 'query' => $queryParams
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to search products', [
                 'query' => $query,
@@ -182,7 +183,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $response = $this->httpClient->get("{$this->getEndpoint()}/featured", [
                 'query' => ['limit' => $limit]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get featured products', [
                 'limit' => $limit,
@@ -201,7 +202,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $response = $this->httpClient->get("{$this->getEndpoint()}/best-sellers", [
                 'query' => ['limit' => $limit]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get best seller products', [
                 'limit' => $limit,
@@ -220,7 +221,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $response = $this->httpClient->get("{$this->getEndpoint()}/{$productId}/related", [
                 'query' => ['limit' => $limit]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get related products', [
                 'product_id' => $productId,
@@ -240,7 +241,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $response = $this->httpClient->get("{$this->getEndpoint()}/{$productId}/stock", [
                 'query' => ['quantity' => $quantity]
             ]);
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['available'] ?? false;
         } catch (HttpException $e) {
             $this->logger->error('Failed to check product stock', [
@@ -283,7 +284,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $response = $this->httpClient->get("{$this->getEndpoint()}/low-stock", [
                 'query' => ['threshold' => $threshold]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get low stock products', [
                 'threshold' => $threshold,
@@ -316,7 +317,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     {
         try {
             $response = $this->httpClient->get("{$this->getEndpoint()}/{$productId}/variations");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return [];
@@ -336,7 +337,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     {
         try {
             $response = $this->httpClient->get("{$this->getEndpoint()}/{$productId}/price-history");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get product price history', [
                 'product_id' => $productId,
@@ -353,7 +354,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     {
         try {
             $response = $this->httpClient->get("{$this->getEndpoint()}/{$productId}/sales-stats");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get product sales stats', [
                 'product_id' => $productId,
@@ -370,7 +371,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     {
         try {
             $response = $this->httpClient->post("{$this->getEndpoint()}/{$id}/duplicate", $overrideData);
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             $this->logger->error('Failed to duplicate product', [
                 'product_id' => $id,

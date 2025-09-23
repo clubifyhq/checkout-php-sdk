@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Offer\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Exceptions\ValidationException;
@@ -63,7 +64,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
 
             // Criar plano via API
             $response = $this->httpClient->post('/subscription-plans', $data);
-            $plan = $response->getData();
+            $plan = ResponseHelper::getData($response);
 
             // Cache do plano
             $this->cache->set($this->getCacheKey("plan:{$plan['id']}"), $plan, 3600);
@@ -106,7 +107,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_plans_by_offer', function () use ($offerId) {
             $response = $this->httpClient->get("/offers/{$offerId}/subscription/plans");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -125,7 +126,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -146,7 +147,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
             $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->httpClient->put("/subscription-plans/{$planId}", $data);
-            $plan = $response->getData();
+            $plan = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidatePlanCache($planId);
@@ -201,7 +202,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
                 'trial' => $trialConfig
             ]);
 
-            $plan = $response->getData();
+            $plan = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidatePlanCache($planId);
@@ -228,7 +229,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
                 'discount' => $discountConfig
             ]);
 
-            $plan = $response->getData();
+            $plan = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidatePlanCache($planId);
@@ -256,7 +257,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
                 'upgrade' => $upgradeConfig
             ]);
 
-            $plan = $response->getData();
+            $plan = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidatePlanCache($planId);
@@ -304,7 +305,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/subscription-plans/{$planId}/metrics", [
                 'query' => $filters
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -317,7 +318,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/subscription-plans/{$planId}/churn-analysis", [
                 'query' => $dateRange
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -330,7 +331,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/subscription-plans/{$planId}/retention-report", [
                 'query' => $filters
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -343,7 +344,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/subscription-plans/{$planId}/revenue-forecast", [
                 'query' => ['months' => $months]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -354,7 +355,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('duplicate_subscription_plan', function () use ($planId, $overrideData) {
             $response = $this->httpClient->post("/subscription-plans/{$planId}/duplicate", $overrideData);
-            $plan = $response->getData();
+            $plan = ResponseHelper::getData($response);
 
             // Dispatch evento
             $this->dispatch('subscription_plan.duplicated', [
@@ -373,7 +374,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/subscription-plans/{$planId}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Offer\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Exceptions\HttpException;
@@ -119,7 +120,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/offers/public/{$slug}/seo");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -136,7 +137,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_public_checkout_config', function () use ($slug) {
             try {
                 $response = $this->httpClient->get("/offers/public/{$slug}/checkout-config");
-                return $response->getData();
+                return ResponseHelper::getData($response);
             } catch (HttpException $e) {
                 if ($e->getStatusCode() === 404) {
                     return null;
@@ -178,7 +179,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_public_offer_upsells', function () use ($slug) {
             try {
                 $response = $this->httpClient->get("/offers/public/{$slug}/upsells");
-                return $response->getData() ?? [];
+                return ResponseHelper::getData($response) ?? [];
             } catch (HttpException $e) {
                 if ($e->getStatusCode() === 404) {
                     return [];
@@ -196,7 +197,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_public_subscription_plans', function () use ($slug) {
             try {
                 $response = $this->httpClient->get("/offers/public/{$slug}/subscription-plans");
-                return $response->getData() ?? [];
+                return ResponseHelper::getData($response) ?? [];
             } catch (HttpException $e) {
                 if ($e->getStatusCode() === 404) {
                     return [];
@@ -287,7 +288,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('check_offer_availability', function () use ($slug) {
             try {
                 $response = $this->httpClient->get("/offers/public/{$slug}/availability");
-                return $response->getData() ?? [];
+                return ResponseHelper::getData($response) ?? [];
             } catch (HttpException $e) {
                 if ($e->getStatusCode() === 404) {
                     return ['available' => false, 'reason' => 'not_found'];
@@ -305,7 +306,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_public_offer_stats', function () use ($slug) {
             try {
                 $response = $this->httpClient->get("/offers/public/{$slug}/stats");
-                return $response->getData() ?? [];
+                return ResponseHelper::getData($response) ?? [];
             } catch (HttpException $e) {
                 if ($e->getStatusCode() === 404) {
                     return [];
@@ -325,7 +326,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
                 $response = $this->httpClient->get("/offers/public/{$slug}/recommendations", [
                     'query' => ['limit' => $limit]
                 ]);
-                return $response->getData() ?? [];
+                return ResponseHelper::getData($response) ?? [];
             } catch (HttpException $e) {
                 if ($e->getStatusCode() === 404) {
                     return [];
@@ -343,7 +344,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_offer_testimonials', function () use ($slug) {
             try {
                 $response = $this->httpClient->get("/offers/public/{$slug}/testimonials");
-                return $response->getData() ?? [];
+                return ResponseHelper::getData($response) ?? [];
             } catch (HttpException $e) {
                 if ($e->getStatusCode() === 404) {
                     return [];
@@ -361,7 +362,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_offer_faq', function () use ($slug) {
             try {
                 $response = $this->httpClient->get("/offers/public/{$slug}/faq");
-                return $response->getData() ?? [];
+                return ResponseHelper::getData($response) ?? [];
             } catch (HttpException $e) {
                 if ($e->getStatusCode() === 404) {
                     return [];
@@ -387,7 +388,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
                     'query' => $query
                 ]);
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             } catch (HttpException $e) {
                 if ($e->getStatusCode() === 404) {
                     return null;
@@ -673,7 +674,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
                     $response = $this->httpClient->get("/offers/public/popular", [
                         'query' => ['limit' => $limit]
                     ]);
-                    return array_column($response->getData() ?? [], 'slug');
+                    return array_column(ResponseHelper::getData($response) ?? [], 'slug');
                 } catch (\Exception $e) {
                     $this->logger->warning('Failed to get popular offer slugs', [
                         'error' => $e->getMessage()
@@ -738,7 +739,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/offers/public/{$slug}");
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
 
             // Dispatch evento de visualização
             $this->dispatch('public_offer.fetched', [
@@ -762,7 +763,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/offers/public/{$slug}/theme");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -778,7 +779,7 @@ class PublicOfferService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/offers/public/{$slug}/layout");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

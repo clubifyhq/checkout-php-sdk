@@ -569,8 +569,13 @@ class ClubifyCheckoutSDK
     public function organization(): OrganizationModule
     {
         if (!$this->organization) {
-            $this->organization = new OrganizationModule($this);
+            $this->organization = new OrganizationModule();
             $this->organization->initialize($this->config, $this->getLogger());
+            $this->organization->setDependencies(
+                $this->getHttpClient(),
+                $this->getCache(),
+                $this->getEventDispatcher()
+            );
         }
 
         return $this->organization;
@@ -723,6 +728,13 @@ class ClubifyCheckoutSDK
                 $this->getHttpClient(),
                 $this->getCache(),
                 $this->getEventDispatcher()
+            );
+
+            // Injetar serviços centralizados necessários
+            $this->superAdmin->setCentralizedServices(
+                $this->userManagement()->getUserService(),
+                $this->organization()->apiKey(),
+                $this->organization()->tenant()
             );
         }
 

@@ -2,6 +2,7 @@
 
 namespace Clubify\Checkout\Modules\Payments\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Repository\BaseRepository;
 use Clubify\Checkout\Modules\Payments\Contracts\CardRepositoryInterface;
 use Clubify\Checkout\Exceptions\HttpException;
@@ -73,17 +74,17 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
                     'customer_id' => $customerId
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         return [];
                     }
                     throw new HttpException(
-                        "Failed to find cards by customer ID: " . $response->getError(),
+                        "Failed to find cards by customer ID: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['cards'] ?? [];
             },
             300 // 5 minutes cache
@@ -102,17 +103,17 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
                     'token' => $token
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find card by token: " . $response->getError(),
+                        "Failed to find card by token: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['cards'][0] ?? null;
             },
             300 // 5 minutes cache
@@ -130,14 +131,14 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
                 'customer_id' => $customerId
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to tokenize card: " . $response->getError(),
+                    "Failed to tokenize card: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch event
             $this->eventDispatcher?->dispatch('Clubify.Checkout.Card.Tokenized', [
@@ -160,14 +161,14 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
                 'token' => $token
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to detokenize card: " . $response->getError(),
+                    "Failed to detokenize card: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            return $response->getData();
+            return ResponseHelper::getData($response);
         });
     }
 
@@ -181,14 +182,14 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
                 'card_data' => $cardData
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to validate card: " . $response->getError(),
+                    "Failed to validate card: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            return $response->getData();
+            return ResponseHelper::getData($response);
         });
     }
 
@@ -202,7 +203,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
                 'status' => $status
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($cardId);
 
@@ -228,7 +229,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
         return $this->executeWithMetrics('archive_card', function () use ($cardId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$cardId}/archive");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($cardId);
 
@@ -253,7 +254,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
         return $this->executeWithMetrics('expire_card', function () use ($cardId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$cardId}/expire");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($cardId);
 
@@ -303,14 +304,14 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get card stats: " . $response->getError(),
+                        "Failed to get card stats: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             600 // 10 minutes cache for stats
         );

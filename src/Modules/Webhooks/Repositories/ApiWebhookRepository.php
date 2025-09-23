@@ -21,6 +21,7 @@
 
 namespace Clubify\Checkout\Modules\Webhooks\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Repository\BaseRepository;
 use Clubify\Checkout\Modules\Webhooks\Contracts\WebhookRepositoryInterface;
 use Clubify\Checkout\Modules\Webhooks\Exceptions\WebhookNotFoundException;
@@ -92,7 +93,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                 'url' => $url
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 // If API validation fails, do basic validation
                 return [
                     'url' => $url,
@@ -100,12 +101,12 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     'reachable' => false,
                     'response_code' => null,
                     'response_time' => null,
-                    'error' => 'API validation failed: ' . $response->getError(),
+                    'error' => 'API validation failed: ' . "HTTP request failed",
                     'ssl_valid' => false,
                 ];
             }
 
-            return $response->getData();
+            return ResponseHelper::getData($response);
         });
     }
 
@@ -122,14 +123,14 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     'active' => true
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to find webhooks by event: " . $response->getError(),
+                        "Failed to find webhooks by event: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['webhooks'] ?? [];
             },
             300 // 5 minutes cache
@@ -149,14 +150,14 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     'active' => true
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to find webhooks by organization: " . $response->getError(),
+                        "Failed to find webhooks by organization: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['webhooks'] ?? [];
             },
             300 // 5 minutes cache
@@ -171,7 +172,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->executeWithMetrics('reset_failure_count', function () use ($webhookId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/reset-failures");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 $this->invalidateCache($webhookId);
                 return true;
             }
@@ -188,7 +189,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->executeWithMetrics('increment_failure_count', function () use ($webhookId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/increment-failures");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 $this->invalidateCache($webhookId);
                 return true;
             }
@@ -205,7 +206,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->executeWithMetrics('update_last_delivery', function () use ($webhookId, $deliveryData) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/last-delivery", $deliveryData);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 $this->invalidateCache($webhookId);
                 return true;
             }
@@ -240,17 +241,17 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
             function () use ($webhookId) {
                 $response = $this->httpClient->get("{$this->getEndpoint()}/{$webhookId}/stats");
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         throw new WebhookNotFoundException("Webhook not found: {$webhookId}");
                     }
                     throw new HttpException(
-                        "Failed to get webhook stats: " . $response->getError(),
+                        "Failed to get webhook stats: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             300 // 5 minutes cache
         );
@@ -273,14 +274,14 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get delivery logs: " . $response->getError(),
+                        "Failed to get delivery logs: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['logs'] ?? [];
             },
             120 // 2 minutes cache for logs
@@ -304,14 +305,14 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
 
                 $response = $this->httpClient->get("{$this->getEndpoint()}/delivery-logs?" . http_build_query($params));
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get failed deliveries: " . $response->getError(),
+                        "Failed to get failed deliveries: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['logs'] ?? [];
             },
             300 // 5 minutes cache
@@ -330,17 +331,17 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     'email' => $fieldValue
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find webhook by email: " . $response->getError(),
+                        "Failed to find webhook by email: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['webhooks'][0] ?? null;
             },
             300 // 5 minutes cache
@@ -359,17 +360,17 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     'url' => $url
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find webhook by URL: " . $response->getError(),
+                        "Failed to find webhook by URL: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['webhooks'][0] ?? null;
             },
             300 // 5 minutes cache
@@ -395,7 +396,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                 'status' => $status
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($webhookId);
 
@@ -428,14 +429,14 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get webhook stats: " . $response->getError(),
+                        "Failed to get webhook stats: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             600 // 10 minutes cache for stats
         );
@@ -451,14 +452,14 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                 'webhooks' => $webhooksData
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk create webhooks: " . $response->getError(),
+                    "Failed to bulk create webhooks: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch event
             $this->eventDispatcher?->dispatch('Clubify.Checkout.Webhook.BulkCreated', [
@@ -481,14 +482,14 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                 'updates' => $updates
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk update webhooks: " . $response->getError(),
+                    "Failed to bulk update webhooks: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Clear cache for updated webhooks
             foreach (array_keys($updates) as $webhookId) {
@@ -524,14 +525,14 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                 ];
                 $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to search webhooks: " . $response->getError(),
+                        "Failed to search webhooks: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             180 // 3 minutes cache for search results
         );
@@ -545,7 +546,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->executeWithMetrics('archive_webhook', function () use ($webhookId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/archive");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($webhookId);
 
@@ -570,7 +571,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->executeWithMetrics('restore_webhook', function () use ($webhookId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/restore");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($webhookId);
 
@@ -604,17 +605,17 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         throw new WebhookNotFoundException("No history found for webhook ID: {$webhookId}");
                     }
                     throw new HttpException(
-                        "Failed to get webhook history: " . $response->getError(),
+                        "Failed to get webhook history: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             900 // 15 minutes cache for history
         );
@@ -641,14 +642,14 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get related {$relationType}: " . $response->getError(),
+                        "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             300 // 5 minutes cache for relationships
         );
@@ -665,7 +666,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                 'metadata' => $metadata
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("webhook:related:{$webhookId}:{$relationType}:*"));
 
@@ -684,7 +685,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->executeWithMetrics('remove_relationship', function () use ($webhookId, $relatedId, $relationType) {
             $response = $this->httpClient->delete("{$this->getEndpoint()}/{$webhookId}/{$relationType}/{$relatedId}");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("webhook:related:{$webhookId}:{$relationType}:*"));
 

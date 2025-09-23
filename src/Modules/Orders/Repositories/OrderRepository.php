@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Orders\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use ClubifyCheckout\Repositories\BaseRepository;
 use Clubify\Checkout\Modules\Orders\Contracts\OrderRepositoryInterface;
 use ClubifyCheckout\Exceptions\ValidationException;
@@ -51,7 +52,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         return $this->executeWithMetrics('create_order', function () use ($orderData) {
             $response = $this->httpClient->post($this->getEndpoint(), $orderData);
-            $order = $response->getData();
+            $order = ResponseHelper::getData($response);
 
             // Cache do pedido
             $this->cacheEntity($order['id'], $order);
@@ -96,7 +97,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'query' => $queryParams
         ]);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -106,7 +107,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         return $this->executeWithMetrics('update_order', function () use ($orderId, $data) {
             $response = $this->httpClient->put("{$this->getEndpoint()}/{$orderId}", $data);
-            $order = $response->getData();
+            $order = ResponseHelper::getData($response);
 
             // Atualizar cache
             $this->cacheEntity($orderId, $order);
@@ -145,7 +146,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'query' => $queryParams
         ]);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -159,7 +160,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'query' => $queryParams
         ]);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -173,7 +174,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'query' => $queryParams
         ]);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -187,7 +188,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'query' => $queryParams
         ]);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -204,7 +205,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'query' => $queryParams
         ]);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -216,7 +217,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             $response = $this->httpClient->get("{$this->getEndpoint()}/count", [
                 'query' => $filters
             ]);
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['count'] ?? 0;
         } catch (HttpException $e) {
             return 0;
@@ -232,7 +233,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'query' => $filters
         ]);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -244,7 +245,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'query' => $dateRange
         ]);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -273,7 +274,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     public function getStatusHistory(string $orderId): array
     {
         $response = $this->httpClient->get("{$this->getEndpoint()}/{$orderId}/status-history");
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -302,7 +303,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         return $this->executeWithMetrics('add_order_item', function () use ($orderId, $itemData) {
             $response = $this->httpClient->post("{$this->getEndpoint()}/{$orderId}/items", $itemData);
-            $item = $response->getData();
+            $item = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
             $this->invalidateCache($orderId);
@@ -337,7 +338,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         return $this->executeWithMetrics('update_order_item', function () use ($orderId, $itemId, $itemData) {
             $response = $this->httpClient->put("{$this->getEndpoint()}/{$orderId}/items/{$itemId}", $itemData);
-            $item = $response->getData();
+            $item = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
             $this->invalidateCache($orderId);
@@ -352,7 +353,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     public function getItems(string $orderId): array
     {
         $response = $this->httpClient->get("{$this->getEndpoint()}/{$orderId}/items");
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -362,7 +363,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         return $this->executeWithMetrics('add_order_upsell', function () use ($orderId, $upsellData) {
             $response = $this->httpClient->post("{$this->getEndpoint()}/{$orderId}/upsells", $upsellData);
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
             $this->invalidateCache($orderId);
@@ -396,7 +397,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     public function getUpsells(string $orderId): array
     {
         $response = $this->httpClient->get("{$this->getEndpoint()}/{$orderId}/upsells");
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -421,7 +422,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'query' => ['limit' => $limit]
         ]);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -433,7 +434,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'query' => ['limit' => $limit]
         ]);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -442,7 +443,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     public function getConversionMetrics(): array
     {
         $response = $this->httpClient->get("{$this->getEndpoint()}/conversion-metrics");
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -452,7 +453,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         try {
             $response = $this->httpClient->get("{$this->getEndpoint()}/{$field}/{$value}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -468,7 +469,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         try {
             $response = $this->httpClient->get("{$this->getEndpoint()}/{$id}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

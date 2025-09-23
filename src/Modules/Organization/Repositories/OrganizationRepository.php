@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Organization\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Repositories\BaseRepository;
 use Clubify\Checkout\Modules\Organization\Repositories\OrganizationRepositoryInterface;
 use Clubify\Checkout\Exceptions\HttpException;
@@ -42,7 +43,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
                 return null;
             }
 
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -64,7 +65,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
                 return null;
             }
 
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -81,7 +82,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
         $url = $this->buildUrl('', ['status' => $status]);
         $response = $this->httpClient->get($url);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -97,7 +98,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
         $url = $this->buildUrl('/date-range', $params);
         $response = $this->httpClient->get($url);
 
-        return $response->getData() ?? [];
+        return ResponseHelper::getData($response) ?? [];
     }
 
     /**
@@ -109,7 +110,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
             $url = $this->buildUrl('/slug/' . urlencode($slug) . '/availability');
             $response = $this->httpClient->get($url);
 
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['available'] ?? false;
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -128,7 +129,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
             $url = $this->buildUrl('/domain/' . urlencode($domain) . '/availability');
             $response = $this->httpClient->get($url);
 
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['available'] ?? false;
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -204,7 +205,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
             $url = $this->buildUrl("/{$id}/stats");
             $response = $this->httpClient->get($url);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get organization stats', [
                 'organization_id' => $id,
@@ -236,7 +237,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
             $url = $this->buildUrl('/search');
             $response = $this->httpClient->post($url, $params);
 
-            return $response->getData() ?? [
+            return ResponseHelper::getData($response) ?? [
                 'data' => [],
                 'pagination' => [
                     'page' => $page,

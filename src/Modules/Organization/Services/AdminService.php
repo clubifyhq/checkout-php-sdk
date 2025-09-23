@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Organization\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Exceptions\ValidationException;
 use Clubify\Checkout\Exceptions\HttpException;
@@ -75,7 +76,7 @@ class AdminService extends BaseService
 
             // Criar admin via API
             $response = $this->httpClient->post('/admins', $data);
-            $admin = $response->getData();
+            $admin = ResponseHelper::getData($response);
 
             // Cache do admin
             $this->cache->set($this->getCacheKey("admin:{$admin['id']}"), $admin, 3600);
@@ -130,7 +131,7 @@ class AdminService extends BaseService
     {
         return $this->executeWithMetrics('get_admins_by_organization', function () use ($organizationId) {
             $response = $this->httpClient->get("/organizations/{$organizationId}/admins");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -151,7 +152,7 @@ class AdminService extends BaseService
             }
 
             $response = $this->httpClient->put("/admins/{$adminId}", $data);
-            $admin = $response->getData();
+            $admin = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateAdminCache($adminId);
@@ -178,7 +179,7 @@ class AdminService extends BaseService
                 'permissions' => $permissions
             ]);
 
-            $admin = $response->getData();
+            $admin = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateAdminCache($adminId);
@@ -208,7 +209,7 @@ class AdminService extends BaseService
                 'permissions' => $permissions
             ]);
 
-            $admin = $response->getData();
+            $admin = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateAdminCache($adminId);
@@ -334,7 +335,7 @@ class AdminService extends BaseService
     {
         return $this->executeWithMetrics('get_admin_active_sessions', function () use ($adminId) {
             $response = $this->httpClient->get("/admins/{$adminId}/sessions");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -372,7 +373,7 @@ class AdminService extends BaseService
             $response = $this->httpClient->get("/admins/{$adminId}/activity-logs", [
                 'limit' => $limit
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -383,7 +384,7 @@ class AdminService extends BaseService
     {
         try {
             $response = $this->httpClient->get("/admins/email/{$email}/exists");
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return $data['exists'] ?? false;
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -400,7 +401,7 @@ class AdminService extends BaseService
     {
         try {
             $response = $this->httpClient->get("/admins/{$adminId}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -416,7 +417,7 @@ class AdminService extends BaseService
     {
         try {
             $response = $this->httpClient->get("/admins/email/{$email}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

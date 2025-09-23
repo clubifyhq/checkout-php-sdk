@@ -21,6 +21,7 @@
 
 namespace Clubify\Checkout\Modules\Payments\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Repository\BaseRepository;
 use Clubify\Checkout\Modules\Payments\Contracts\PaymentRepositoryInterface;
 use Clubify\Checkout\Modules\Payments\Exceptions\PaymentNotFoundException;
@@ -94,17 +95,17 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                     'email' => $fieldValue
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find payment by email: " . $response->getError(),
+                        "Failed to find payment by email: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['payments'][0] ?? null;
             },
             300 // 5 minutes cache
@@ -130,7 +131,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                 'status' => $status
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($paymentId);
 
@@ -163,14 +164,14 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get payment stats: " . $response->getError(),
+                        "Failed to get payment stats: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             600 // 10 minutes cache for stats
         );
@@ -186,14 +187,14 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                 'payments' => $paymentsData
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk create payments: " . $response->getError(),
+                    "Failed to bulk create payments: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch event
             $this->eventDispatcher?->dispatch('Clubify.Checkout.Payment.BulkCreated', [
@@ -216,14 +217,14 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                 'updates' => $updates
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk update payments: " . $response->getError(),
+                    "Failed to bulk update payments: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Clear cache for updated payments
             foreach (array_keys($updates) as $paymentId) {
@@ -259,14 +260,14 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                 ];
                 $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to search payments: " . $response->getError(),
+                        "Failed to search payments: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             180 // 3 minutes cache for search results
         );
@@ -280,7 +281,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
         return $this->executeWithMetrics('archive_payment', function () use ($paymentId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$paymentId}/archive");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($paymentId);
 
@@ -305,7 +306,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
         return $this->executeWithMetrics('restore_payment', function () use ($paymentId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$paymentId}/restore");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($paymentId);
 
@@ -339,17 +340,17 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         throw new PaymentNotFoundException("No history found for payment ID: {$paymentId}");
                     }
                     throw new HttpException(
-                        "Failed to get payment history: " . $response->getError(),
+                        "Failed to get payment history: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             900 // 15 minutes cache for history
         );
@@ -376,14 +377,14 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get related {$relationType}: " . $response->getError(),
+                        "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             300 // 5 minutes cache for relationships
         );
@@ -400,7 +401,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                 'metadata' => $metadata
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("payment:related:{$paymentId}:{$relationType}:*"));
 
@@ -419,7 +420,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
         return $this->executeWithMetrics('remove_relationship', function () use ($paymentId, $relatedId, $relationType) {
             $response = $this->httpClient->delete("{$this->getEndpoint()}/{$paymentId}/{$relationType}/{$relatedId}");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("payment:related:{$paymentId}:{$relationType}:*"));
 

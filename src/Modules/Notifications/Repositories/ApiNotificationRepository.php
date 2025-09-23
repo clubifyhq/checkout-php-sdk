@@ -21,6 +21,7 @@
 
 namespace Clubify\Checkout\Modules\Notifications\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Repository\BaseRepository;
 use Clubify\Checkout\Modules\Notifications\Contracts\NotificationRepositoryInterface;
 use Clubify\Checkout\Modules\Notifications\Exceptions\NotificationNotFoundException;
@@ -94,17 +95,17 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                     'email' => $fieldValue
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find notification by email: " . $response->getError(),
+                        "Failed to find notification by email: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['notifications'][0] ?? null;
             },
             300 // 5 minutes cache
@@ -130,7 +131,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                 'status' => $status
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($notificationId);
 
@@ -163,14 +164,14 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get notification stats: " . $response->getError(),
+                        "Failed to get notification stats: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             600 // 10 minutes cache for stats
         );
@@ -186,14 +187,14 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                 'notifications' => $notificationsData
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk create notifications: " . $response->getError(),
+                    "Failed to bulk create notifications: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch event
             $this->eventDispatcher?->dispatch('Clubify.Checkout.Notification.BulkCreated', [
@@ -216,14 +217,14 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                 'updates' => $updates
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk update notifications: " . $response->getError(),
+                    "Failed to bulk update notifications: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Clear cache for updated notifications
             foreach (array_keys($updates) as $notificationId) {
@@ -254,14 +255,14 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                 $payload = array_merge(['criteria' => $criteria], $options);
                 $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to search notifications: " . $response->getError(),
+                        "Failed to search notifications: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             180 // 3 minutes cache for search results
         );
@@ -275,7 +276,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
         return $this->executeWithMetrics('archive_notification', function () use ($notificationId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$notificationId}/archive");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($notificationId);
 
@@ -300,7 +301,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
         return $this->executeWithMetrics('restore_notification', function () use ($notificationId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$notificationId}/restore");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($notificationId);
 
@@ -334,17 +335,17 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         throw new NotificationNotFoundException("No history found for notification ID: {$notificationId}");
                     }
                     throw new HttpException(
-                        "Failed to get notification history: " . $response->getError(),
+                        "Failed to get notification history: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             900 // 15 minutes cache for history
         );
@@ -371,14 +372,14 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get related {$relationType}: " . $response->getError(),
+                        "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             300 // 5 minutes cache for relationships
         );
@@ -395,7 +396,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                 'metadata' => $metadata
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("notification:related:{$notificationId}:{$relationType}:*"));
 
@@ -414,7 +415,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
         return $this->executeWithMetrics('remove_relationship', function () use ($notificationId, $relatedId, $relationType) {
             $response = $this->httpClient->delete("{$this->getEndpoint()}/{$notificationId}/{$relationType}/{$relatedId}");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("notification:related:{$notificationId}:{$relationType}:*"));
 

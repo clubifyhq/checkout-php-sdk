@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Organization\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Exceptions\ValidationException;
 use Clubify\Checkout\Exceptions\HttpException;
@@ -73,7 +74,7 @@ class DomainService extends BaseService
 
             // Criar configuração de domínio via API
             $response = $this->httpClient->post('/domains', $data);
-            $domainConfig = $response->getData();
+            $domainConfig = ResponseHelper::getData($response);
 
             // Cache da configuração
             $this->cache->set($this->getCacheKey("domain:{$domainConfig['id']}"), $domainConfig, 3600);
@@ -128,7 +129,7 @@ class DomainService extends BaseService
     {
         return $this->executeWithMetrics('get_domains_by_organization', function () use ($organizationId) {
             $response = $this->httpClient->get("/organizations/{$organizationId}/domains");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -139,7 +140,7 @@ class DomainService extends BaseService
     {
         return $this->executeWithMetrics('verify_domain_dns', function () use ($domainId) {
             $response = $this->httpClient->post("/domains/{$domainId}/verify-dns", []);
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Invalidar cache se verificação foi bem-sucedida
             if ($result['verified'] ?? false) {
@@ -164,7 +165,7 @@ class DomainService extends BaseService
     {
         return $this->executeWithMetrics('provision_ssl_certificate', function () use ($domainId) {
             $response = $this->httpClient->post("/domains/{$domainId}/provision-ssl", []);
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Invalidar cache se SSL foi provisionado
             if ($result['success'] ?? false) {
@@ -189,7 +190,7 @@ class DomainService extends BaseService
     {
         return $this->executeWithMetrics('renew_ssl_certificate', function () use ($domainId) {
             $response = $this->httpClient->post("/domains/{$domainId}/renew-ssl", []);
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Invalidar cache se SSL foi renovado
             if ($result['success'] ?? false) {
@@ -219,7 +220,7 @@ class DomainService extends BaseService
                 'settings' => $settings
             ]);
 
-            $domain = $response->getData();
+            $domain = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateDomainCache($domainId);
@@ -241,7 +242,7 @@ class DomainService extends BaseService
     {
         return $this->executeWithMetrics('check_domain_health', function () use ($domainId) {
             $response = $this->httpClient->get("/domains/{$domainId}/health");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -252,7 +253,7 @@ class DomainService extends BaseService
     {
         return $this->executeWithMetrics('get_ssl_status', function () use ($domainId) {
             $response = $this->httpClient->get("/domains/{$domainId}/ssl-status");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -315,7 +316,7 @@ class DomainService extends BaseService
     {
         try {
             $response = $this->httpClient->get("/domains/check-availability/{$domain}");
-            $data = $response->getData();
+            $data = ResponseHelper::getData($response);
             return !($data['available'] ?? false);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -332,7 +333,7 @@ class DomainService extends BaseService
     {
         return $this->executeWithMetrics('get_dns_records', function () use ($domainId) {
             $response = $this->httpClient->get("/domains/{$domainId}/dns-records");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -345,7 +346,7 @@ class DomainService extends BaseService
             $response = $this->httpClient->post('/domains/test-connectivity', [
                 'domain' => $domain
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -358,7 +359,7 @@ class DomainService extends BaseService
             $response = $this->httpClient->get('/domains/expiring-certificates', [
                 'days' => $days
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -405,7 +406,7 @@ class DomainService extends BaseService
     {
         try {
             $response = $this->httpClient->get("/domains/{$domainId}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -421,7 +422,7 @@ class DomainService extends BaseService
     {
         try {
             $response = $this->httpClient->get("/domains/by-name/{$domain}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

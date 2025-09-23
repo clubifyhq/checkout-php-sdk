@@ -21,6 +21,7 @@
 
 namespace Clubify\Checkout\Modules\Orders\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Repository\BaseRepository;
 use Clubify\Checkout\Modules\Orders\Contracts\OrderRepositoryInterface;
 use Clubify\Checkout\Modules\Orders\Exceptions\OrderNotFoundException;
@@ -94,17 +95,17 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                     'email' => $fieldValue
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find order by email: " . $response->getError(),
+                        "Failed to find order by email: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['orders'][0] ?? null;
             },
             300 // 5 minutes cache
@@ -130,7 +131,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                 'status' => $status
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($orderId);
 
@@ -163,14 +164,14 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get order stats: " . $response->getError(),
+                        "Failed to get order stats: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             600 // 10 minutes cache for stats
         );
@@ -186,14 +187,14 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                 'orders' => $ordersData
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk create orders: " . $response->getError(),
+                    "Failed to bulk create orders: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch event
             $this->eventDispatcher?->dispatch('Clubify.Checkout.Order.BulkCreated', [
@@ -216,14 +217,14 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                 'updates' => $updates
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk update orders: " . $response->getError(),
+                    "Failed to bulk update orders: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Clear cache for updated orders
             foreach (array_keys($updates) as $orderId) {
@@ -254,14 +255,14 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                 $payload = array_merge(['criteria' => $criteria], $options);
                 $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to search orders: " . $response->getError(),
+                        "Failed to search orders: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             180 // 3 minutes cache for search results
         );
@@ -275,7 +276,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
         return $this->executeWithMetrics('archive_order', function () use ($orderId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$orderId}/archive");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($orderId);
 
@@ -300,7 +301,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
         return $this->executeWithMetrics('restore_order', function () use ($orderId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$orderId}/restore");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($orderId);
 
@@ -334,17 +335,17 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         throw new OrderNotFoundException("No history found for order ID: {$orderId}");
                     }
                     throw new HttpException(
-                        "Failed to get order history: " . $response->getError(),
+                        "Failed to get order history: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             900 // 15 minutes cache for history
         );
@@ -371,14 +372,14 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get related {$relationType}: " . $response->getError(),
+                        "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             300 // 5 minutes cache for relationships
         );
@@ -395,7 +396,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                 'metadata' => $metadata
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("order:related:{$orderId}:{$relationType}:*"));
 
@@ -414,7 +415,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
         return $this->executeWithMetrics('remove_relationship', function () use ($orderId, $relatedId, $relationType) {
             $response = $this->httpClient->delete("{$this->getEndpoint()}/{$orderId}/{$relationType}/{$relatedId}");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("order:related:{$orderId}:{$relationType}:*"));
 

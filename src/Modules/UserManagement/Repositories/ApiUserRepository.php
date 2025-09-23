@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Modules\UserManagement\Repositories;
 
 use Clubify\Checkout\Core\Repository\BaseRepository;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Modules\UserManagement\Contracts\UserRepositoryInterface;
 use Clubify\Checkout\Exceptions\HttpException;
 
@@ -56,11 +57,11 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
             function () use ($email) {
                 $response = $this->httpClient->get("users/search/advanced", ['email' => $email]);
 
-                if (!$response->isSuccessful()) {
+                $data = \Clubify\Checkout\Core\Http\ResponseHelper::getDataIfSuccessful($response);
+                if (!$data) {
                     return null;
                 }
 
-                $data = $response->getData();
                 return $data['users'][0] ?? $data['data'][0] ?? null;
             },
             300 // 5 minutes cache
@@ -84,9 +85,9 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
         return $this->executeWithMetrics('update_user_profile', function () use ($userId, $profileData) {
             $response = $this->httpClient->patch("users/{$userId}/profile", $profileData);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    'Failed to update user profile: ' . $response->getError(),
+                    'Failed to update user profile',
                     $response->getStatusCode()
                 );
             }
@@ -95,7 +96,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
             $this->cache->delete($this->getCacheKey("user:{$userId}"));
             $this->cache->delete($this->getCacheKey("user:email:" . ($profileData['email'] ?? '')));
 
-            $updatedData = $response->getData();
+            $updatedData = ResponseHelper::getData($response);
 
             // Dispatch profile update event
             $this->dispatch('user.profile.updated', [
@@ -117,7 +118,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
                 'password' => $newPassword
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Dispatch password change event
                 $this->dispatch('user.password.changed', [
                     'user_id' => $userId
@@ -156,8 +157,8 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
             function () use ($userId) {
                 $response = $this->httpClient->get("users/{$userId}/roles");
 
-                if ($response->isSuccessful()) {
-                    return $response->getData();
+                if (ResponseHelper::isSuccessful($response)) {
+                    return ResponseHelper::getData($response);
                 }
 
                 return ['roles' => [], 'permissions' => []];
@@ -174,7 +175,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
         return $this->executeWithMetrics('assign_role', function () use ($userId, $role) {
             $response = $this->httpClient->post("users/{$userId}/roles", ['role' => $role]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate roles cache
                 $this->cache->delete($this->getCacheKey("user_roles:{$userId}"));
 
@@ -199,7 +200,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
         return $this->executeWithMetrics('remove_role', function () use ($userId, $role) {
             $response = $this->httpClient->delete("users/{$userId}/roles/{$role}");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate roles cache
                 $this->cache->delete($this->getCacheKey("user_roles:{$userId}"));
 
@@ -262,7 +263,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
                 }
 
                 $response = $this->httpClient->get("users/by-role?" . http_build_query($filters));
-                return $response->isSuccessful() ? $response->getData() : [];
+                return ResponseHelper::isSuccessful($response) ? ResponseHelper::getData($response) : [];
             },
             300 // 5 minutes cache
         );
@@ -281,8 +282,8 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
                 $filters = $tenantId ? ['tenant_id' => $tenantId] : [];
                 $response = $this->httpClient->get("users/stats?" . http_build_query($filters));
 
-                if ($response->isSuccessful()) {
-                    return $response->getData();
+                if (ResponseHelper::isSuccessful($response)) {
+                    return ResponseHelper::getData($response);
                 }
 
                 return [
@@ -307,8 +308,8 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
                 'password' => $password
             ]);
 
-            if ($response->isSuccessful()) {
-                $data = $response->getData();
+            if (ResponseHelper::isSuccessful($response)) {
+                $data = ResponseHelper::getData($response);
                 return $data['valid'] ?? false;
             }
 
@@ -324,7 +325,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
         return $this->executeWithMetrics('update_user_status', function () use ($userId, $status) {
             $response = $this->httpClient->patch("users/{$userId}", ['status' => $status]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate user cache
                 $this->cache->delete($this->getCacheKey("user:{$userId}"));
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Orders\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Exceptions\ValidationException;
 use Clubify\Checkout\Exceptions\HttpException;
@@ -229,7 +230,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_order_status_history', function () use ($orderId) {
             $response = $this->httpClient->get("/orders/{$orderId}/status-history");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -247,7 +248,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -273,7 +274,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
             ]);
 
             $response = $this->httpClient->post('/orders/bulk-status-update', $data);
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Invalidar cache de todos os pedidos
             foreach ($orderIds as $orderId) {
@@ -368,7 +369,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/orders/status-statistics', [
                 'query' => $filters
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -413,7 +414,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
         if ($order === null) {
             try {
                 $response = $this->httpClient->get("/orders/{$orderId}");
-                $order = $response->getData();
+                $order = ResponseHelper::getData($response);
 
                 // Cache por 5 minutos para status
                 $this->cache->set($cacheKey, $order, 300);

@@ -21,6 +21,7 @@
 
 namespace Clubify\Checkout\Modules\Products\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Repository\BaseRepository;
 use Clubify\Checkout\Modules\Products\Contracts\ProductRepositoryInterface;
 use Clubify\Checkout\Modules\Products\Exceptions\ProductNotFoundException;
@@ -94,17 +95,17 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                     'email' => $fieldValue
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find product by email: " . $response->getError(),
+                        "Failed to find product by email: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['products'][0] ?? null;
             },
             300 // 5 minutes cache
@@ -130,7 +131,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                 'status' => $status
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($productId);
 
@@ -163,14 +164,14 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get product stats: " . $response->getError(),
+                        "Failed to get product stats: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             600 // 10 minutes cache for stats
         );
@@ -186,14 +187,14 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                 'products' => $productsData
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk create products: " . $response->getError(),
+                    "Failed to bulk create products: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch event
             $this->eventDispatcher?->dispatch('Clubify.Checkout.Product.BulkCreated', [
@@ -216,14 +217,14 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                 'updates' => $updates
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk update products: " . $response->getError(),
+                    "Failed to bulk update products: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Clear cache for updated products
             foreach (array_keys($updates) as $productId) {
@@ -254,14 +255,14 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                 $payload = array_merge(['criteria' => $criteria], $options);
                 $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to search products: " . $response->getError(),
+                        "Failed to search products: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             180 // 3 minutes cache for search results
         );
@@ -275,7 +276,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
         return $this->executeWithMetrics('archive_product', function () use ($productId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$productId}/archive");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($productId);
 
@@ -300,7 +301,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
         return $this->executeWithMetrics('restore_product', function () use ($productId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$productId}/restore");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($productId);
 
@@ -334,17 +335,17 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         throw new ProductNotFoundException("No history found for product ID: {$productId}");
                     }
                     throw new HttpException(
-                        "Failed to get product history: " . $response->getError(),
+                        "Failed to get product history: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             900 // 15 minutes cache for history
         );
@@ -371,14 +372,14 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get related {$relationType}: " . $response->getError(),
+                        "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             300 // 5 minutes cache for relationships
         );
@@ -395,7 +396,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                 'metadata' => $metadata
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("product:related:{$productId}:{$relationType}:*"));
 
@@ -414,7 +415,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
         return $this->executeWithMetrics('remove_relationship', function () use ($productId, $relatedId, $relationType) {
             $response = $this->httpClient->delete("{$this->getEndpoint()}/{$productId}/{$relationType}/{$relatedId}");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("product:related:{$productId}:{$relationType}:*"));
 

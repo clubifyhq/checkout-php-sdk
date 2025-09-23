@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Products\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Exceptions\ValidationException;
@@ -58,7 +59,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'overrides' => $overrides
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache do flow
             $this->invalidateFlowCache($flowId);
@@ -91,7 +92,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'rules' => $rules
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache do flow
             $this->invalidateFlowCache($flowId);
@@ -118,7 +119,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'integrations' => $integrations
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache do flow
             $this->invalidateFlowCache($flowId);
@@ -145,7 +146,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'tracking_config' => $trackingConfig
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache do flow
             $this->invalidateFlowCache($flowId);
@@ -172,7 +173,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'automations' => $automations
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache do flow
             $this->invalidateFlowCache($flowId);
@@ -199,7 +200,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'optimizations' => $optimizations
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache do flow
             $this->invalidateFlowCache($flowId);
@@ -226,7 +227,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'test_config' => $testConfig
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache do flow
             $this->invalidateFlowCache($flowId);
@@ -254,7 +255,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'personalization_rules' => $personalizationRules
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache do flow
             $this->invalidateFlowCache($flowId);
@@ -281,7 +282,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'fallback_strategies' => $fallbackStrategies
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache do flow
             $this->invalidateFlowCache($flowId);
@@ -303,7 +304,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('list_flow_templates', function () {
             $response = $this->httpClient->get('/sales-flows/templates');
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -314,7 +315,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_complete_flow_configuration', function () use ($flowId) {
             $response = $this->httpClient->get("/sales-flows/{$flowId}/complete-configuration");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -325,7 +326,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('export_flow_configuration', function () use ($flowId) {
             $response = $this->httpClient->get("/sales-flows/{$flowId}/export-configuration");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -341,7 +342,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'configuration' => $configuration
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache do flow
             $this->invalidateFlowCache($flowId);
@@ -367,7 +368,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'overrides' => $overrides
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache dos flows afetados
             $this->invalidateFlowCache($sourceFlowId);
@@ -394,7 +395,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
                 'preserve_settings' => $preserveSettings
             ]);
 
-            $flow = $response->getData();
+            $flow = ResponseHelper::getData($response);
 
             // Invalidar cache do flow
             $this->invalidateFlowCache($flowId);

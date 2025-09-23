@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Orders\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Exceptions\ValidationException;
 use Clubify\Checkout\Exceptions\HttpException;
@@ -176,7 +177,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
 
             // Adicionar upsell via API
             $response = $this->httpClient->post("/orders/{$orderId}/upsells", $data);
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
             $this->invalidateOrderCache($orderId);
@@ -253,7 +254,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_order_upsells', function () use ($orderId) {
             $response = $this->httpClient->get("/orders/{$orderId}/upsells");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -264,7 +265,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get("/orders/{$orderId}/upsells/{$upsellId}");
-            return $response->getData();
+            return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -290,7 +291,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
             $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->httpClient->put("/orders/{$orderId}/upsells/{$upsellId}", $data);
-            $upsell = $response->getData();
+            $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
             $this->invalidateOrderCache($orderId);
@@ -313,7 +314,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_available_upsells', function () use ($orderId) {
             $response = $this->httpClient->get("/orders/{$orderId}/available-upsells");
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -326,7 +327,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get("/orders/{$orderId}/recommended-upsells", [
                 'query' => ['limit' => $limit]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -378,7 +379,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/orders/upsell-statistics', [
                 'query' => $filters
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -391,7 +392,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/orders/upsell-conversion', [
                 'query' => $dateRange
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -404,7 +405,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
             $response = $this->httpClient->get('/orders/top-upsell-products', [
                 'query' => ['limit' => $limit]
             ]);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -445,7 +446,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
         if ($order === null) {
             try {
                 $response = $this->httpClient->get("/orders/{$orderId}");
-                $order = $response->getData();
+                $order = ResponseHelper::getData($response);
 
                 $this->cache->set($cacheKey, $order, 300);
             } catch (HttpException $e) {

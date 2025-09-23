@@ -21,6 +21,7 @@
 
 namespace Clubify\Checkout\Modules\Tracking\Repositories;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Repository\BaseRepository;
 use Clubify\Checkout\Modules\Tracking\Contracts\TrackRepositoryInterface;
 use Clubify\Checkout\Modules\Tracking\Exceptions\TrackNotFoundException;
@@ -94,17 +95,17 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                     'email' => $fieldValue
                 ]);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         return null;
                     }
                     throw new HttpException(
-                        "Failed to find track by email: " . $response->getError(),
+                        "Failed to find track by email: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                $data = $response->getData();
+                $data = ResponseHelper::getData($response);
                 return $data['tracks'][0] ?? null;
             },
             300 // 5 minutes cache
@@ -130,7 +131,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                 'status' => $status
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($trackId);
 
@@ -163,14 +164,14 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get track stats: " . $response->getError(),
+                        "Failed to get track stats: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             600 // 10 minutes cache for stats
         );
@@ -186,14 +187,14 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                 'tracks' => $tracksData
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk create tracks: " . $response->getError(),
+                    "Failed to bulk create tracks: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Dispatch event
             $this->eventDispatcher?->dispatch('Clubify.Checkout.Track.BulkCreated', [
@@ -216,14 +217,14 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                 'updates' => $updates
             ]);
 
-            if (!$response->isSuccessful()) {
+            if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
-                    "Failed to bulk update tracks: " . $response->getError(),
+                    "Failed to bulk update tracks: " . "HTTP request failed",
                     $response->getStatusCode()
                 );
             }
 
-            $result = $response->getData();
+            $result = ResponseHelper::getData($response);
 
             // Clear cache for updated tracks
             foreach (array_keys($updates) as $trackId) {
@@ -254,14 +255,14 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                 $payload = array_merge(['criteria' => $criteria], $options);
                 $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to search tracks: " . $response->getError(),
+                        "Failed to search tracks: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             180 // 3 minutes cache for search results
         );
@@ -275,7 +276,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
         return $this->executeWithMetrics('archive_track', function () use ($trackId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$trackId}/archive");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($trackId);
 
@@ -300,7 +301,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
         return $this->executeWithMetrics('restore_track', function () use ($trackId) {
             $response = $this->httpClient->patch("{$this->getEndpoint()}/{$trackId}/restore");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($trackId);
 
@@ -334,17 +335,17 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
                         throw new TrackNotFoundException("No history found for track ID: {$trackId}");
                     }
                     throw new HttpException(
-                        "Failed to get track history: " . $response->getError(),
+                        "Failed to get track history: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             900 // 15 minutes cache for history
         );
@@ -371,14 +372,14 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
 
                 $response = $this->httpClient->get($endpoint);
 
-                if (!$response->isSuccessful()) {
+                if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
-                        "Failed to get related {$relationType}: " . $response->getError(),
+                        "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
                     );
                 }
 
-                return $response->getData();
+                return ResponseHelper::getData($response);
             },
             300 // 5 minutes cache for relationships
         );
@@ -395,7 +396,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                 'metadata' => $metadata
             ]);
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("track:related:{$trackId}:{$relationType}:*"));
 
@@ -414,7 +415,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
         return $this->executeWithMetrics('remove_relationship', function () use ($trackId, $relatedId, $relationType) {
             $response = $this->httpClient->delete("{$this->getEndpoint()}/{$trackId}/{$relationType}/{$relatedId}");
 
-            if ($response->isSuccessful()) {
+            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("track:related:{$trackId}:{$relationType}:*"));
 

@@ -291,9 +291,9 @@ class UserManagementModule implements ModuleInterface
     }
 
     /**
-     * Obtém o UserService (lazy loading)
+     * Obtém o UserService (lazy loading) - método público para injeção
      */
-    private function getUserService(): UserService
+    public function getUserService(): UserService
     {
         if ($this->userService === null) {
             $this->userService = $this->getFactory()->create('user');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Orders\Services;
 
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Exceptions\ValidationException;
 use Clubify\Checkout\Exceptions\HttpException;
@@ -152,7 +153,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => $filters
             ]);
 
-            $stats = $response->getData() ?? [];
+            $stats = ResponseHelper::getData($response) ?? [];
 
             // Calcular métricas adicionais se necessário
             if (!empty($stats)) {
@@ -175,7 +176,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => $dateRange
             ]);
 
-            $revenueStats = $response->getData() ?? [];
+            $revenueStats = ResponseHelper::getData($response) ?? [];
 
             // Adicionar cálculos de crescimento e tendências
             if (!empty($revenueStats)) {
@@ -200,7 +201,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => ['limit' => $limit]
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -218,7 +219,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => ['limit' => $limit]
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -229,7 +230,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_conversion_metrics', function () {
             $response = $this->httpClient->get('/orders/conversion-metrics');
-            $metrics = $response->getData() ?? [];
+            $metrics = ResponseHelper::getData($response) ?? [];
 
             // Calcular métricas adicionais de conversão
             if (!empty($metrics)) {
@@ -255,7 +256,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => ['period' => $period]
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -266,7 +267,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_ltv_analysis', function () {
             $response = $this->httpClient->get('/orders/lifetime-value-analysis');
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -282,7 +283,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => $dateRange
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -296,7 +297,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => $filters
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -310,7 +311,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => $filters
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -324,7 +325,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => $filters
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -338,7 +339,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => $filters
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -352,7 +353,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => $filters
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -370,7 +371,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'query' => ['days' => $days]
             ]);
 
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 
@@ -389,7 +390,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
             ];
 
             $response = $this->httpClient->post('/orders/period-comparison', $data);
-            $comparison = $response->getData() ?? [];
+            $comparison = ResponseHelper::getData($response) ?? [];
 
             // Calcular variações percentuais
             if (!empty($comparison)) {
@@ -470,7 +471,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
             ]);
 
             $response = $this->httpClient->post('/orders/export-report', $data);
-            return $response->getData() ?? [];
+            return ResponseHelper::getData($response) ?? [];
         });
     }
 

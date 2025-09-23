@@ -119,7 +119,7 @@ class CredentialManager
     /**
      * Obter contexto ativo
      */
-    public function getActiveContext(): string
+    public function getActiveContext(): ?string
     {
         return $this->activeContext;
     }
@@ -138,6 +138,19 @@ class CredentialManager
     public function hasContext(string $contextId): bool
     {
         return isset($this->contexts[$contextId]);
+    }
+
+    /**
+     * Verificar se contexto tem API key válida
+     */
+    public function hasValidApiKey(string $contextId): bool
+    {
+        if (!$this->hasContext($contextId)) {
+            return false;
+        }
+
+        $apiKey = $this->contexts[$contextId]['api_key'] ?? null;
+        return !empty($apiKey) && is_string($apiKey) && strlen($apiKey) > 10;
     }
 
     /**

@@ -589,69 +589,204 @@ class AuthManager implements AuthManagerInterface
     /**
      * Registrar tenant existente para permitir alternância de contexto
      */
-    public function registerExistingTenant(string $tenantId, array $tenantData = []): void
+    public function registerExistingTenant(string $tenantId, array $tenantData = []): array
     {
         if ($this->credentialManager === null) {
             throw new AuthenticationException('Credential manager not initialized');
         }
 
-        // Se o contexto já existe, não fazer nada
+        // Validar entrada
+        if (empty($tenantId) || !is_string($tenantId)) {
+            throw new AuthenticationException('Valid tenant ID is required');
+        }
+
+        // Se o contexto já existe, retornar informações sobre ele
         if ($this->credentialManager->hasContext($tenantId)) {
-            return;
+            return [
+                'success' => true,
+                'existed' => true,
+                'has_api_key' => $this->credentialManager->hasValidApiKey($tenantId),
+                'message' => 'Tenant context already registered'
+            ];
         }
 
-        // Verificar se o tenant tem API key. Se não tiver, tentar obter ou provisionar
-        $apiKey = $tenantData['api_key'] ?? null;
+        $registrationResult = [
+            'success' => false,
+            'existed' => false,
+            'has_api_key' => false,
+            'message' => '',
+            'warnings' => []
+        ];
 
-        if (!$apiKey) {
-            try {
-                // Tentar obter credenciais existentes primeiro
-                $credentials = $this->httpClient->get("tenants/{$tenantId}");
-                $credentialsResponse = json_decode($credentials->getBody()->getContents(), true);
-                $credentialsData = $credentialsResponse['data'] ?? $credentialsResponse;
-                $apiKey = $credentialsData['api_key'] ?? null;
-
-                // Se ainda não tem API key, pode ser que precise provisionar
-                // (deixar isso como responsabilidade manual por agora para evitar criação acidental)
-                if (!$apiKey) {
-                    error_log("Tenant registered without API key - manual provisioning may be required. Tenant ID: {$tenantId}");
-                }
-            } catch (\Exception $e) {
-                error_log("Could not retrieve tenant credentials during registration. Tenant ID: {$tenantId}, Error: " . $e->getMessage());
+        try {
+            // Primeiro validar se tenant existe através da API
+            $tenantExists = $this->validateTenantExists($tenantId);
+            if (!$tenantExists) {
+                throw new AuthenticationException("Tenant {$tenantId} does not exist or is not accessible");
             }
+
+            // Tentar obter credenciais completas com estratégias múltiplas
+            $apiKey = $this->resolveTenantApiKey($tenantId, $tenantData);
+
+            // Registrar contexto com as informações disponíveis
+            $this->credentialManager->addTenantContext($tenantId, [
+                'tenant_id' => $tenantId,
+                'name' => $tenantData['name'] ?? "Tenant {$tenantId}",
+                'domain' => $tenantData['domain'] ?? $tenantData['custom_domain'] ?? null,
+                'subdomain' => $tenantData['subdomain'] ?? null,
+                'api_key' => $apiKey,
+                'created_at' => time(),
+                'registration_method' => 'existing_tenant'
+            ]);
+
+            $registrationResult['success'] = true;
+            $registrationResult['has_api_key'] = !empty($apiKey);
+            $registrationResult['message'] = 'Tenant context registered successfully';
+
+            if (empty($apiKey)) {
+                $registrationResult['warnings'][] = 'No API key available - context switching will be limited';
+            }
+
+        } catch (AuthenticationException $e) {
+            // Re-throw authentication exceptions
+            throw $e;
+        } catch (\Exception $e) {
+            // Log but don't fail registration for non-critical errors
+            error_log("Non-critical error during tenant registration. Tenant ID: {$tenantId}, Error: " . $e->getMessage());
+
+            // Register with limited information
+            $this->credentialManager->addTenantContext($tenantId, [
+                'tenant_id' => $tenantId,
+                'name' => $tenantData['name'] ?? "Tenant {$tenantId}",
+                'domain' => $tenantData['domain'] ?? $tenantData['custom_domain'] ?? null,
+                'subdomain' => $tenantData['subdomain'] ?? null,
+                'api_key' => null,
+                'created_at' => time(),
+                'registration_method' => 'fallback'
+            ]);
+
+            $registrationResult['success'] = true;
+            $registrationResult['has_api_key'] = false;
+            $registrationResult['message'] = 'Tenant context registered with limited information';
+            $registrationResult['warnings'][] = 'Could not retrieve full tenant credentials';
         }
 
-        // Adicionar contexto do tenant existente
-        $this->credentialManager->addTenantContext($tenantId, [
-            'tenant_id' => $tenantId,
-            'name' => $tenantData['name'] ?? null,
-            'domain' => $tenantData['domain'] ?? $tenantData['custom_domain'] ?? null,
-            'subdomain' => $tenantData['subdomain'] ?? null,
-            'api_key' => $apiKey,
-            'created_at' => time()
-        ]);
+        return $registrationResult;
     }
 
     /**
-     * Alternar para tenant específico
+     * Validar se tenant existe
      */
-    public function switchToTenant(string $tenantId): void
+    private function validateTenantExists(string $tenantId): bool
+    {
+        try {
+            $response = $this->httpClient->get("tenants/{$tenantId}");
+            return $response->getStatusCode() >= 200 && $response->getStatusCode() < 300;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Resolver API key do tenant usando múltiplas estratégias
+     */
+    private function resolveTenantApiKey(string $tenantId, array $tenantData): ?string
+    {
+        // Estratégia 1: Usar API key fornecida nos dados
+        if (!empty($tenantData['api_key'])) {
+            return $tenantData['api_key'];
+        }
+
+        // Estratégia 2: Tentar obter da API
+        try {
+            $response = $this->httpClient->get("tenants/{$tenantId}");
+            if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
+                $data = json_decode($response->getBody()->getContents(), true);
+                $tenantInfo = $data['data'] ?? $data;
+                return $tenantInfo['api_key'] ?? null;
+            }
+        } catch (\Exception $e) {
+            // Falhou silenciosamente, tentará próxima estratégia
+        }
+
+        // Estratégia 3: Verificar se existe em cache/storage local
+        // TODO: Implementar se houver cache local
+
+        return null;
+    }
+
+    /**
+     * Alternar para tenant específico com validações robustas
+     */
+    public function switchToTenant(string $tenantId): array
     {
         if ($this->credentialManager === null) {
             throw new AuthenticationException('Credential manager not initialized');
         }
 
-        if (!$this->credentialManager->hasContext($tenantId)) {
-            throw new AuthenticationException("Tenant context {$tenantId} not found");
+        // Validar entrada
+        if (empty($tenantId)) {
+            throw new AuthenticationException('Tenant ID is required');
         }
 
-        $this->credentialManager->switchContext($tenantId);
-        $this->currentRole = 'tenant_admin';
+        // Verificar se contexto existe
+        if (!$this->credentialManager->hasContext($tenantId)) {
+            throw new AuthenticationException("Tenant context {$tenantId} not found. Register tenant first using registerExistingTenant()");
+        }
 
-        // Atualizar configuração com as credenciais do tenant
-        $credentials = $this->credentialManager->getCurrentCredentials();
-        $this->config->set('credentials.tenant_id', $credentials['tenant_id']);
-        $this->config->set('credentials.api_key', $credentials['api_key']);
+        // Salvar estado atual para rollback se necessário
+        $previousContext = $this->credentialManager->getActiveContext();
+        $previousRole = $this->currentRole;
+
+        try {
+            // Verificar se tem API key válida
+            if (!$this->credentialManager->hasValidApiKey($tenantId)) {
+                throw new AuthenticationException("Tenant {$tenantId} does not have valid API key for authentication");
+            }
+
+            // Alternar contexto
+            $this->credentialManager->switchContext($tenantId);
+            $this->currentRole = 'tenant_admin';
+
+            // Obter credenciais do novo contexto
+            $credentials = $this->credentialManager->getCurrentCredentials();
+
+            // Validar que as credenciais são válidas
+            if (empty($credentials['tenant_id']) || empty($credentials['api_key'])) {
+                throw new AuthenticationException('Invalid tenant credentials after context switch');
+            }
+
+            // Atualizar configuração
+            $this->config->set('credentials.tenant_id', $credentials['tenant_id']);
+            $this->config->set('credentials.api_key', $credentials['api_key']);
+
+            // Log da mudança para auditoria
+            $this->logRoleTransition('super_admin', 'tenant_admin', [
+                'tenant_id' => $tenantId,
+                'switch_method' => 'manual'
+            ]);
+
+            return [
+                'success' => true,
+                'previous_context' => $previousContext,
+                'current_context' => $tenantId,
+                'current_role' => $this->currentRole,
+                'message' => "Successfully switched to tenant {$tenantId}"
+            ];
+
+        } catch (\Exception $e) {
+            // Rollback em caso de erro
+            try {
+                if ($previousContext) {
+                    $this->credentialManager->switchContext($previousContext);
+                }
+                $this->currentRole = $previousRole;
+            } catch (\Exception $rollbackError) {
+                error_log("Failed to rollback context switch: " . $rollbackError->getMessage());
+            }
+
+            throw new AuthenticationException("Failed to switch to tenant {$tenantId}: " . $e->getMessage(), 0, $e);
+        }
     }
 
     /**

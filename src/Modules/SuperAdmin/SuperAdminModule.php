@@ -242,65 +242,6 @@ class SuperAdminModule implements ModuleInterface
         }
     }
 
-    /**
-     * Provisionar credenciais de acesso para tenant existente
-     * Cria usuário tenant_admin e API key se necessário
-     */
-    public function provisionTenantCredentials(string $tenantId, array $adminData = []): array
-    {
-        $this->ensureInitialized();
-
-        try {
-            $payload = [
-                'tenant_id' => $tenantId,
-                'admin_email' => $adminData['admin_email'] ?? "admin@tenant-{$tenantId}.local",
-                'admin_name' => $adminData['admin_name'] ?? 'Tenant Administrator',
-                'admin_password' => $adminData['admin_password'] ?? $this->generateSecurePassword(),
-                'generate_api_key' => true
-            ];
-
-            $response = $this->httpClient->post("tenants/{$tenantId}/provision", [
-                'json' => $payload
-            ]);
-
-            $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 300) {
-                throw new SDKException('Failed to provision tenant credentials');
-            }
-
-            $result = json_decode($response->getBody()->getContents(), true);
-
-            $this->logger->info('Tenant credentials provisioned successfully', [
-                'tenant_id' => $tenantId,
-                'admin_email' => $payload['admin_email']
-            ]);
-
-            return $result;
-
-        } catch (\Exception $e) {
-            $this->logger->error('Failed to provision tenant credentials', [
-                'error' => $e->getMessage(),
-                'tenant_id' => $tenantId
-            ]);
-
-            throw new SDKException('Failed to provision tenant credentials: ' . $e->getMessage(), 0, $e);
-        }
-    }
-
-    /**
-     * Gerar senha segura para usuário admin
-     */
-    private function generateSecurePassword(int $length = 16): string
-    {
-        $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-        $password = '';
-
-        for ($i = 0; $i < $length; $i++) {
-            $password .= $characters[random_int(0, strlen($characters) - 1)];
-        }
-
-        return $password;
-    }
 
     /**
      * Buscar tenant por domínio
@@ -346,8 +287,115 @@ class SuperAdminModule implements ModuleInterface
         }
     }
 
-    // Nota: O endpoint regenerate-api-key foi movido para o módulo de API Keys
-    // Usar: POST /api-keys/{keyId}/rotate no módulo ApiKeys quando implementado
+    /**
+     * Rotacionar API key de um tenant
+     */
+    public function rotateApiKey(string $apiKeyId, array $options = []): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $payload = [
+                'gracePeriodHours' => $options['gracePeriodHours'] ?? 24,
+                'forceRotation' => $options['forceRotation'] ?? false
+            ];
+
+            $response = $this->httpClient->post("api-keys/{$apiKeyId}/rotate", [
+                'json' => $payload
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to rotate API key');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            $this->logger->info('API key rotated successfully', [
+                'api_key_id' => $apiKeyId,
+                'grace_period_hours' => $payload['gracePeriodHours']
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to rotate API key', [
+                'error' => $e->getMessage(),
+                'api_key_id' => $apiKeyId
+            ]);
+
+            throw new SDKException('Failed to rotate API key: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Obter informações de uma API key específica
+     */
+    public function getApiKeyInfo(string $apiKeyId): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $response = $this->httpClient->get("api-keys/{$apiKeyId}");
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to get API key info');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to get API key info', [
+                'error' => $e->getMessage(),
+                'api_key_id' => $apiKeyId
+            ]);
+
+            throw new SDKException('Failed to get API key info: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Validar uma API key
+     */
+    public function validateApiKey(string $apiKeyValue, string $endpoint = '/checkout', string $clientIp = null): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $payload = [
+                'apiKey' => $apiKeyValue,
+                'endpoint' => $endpoint
+            ];
+
+            if ($clientIp) {
+                $payload['clientIp'] = $clientIp;
+            }
+
+            $response = $this->httpClient->post('api-keys/public/validate', [
+                'json' => $payload
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to validate API key');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to validate API key', [
+                'error' => $e->getMessage(),
+                'endpoint' => $endpoint
+            ]);
+
+            throw new SDKException('Failed to validate API key: ' . $e->getMessage(), 0, $e);
+        }
+    }
 
     /**
      * Obter estatísticas gerais
@@ -480,5 +528,50 @@ class SuperAdminModule implements ModuleInterface
         }
 
         $this->ensureDependenciesInitialized();
+    }
+
+    /**
+     * Verificar se tenant tem credenciais de acesso
+     */
+    public function checkTenantCredentials(string $tenantId): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            // Primeiro tentar obter informações detalhadas do tenant
+            $tenantResponse = $this->httpClient->get("tenants/{$tenantId}");
+            $tenantStatusCode = $tenantResponse->getStatusCode();
+
+            if ($tenantStatusCode >= 200 && $tenantStatusCode < 300) {
+                $tenantResult = json_decode($tenantResponse->getBody()->getContents(), true);
+                $tenantData = $tenantResult['data'] ?? $tenantResult;
+
+                // Verificar se já tem API key nos dados do tenant
+                if (isset($tenantData['api_key']) && !empty($tenantData['api_key'])) {
+                    return [
+                        'has_credentials' => true,
+                        'api_key' => $tenantData['api_key'],
+                        'message' => 'Tenant has API key available'
+                    ];
+                }
+            }
+
+            return [
+                'has_credentials' => false,
+                'message' => 'Tenant needs manual credential setup',
+                'instructions' => [
+                    'step1' => 'Create admin user via POST /users with role tenant_admin',
+                    'step2' => 'Create API key via POST /api-keys for the tenant',
+                    'step3' => 'Use the API key for tenant context switching'
+                ]
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'has_credentials' => false,
+                'error' => $e->getMessage(),
+                'message' => 'Could not verify tenant credentials'
+            ];
+        }
     }
 }

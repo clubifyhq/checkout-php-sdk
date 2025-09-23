@@ -82,35 +82,54 @@ function getOrCreateOrganization($sdk, $organizationData) {
             $tenantData = $existingTenant['data'] ?? $existingTenant;
             $tenantId = $tenantData['_id'] ?? $tenantData['id'] ?? 'unknown';
 
-            // Registrar tenant existente para permitir alternância de contexto
+            // Registrar tenant existente para permitir alternância de contexto (versão robusta)
             try {
                 echo "🔑 Registrando tenant existente para alternância de contexto...\n";
-                $sdk->registerExistingTenant($tenantId, $tenantData);
-                echo "✅ Tenant registrado com sucesso para alternância de contexto\n";
+                $registrationResult = $sdk->registerExistingTenant($tenantId, $tenantData);
 
-                // Tentar provisionar credenciais se necessário
-                if (!isset($tenantData['api_key']) || empty($tenantData['api_key'])) {
-                    echo "🔧 Tenant sem API key detectado, tentando provisionar credenciais...\n";
-                    try {
-                        $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, [
-                            'admin_email' => $organizationData['admin_email'] ?? "admin@{$tenantId}.local",
-                            'admin_name' => $organizationData['admin_name'] ?? 'Tenant Administrator'
-                        ]);
-                        echo "✅ Credenciais de tenant provisionadas com sucesso\n";
+                // Tratamento defensivo - verificar se o resultado é um array válido
+                if (!is_array($registrationResult)) {
+                    echo "⚠️  Resultado de registro inesperado, assumindo falha\n";
+                    $registrationResult = [
+                        'success' => false,
+                        'message' => 'Método retornou tipo inesperado',
+                        'has_api_key' => false
+                    ];
+                }
 
-                        // Atualizar dados do tenant com as novas credenciais
-                        $provisionData = $provisionResult['data'] ?? $provisionResult;
-                        if (isset($provisionData['api_key'])) {
-                            $tenantData['api_key'] = $provisionData['api_key'];
-                            echo "   API Key: " . substr($provisionData['api_key'], 0, 20) . "...\n";
-                        }
-                    } catch (Exception $e) {
-                        echo "⚠️  Aviso: Não foi possível provisionar credenciais automaticamente: " . $e->getMessage() . "\n";
-                        echo "   Será necessário criar um usuário tenant_admin e API key manualmente\n";
+                $success = $registrationResult['success'] ?? false;
+                $message = $registrationResult['message'] ?? 'Sem mensagem disponível';
+                $hasApiKey = $registrationResult['has_api_key'] ?? false;
+
+                if ($success) {
+                    echo "✅ " . $message . "\n";
+
+                    if ($hasApiKey) {
+                        echo "   🔐 API key disponível - alternância de contexto habilitada\n";
+                        $tenantData['api_key'] = 'available'; // Marcar como disponível
+                    } else {
+                        echo "   ⚠️  Sem API key - funcionalidade limitada\n";
                     }
+
+                    // Mostrar avisos se houver
+                    if (!empty($registrationResult['warnings'])) {
+                        foreach ($registrationResult['warnings'] as $warning) {
+                            echo "   ⚠️  " . $warning . "\n";
+                        }
+                    }
+
+                    if (!$hasApiKey) {
+                        echo "   📋 Para habilitar alternância completa:\n";
+                        echo "   1. Criar usuário com role 'tenant_admin'\n";
+                        echo "   2. Criar API key via POST /api-keys\n";
+                        echo "   3. Registrar novamente o tenant com as credenciais\n";
+                    }
+                } else {
+                    echo "❌ Falha no registro: " . $message . "\n";
                 }
             } catch (Exception $e) {
-                echo "⚠️  Aviso: Não foi possível registrar tenant para alternância: " . $e->getMessage() . "\n";
+                echo "❌ Erro crítico no registro: " . $e->getMessage() . "\n";
+                echo "   O tenant pode não existir ou não estar acessível\n";
             }
 
             return [
@@ -131,35 +150,54 @@ function getOrCreateOrganization($sdk, $organizationData) {
             $tenantData = $existingTenant['data'] ?? $existingTenant;
             $tenantId = $tenantData['_id'] ?? $tenantData['id'] ?? 'unknown';
 
-            // Registrar tenant existente para permitir alternância de contexto
+            // Registrar tenant existente para permitir alternância de contexto (versão robusta)
             try {
                 echo "🔑 Registrando tenant existente para alternância de contexto...\n";
-                $sdk->registerExistingTenant($tenantId, $tenantData);
-                echo "✅ Tenant registrado com sucesso para alternância de contexto\n";
+                $registrationResult = $sdk->registerExistingTenant($tenantId, $tenantData);
 
-                // Tentar provisionar credenciais se necessário
-                if (!isset($tenantData['api_key']) || empty($tenantData['api_key'])) {
-                    echo "🔧 Tenant sem API key detectado, tentando provisionar credenciais...\n";
-                    try {
-                        $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, [
-                            'admin_email' => $organizationData['admin_email'] ?? "admin@{$tenantId}.local",
-                            'admin_name' => $organizationData['admin_name'] ?? 'Tenant Administrator'
-                        ]);
-                        echo "✅ Credenciais de tenant provisionadas com sucesso\n";
+                // Tratamento defensivo - verificar se o resultado é um array válido
+                if (!is_array($registrationResult)) {
+                    echo "⚠️  Resultado de registro inesperado, assumindo falha\n";
+                    $registrationResult = [
+                        'success' => false,
+                        'message' => 'Método retornou tipo inesperado',
+                        'has_api_key' => false
+                    ];
+                }
 
-                        // Atualizar dados do tenant com as novas credenciais
-                        $provisionData = $provisionResult['data'] ?? $provisionResult;
-                        if (isset($provisionData['api_key'])) {
-                            $tenantData['api_key'] = $provisionData['api_key'];
-                            echo "   API Key: " . substr($provisionData['api_key'], 0, 20) . "...\n";
-                        }
-                    } catch (Exception $e) {
-                        echo "⚠️  Aviso: Não foi possível provisionar credenciais automaticamente: " . $e->getMessage() . "\n";
-                        echo "   Será necessário criar um usuário tenant_admin e API key manualmente\n";
+                $success = $registrationResult['success'] ?? false;
+                $message = $registrationResult['message'] ?? 'Sem mensagem disponível';
+                $hasApiKey = $registrationResult['has_api_key'] ?? false;
+
+                if ($success) {
+                    echo "✅ " . $message . "\n";
+
+                    if ($hasApiKey) {
+                        echo "   🔐 API key disponível - alternância de contexto habilitada\n";
+                        $tenantData['api_key'] = 'available'; // Marcar como disponível
+                    } else {
+                        echo "   ⚠️  Sem API key - funcionalidade limitada\n";
                     }
+
+                    // Mostrar avisos se houver
+                    if (!empty($registrationResult['warnings'])) {
+                        foreach ($registrationResult['warnings'] as $warning) {
+                            echo "   ⚠️  " . $warning . "\n";
+                        }
+                    }
+
+                    if (!$hasApiKey) {
+                        echo "   📋 Para habilitar alternância completa:\n";
+                        echo "   1. Criar usuário com role 'tenant_admin'\n";
+                        echo "   2. Criar API key via POST /api-keys\n";
+                        echo "   3. Registrar novamente o tenant com as credenciais\n";
+                    }
+                } else {
+                    echo "❌ Falha no registro: " . $message . "\n";
                 }
             } catch (Exception $e) {
-                echo "⚠️  Aviso: Não foi possível registrar tenant para alternância: " . $e->getMessage() . "\n";
+                echo "❌ Erro crítico no registro: " . $e->getMessage() . "\n";
+                echo "   O tenant pode não existir ou não estar acessível\n";
             }
 
             return [
@@ -385,7 +423,7 @@ try {
         echo "ℹ️  Continuando com o restante do exemplo usando tenant padrão...\n\n";
 
         // Usar tenant padrão se disponível
-        $tenantId = '507f1f77bcf86cd799439011';
+        $tenantId = $config['credentials']['tenant_id'];
     }
 
     // ===============================================
@@ -408,8 +446,18 @@ try {
 
         // Usar timeout de 10 segundos para evitar travamento
         $stats = $sdk->superAdmin()->getSystemStats(10);
-        echo "📊 Organizações ativas: " . ($stats['organizations']['active'] ?? 'N/A') . "\n";
-        echo "📊 Total de usuários: " . ($stats['users']['total'] ?? 'N/A') . "\n";
+
+        // Tratamento defensivo para parsing de estatísticas
+        $statsData = $stats['data'] ?? $stats;
+        $organizationsActive = $statsData['organizations']['active'] ??
+                               $statsData['activeOrganizations'] ??
+                               $statsData['totalTenants'] ?? 'N/A';
+        $usersTotal = $statsData['users']['total'] ??
+                      $statsData['totalUsers'] ??
+                      $statsData['userCount'] ?? 'N/A';
+
+        echo "📊 Organizações ativas: " . $organizationsActive . "\n";
+        echo "📊 Total de usuários: " . $usersTotal . "\n";
     } catch (Exception $e) {
         $errorMsg = $e->getMessage();
         if (strpos($errorMsg, 'timeout') !== false ||
@@ -433,16 +481,40 @@ try {
     if ($tenantId && $tenantId !== 'unknown') {
         try {
             echo "🔄 Tentando alternar para tenant: $tenantId\n";
-            // Alternar para o tenant criado
-            $sdk->switchToTenant($tenantId);
 
-            $context = $sdk->getCurrentContext();
-            echo "✅ Contexto alterado com sucesso:\n";
-            echo "   Current Role: " . (isset($context['current_role']) ? $context['current_role'] : 'N/A') . "\n";
-            $currentRole = isset($context['current_role']) ? $context['current_role'] : '';
-            echo "   Active Context: " . ($currentRole === 'tenant_admin' ? $tenantId : 'super_admin') . "\n\n";
+            // Usar nova versão robusta com validações
+            $switchResult = $sdk->switchToTenant($tenantId);
+
+            // Tratamento defensivo - verificar se o resultado é um array válido
+            if (!is_array($switchResult)) {
+                echo "⚠️  Resultado de alternância inesperado, assumindo falha\n";
+                $switchResult = [
+                    'success' => false,
+                    'message' => 'Método retornou tipo inesperado'
+                ];
+            }
+
+            $success = $switchResult['success'] ?? false;
+            $message = $switchResult['message'] ?? 'Sem mensagem disponível';
+
+            if ($success) {
+                echo "✅ " . $message . "\n";
+                echo "   Previous Context: " . ($switchResult['previous_context'] ?? 'N/A') . "\n";
+                echo "   Current Context: " . ($switchResult['current_context'] ?? 'N/A') . "\n";
+                echo "   Current Role: " . ($switchResult['current_role'] ?? 'N/A') . "\n\n";
+            } else {
+                echo "❌ Falha na alternância: " . $message . "\n\n";
+            }
         } catch (Exception $e) {
-            echo "⚠️  Erro ao alternar contexto para tenant '$tenantId': " . $e->getMessage() . "\n";
+            echo "❌ Erro ao alternar contexto para tenant '$tenantId':\n";
+            echo "   " . $e->getMessage() . "\n";
+
+            // Fornecer orientação baseada no tipo de erro
+            if (strpos($e->getMessage(), 'not found') !== false) {
+                echo "   💡 Dica: Execute registerExistingTenant() primeiro\n";
+            } elseif (strpos($e->getMessage(), 'API key') !== false) {
+                echo "   💡 Dica: Tenant precisa de API key válida para alternância\n";
+            }
             echo "ℹ️  Continuando com contexto de super admin...\n\n";
         }
     } else {
@@ -541,9 +613,23 @@ try {
             echo "🔍 Credenciais atuais obtidas com sucesso\n";
             echo "   Current API Key: " . substr($currentCredentials['api_key'] ?? 'N/A', 0, 20) . "...\n";
 
-            // Endpoint de regenerar API key não disponível no momento
-            echo "ℹ️  Funcionalidade de regenerar API key ainda não implementada\n";
-            echo "   Endpoint necessário: POST /api-keys/{keyId}/rotate\n";
+            // Testar funcionalidade de rotação de API key (apenas se houver API key)
+            if (!empty($currentCredentials['api_key_id'])) {
+                echo "🔄 Testando rotação de API key...\n";
+                try {
+                    $rotationResult = $sdk->superAdmin()->rotateApiKey($currentCredentials['api_key_id'], [
+                        'gracePeriodHours' => 1,  // Período curto para teste
+                        'forceRotation' => false   // Não forçar para teste
+                    ]);
+                    echo "✅ Rotação iniciada com sucesso\n";
+                    echo "   Nova API Key: " . substr($rotationResult['newApiKey'] ?? 'N/A', 0, 20) . "...\n";
+                    echo "   Período de graça: " . ($rotationResult['gracePeriodHours'] ?? 'N/A') . " horas\n";
+                } catch (Exception $rotateError) {
+                    echo "ℹ️  Rotação não executada: " . $rotateError->getMessage() . "\n";
+                }
+            } else {
+                echo "ℹ️  Não há API key ID disponível para rotação\n";
+            }
         } catch (Exception $e) {
             echo "⚠️  Erro na gestão de credenciais: " . $e->getMessage() . "\n";
             echo "   Continuando com outras operações...\n";

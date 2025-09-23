@@ -118,11 +118,45 @@ function getOrCreateOrganization($sdk, $organizationData) {
                         }
                     }
 
+                    // Tentar provisionar credenciais automaticamente se não houver API key
                     if (!$hasApiKey) {
-                        echo "   📋 Para habilitar alternância completa:\n";
-                        echo "   1. Criar usuário com role 'tenant_admin'\n";
-                        echo "   2. Criar API key via POST /api-keys\n";
-                        echo "   3. Registrar novamente o tenant com as credenciais\n";
+                        echo "   🔧 Tentando provisionar credenciais automaticamente...\n";
+                        try {
+                            $provisioningOptions = [
+                                'admin_email' => $organizationData['admin_email'] ?? "admin@{$tenantId}.local",
+                                'admin_name' => 'Tenant Administrator',
+                                'api_key_name' => 'Auto-generated Admin Key',
+                                'environment' => $EXAMPLE_CONFIG['sdk']['environment'] ?? 'production'
+                            ];
+
+                            $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, $provisioningOptions);
+
+                            if ($provisionResult['success']) {
+                                echo "   ✅ Credenciais provisionadas com sucesso!\n";
+                                echo "   👤 Usuário admin criado: " . $provisionResult['user']['email'] . "\n";
+                                echo "   🔑 API Key criada: " . substr($provisionResult['api_key']['key'], 0, 20) . "...\n";
+                                echo "   🔒 Senha temporária: " . $provisionResult['user']['password'] . "\n";
+                                echo "   ⚠️  IMPORTANTE: Salve essas credenciais em local seguro!\n";
+
+                                // Marcar que agora tem API key
+                                $hasApiKey = true;
+                                $tenantData['api_key'] = $provisionResult['api_key']['key'];
+                                $tenantData['admin_user'] = $provisionResult['user'];
+
+                                // Re-registrar tenant com credenciais
+                                echo "   🔄 Re-registrando tenant com novas credenciais...\n";
+                                $reregistrationResult = $sdk->registerExistingTenant($tenantId, $tenantData);
+                                if (($reregistrationResult['success'] ?? false) && ($reregistrationResult['has_api_key'] ?? false)) {
+                                    echo "   🎉 Tenant re-registrado com credenciais! Alternância habilitada.\n";
+                                }
+                            }
+                        } catch (Exception $provisionError) {
+                            echo "   ❌ Falha no provisionamento automático: " . $provisionError->getMessage() . "\n";
+                            echo "   📋 Configuração manual necessária:\n";
+                            echo "   1. Criar usuário com role 'tenant_admin'\n";
+                            echo "   2. Criar API key via POST /api-keys\n";
+                            echo "   3. Registrar novamente o tenant com as credenciais\n";
+                        }
                     }
                 } else {
                     echo "❌ Falha no registro: " . $message . "\n";
@@ -186,11 +220,45 @@ function getOrCreateOrganization($sdk, $organizationData) {
                         }
                     }
 
+                    // Tentar provisionar credenciais automaticamente se não houver API key
                     if (!$hasApiKey) {
-                        echo "   📋 Para habilitar alternância completa:\n";
-                        echo "   1. Criar usuário com role 'tenant_admin'\n";
-                        echo "   2. Criar API key via POST /api-keys\n";
-                        echo "   3. Registrar novamente o tenant com as credenciais\n";
+                        echo "   🔧 Tentando provisionar credenciais automaticamente...\n";
+                        try {
+                            $provisioningOptions = [
+                                'admin_email' => $organizationData['admin_email'] ?? "admin@{$tenantId}.local",
+                                'admin_name' => 'Tenant Administrator',
+                                'api_key_name' => 'Auto-generated Admin Key',
+                                'environment' => $EXAMPLE_CONFIG['sdk']['environment'] ?? 'production'
+                            ];
+
+                            $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, $provisioningOptions);
+
+                            if ($provisionResult['success']) {
+                                echo "   ✅ Credenciais provisionadas com sucesso!\n";
+                                echo "   👤 Usuário admin criado: " . $provisionResult['user']['email'] . "\n";
+                                echo "   🔑 API Key criada: " . substr($provisionResult['api_key']['key'], 0, 20) . "...\n";
+                                echo "   🔒 Senha temporária: " . $provisionResult['user']['password'] . "\n";
+                                echo "   ⚠️  IMPORTANTE: Salve essas credenciais em local seguro!\n";
+
+                                // Marcar que agora tem API key
+                                $hasApiKey = true;
+                                $tenantData['api_key'] = $provisionResult['api_key']['key'];
+                                $tenantData['admin_user'] = $provisionResult['user'];
+
+                                // Re-registrar tenant com credenciais
+                                echo "   🔄 Re-registrando tenant com novas credenciais...\n";
+                                $reregistrationResult = $sdk->registerExistingTenant($tenantId, $tenantData);
+                                if (($reregistrationResult['success'] ?? false) && ($reregistrationResult['has_api_key'] ?? false)) {
+                                    echo "   🎉 Tenant re-registrado com credenciais! Alternância habilitada.\n";
+                                }
+                            }
+                        } catch (Exception $provisionError) {
+                            echo "   ❌ Falha no provisionamento automático: " . $provisionError->getMessage() . "\n";
+                            echo "   📋 Configuração manual necessária:\n";
+                            echo "   1. Criar usuário com role 'tenant_admin'\n";
+                            echo "   2. Criar API key via POST /api-keys\n";
+                            echo "   3. Registrar novamente o tenant com as credenciais\n";
+                        }
                     }
                 } else {
                     echo "❌ Falha no registro: " . $message . "\n";
@@ -447,17 +515,27 @@ try {
         // Usar timeout de 10 segundos para evitar travamento
         $stats = $sdk->superAdmin()->getSystemStats(10);
 
-        // Tratamento defensivo para parsing de estatísticas
+        // Tratamento defensivo para parsing de estatísticas (estrutura real da API)
         $statsData = $stats['data'] ?? $stats;
-        $organizationsActive = $statsData['organizations']['active'] ??
-                               $statsData['activeOrganizations'] ??
-                               $statsData['totalTenants'] ?? 'N/A';
-        $usersTotal = $statsData['users']['total'] ??
-                      $statsData['totalUsers'] ??
-                      $statsData['userCount'] ?? 'N/A';
 
-        echo "📊 Organizações ativas: " . $organizationsActive . "\n";
-        echo "📊 Total de usuários: " . $usersTotal . "\n";
+        // A API retorna a estrutura: { total, active, trial, suspended, deleted, byPlan }
+        $totalTenants = $statsData['total'] ?? 'N/A';
+        $activeTenants = $statsData['active'] ?? 'N/A';
+        $trialTenants = $statsData['trial'] ?? 'N/A';
+        $suspendedTenants = $statsData['suspended'] ?? 'N/A';
+
+        echo "📊 Total de tenants: " . $totalTenants . "\n";
+        echo "📊 Tenants ativos: " . $activeTenants . "\n";
+        echo "📊 Tenants em trial: " . $trialTenants . "\n";
+        echo "📊 Tenants suspensos: " . $suspendedTenants . "\n";
+
+        // Mostrar distribuição por plano se disponível
+        if (isset($statsData['byPlan']) && is_array($statsData['byPlan'])) {
+            echo "📊 Distribuição por plano:\n";
+            foreach ($statsData['byPlan'] as $plan => $count) {
+                echo "   - " . ucfirst($plan) . ": " . $count . "\n";
+            }
+        }
     } catch (Exception $e) {
         $errorMsg = $e->getMessage();
         if (strpos($errorMsg, 'timeout') !== false ||
@@ -641,22 +719,36 @@ try {
     // Listar tenants (API não suporta filtros específicos no momento)
     try {
         $filteredTenants = $sdk->superAdmin()->listTenants();
-        echo "📋 Total de tenants encontrados: " . count($filteredTenants['data']) . "\n";
+        // Corrigir contagem baseada na estrutura real da API
+        $totalTenants = $filteredTenants['data']['total'] ?? count($filteredTenants['data']['tenants'] ?? $filteredTenants['data'] ?? []);
+        echo "📋 Total de tenants encontrados: " . $totalTenants . "\n";
 
         // Mostrar alguns detalhes dos tenants encontrados
-        if (count($filteredTenants['data']) > 0) {
+        // A API retorna { data: { tenants: [...], total, page, limit } }
+        $tenantsData = $filteredTenants['data']['tenants'] ?? $filteredTenants['data'] ?? [];
+        if (count($tenantsData) > 0) {
             $maxToShow = $EXAMPLE_CONFIG['options']['max_tenants_to_show'];
             echo "   Primeiros tenants (máximo $maxToShow):\n";
             $count = 0;
-            foreach ($filteredTenants['data'] as $tenant) {
+            foreach ($tenantsData as $tenant) {
                 if ($count >= $maxToShow) break;
-                $name = $tenant['name'] ?? $tenant['subdomain'] ?? 'Nome não disponível';
-                $status = $tenant['status'] ?? 'Status não disponível';
-                echo "   - $name (Status: $status)\n";
+
+                // Parsing melhorado para dados do tenant (estrutura real da API)
+                $name = $tenant['name'] ?? 'Sem nome';
+                $status = $tenant['status'] ?? 'unknown';
+                $plan = $tenant['plan'] ?? 'sem plano';
+                $domain = $tenant['domain'] ?? $tenant['subdomain'] ?? 'sem domínio';
+
+                // Adicionar ID para identificação (últimos 8 chars)
+                $tenantId = $tenant['_id'] ?? $tenant['id'] ?? 'no-id';
+                $shortId = strlen($tenantId) > 8 ? substr($tenantId, -8) : $tenantId;
+
+                echo "   - $name\n";
+                echo "     Domain: $domain | Status: $status | Plan: $plan | ID: $shortId\n";
                 $count++;
             }
-            if (count($filteredTenants['data']) > $maxToShow) {
-                echo "   ... e mais " . (count($filteredTenants['data']) - $maxToShow) . " tenant(s)\n";
+            if (count($tenantsData) > $maxToShow) {
+                echo "   ... e mais " . (count($tenantsData) - $maxToShow) . " tenant(s)\n";
             }
         }
     } catch (Exception $e) {

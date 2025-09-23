@@ -398,6 +398,218 @@ class SuperAdminModule implements ModuleInterface
     }
 
     /**
+     * Criar usuário com role tenant_admin para um tenant
+     */
+    public function createTenantAdmin(string $tenantId, array $userData): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            // Estrutura correta baseada na validação da API
+            $payload = [
+                'email' => $userData['email'],
+                'firstName' => $userData['firstName'] ?? $userData['name'] ?? 'Tenant',
+                'lastName' => $userData['lastName'] ?? 'Administrator',
+                'password' => $userData['password'],
+                'roles' => ['tenant_admin'],
+                'tenantId' => $tenantId
+            ];
+
+            // Adicionar cabeçalho X-Tenant-Id para contexto correto
+            $response = $this->httpClient->post('users', [
+                'json' => $payload,
+                'headers' => [
+                    'X-Tenant-Id' => $tenantId
+                ]
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to create tenant admin user');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            $this->logger->info('Tenant admin user created successfully', [
+                'tenant_id' => $tenantId,
+                'user_id' => $result['data']['id'] ?? $result['id'] ?? 'unknown',
+                'email' => $payload['email']
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to create tenant admin user', [
+                'error' => $e->getMessage(),
+                'tenant_id' => $tenantId,
+                'email' => $userData['email'] ?? 'unknown'
+            ]);
+
+            throw new SDKException('Failed to create tenant admin user: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Criar API key para um tenant
+     */
+    public function createApiKey(string $tenantId, array $keyData = []): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $payload = [
+                'name' => $keyData['name'] ?? 'Tenant Admin API Key',
+                'description' => $keyData['description'] ?? 'API key for tenant admin operations',
+                'environment' => $keyData['environment'] ?? 'production',
+                'allowedOrigins' => $keyData['allowedOrigins'] ?? ['*'],
+                'rateLimiting' => $keyData['rateLimiting'] ?? [
+                    'requestsPerMinute' => 120,
+                    'requestsPerHour' => 5000,
+                    'requestsPerDay' => 50000
+                ],
+                'permissions' => $keyData['permissions'] ?? [
+                    'integration:advanced',
+                    'customer:read',
+                    'customer:write',
+                    'analytics:read',
+                    'user:write',
+                    'api-key:write',
+                    'tenant:write',
+                    'products:read',
+                    'products:write',
+                    'checkout:read',
+                    'checkout:write'
+                ]
+            ];
+
+            // Usar cabeçalho X-Tenant-Id para contexto
+            $response = $this->httpClient->post('api-keys', [
+                'json' => $payload,
+                'headers' => [
+                    'X-Tenant-Id' => $tenantId
+                ]
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to create API key');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            $this->logger->info('API key created successfully', [
+                'tenant_id' => $tenantId,
+                'api_key_id' => $result['data']['id'] ?? $result['id'] ?? 'unknown',
+                'name' => $payload['name']
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to create API key', [
+                'error' => $e->getMessage(),
+                'tenant_id' => $tenantId
+            ]);
+
+            throw new SDKException('Failed to create API key: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Provisionar credenciais completas para um tenant (usuário admin + API key)
+     */
+    public function provisionTenantCredentials(string $tenantId, array $options = []): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            // Dados do usuário admin (estrutura correta da API)
+            $fullName = $options['admin_name'] ?? 'Tenant Administrator';
+            $nameParts = explode(' ', $fullName, 2);
+
+            $adminData = [
+                'email' => $options['admin_email'] ?? "admin@tenant-{$tenantId}.local",
+                'firstName' => $nameParts[0] ?? 'Tenant',
+                'lastName' => $nameParts[1] ?? 'Administrator',
+                'password' => $options['admin_password'] ?? $this->generateSecurePassword()
+            ];
+
+            // 1. Criar usuário tenant_admin
+            $userResult = $this->createTenantAdmin($tenantId, $adminData);
+            $userId = $userResult['data']['id'] ?? $userResult['id'] ?? null;
+
+            if (!$userId) {
+                throw new SDKException('Failed to get user ID from creation response');
+            }
+
+            // 2. Criar API key para o tenant
+            $apiKeyData = [
+                'name' => $options['api_key_name'] ?? 'Tenant Admin API Key',
+                'description' => $options['api_key_description'] ?? 'API key for tenant admin operations',
+                'environment' => $options['environment'] ?? 'production'
+            ];
+
+            $apiKeyResult = $this->createApiKey($tenantId, $apiKeyData);
+            $apiKey = $apiKeyResult['data']['key'] ?? $apiKeyResult['key'] ?? null;
+            $apiKeyId = $apiKeyResult['data']['id'] ?? $apiKeyResult['id'] ?? null;
+
+            if (!$apiKey) {
+                throw new SDKException('Failed to get API key from creation response');
+            }
+
+            $this->logger->info('Tenant credentials provisioned successfully', [
+                'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'api_key_id' => $apiKeyId,
+                'admin_email' => $adminData['email']
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Tenant credentials provisioned successfully',
+                'user' => [
+                    'id' => $userId,
+                    'email' => $adminData['email'],
+                    'firstName' => $adminData['firstName'],
+                    'lastName' => $adminData['lastName'],
+                    'fullName' => $adminData['firstName'] . ' ' . $adminData['lastName'],
+                    'password' => $adminData['password'], // Retorna apenas para configuração inicial
+                    'roles' => ['tenant_admin']
+                ],
+                'api_key' => [
+                    'id' => $apiKeyId,
+                    'key' => $apiKey,
+                    'name' => $apiKeyData['name']
+                ],
+                'tenant_id' => $tenantId
+            ];
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to provision tenant credentials', [
+                'error' => $e->getMessage(),
+                'tenant_id' => $tenantId
+            ]);
+
+            throw new SDKException('Failed to provision tenant credentials: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Gerar senha segura
+     */
+    private function generateSecurePassword(int $length = 16): string
+    {
+        $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        $password = '';
+
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $characters[random_int(0, strlen($characters) - 1)];
+        }
+
+        return $password;
+    }
+
+    /**
      * Obter estatísticas gerais
      */
     public function getSystemStats(int $timeoutSeconds = 10): array

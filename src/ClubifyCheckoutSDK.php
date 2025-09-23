@@ -262,6 +262,15 @@ class ClubifyCheckoutSDK
     }
 
     /**
+     * Registrar tenant existente para permitir alternância de contexto
+     */
+    public function registerExistingTenant(string $tenantId, array $tenantData = []): void
+    {
+        $this->requireSuperAdminMode();
+        $this->getAuthManager()->registerExistingTenant($tenantId, $tenantData);
+    }
+
+    /**
      * Alternar para tenant específico
      */
     public function switchToTenant(string $tenantId): void

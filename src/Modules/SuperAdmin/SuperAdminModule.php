@@ -243,6 +243,66 @@ class SuperAdminModule implements ModuleInterface
     }
 
     /**
+     * Provisionar credenciais de acesso para tenant existente
+     * Cria usuário tenant_admin e API key se necessário
+     */
+    public function provisionTenantCredentials(string $tenantId, array $adminData = []): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $payload = [
+                'tenant_id' => $tenantId,
+                'admin_email' => $adminData['admin_email'] ?? "admin@tenant-{$tenantId}.local",
+                'admin_name' => $adminData['admin_name'] ?? 'Tenant Administrator',
+                'admin_password' => $adminData['admin_password'] ?? $this->generateSecurePassword(),
+                'generate_api_key' => true
+            ];
+
+            $response = $this->httpClient->post("tenants/{$tenantId}/provision", [
+                'json' => $payload
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new SDKException('Failed to provision tenant credentials');
+            }
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            $this->logger->info('Tenant credentials provisioned successfully', [
+                'tenant_id' => $tenantId,
+                'admin_email' => $payload['admin_email']
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to provision tenant credentials', [
+                'error' => $e->getMessage(),
+                'tenant_id' => $tenantId
+            ]);
+
+            throw new SDKException('Failed to provision tenant credentials: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Gerar senha segura para usuário admin
+     */
+    private function generateSecurePassword(int $length = 16): string
+    {
+        $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        $password = '';
+
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $characters[random_int(0, strlen($characters) - 1)];
+        }
+
+        return $password;
+    }
+
+    /**
      * Buscar tenant por domínio
      */
     public function getTenantByDomain(string $domain): ?array

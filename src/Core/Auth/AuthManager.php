@@ -587,6 +587,52 @@ class AuthManager implements AuthManagerInterface
     }
 
     /**
+     * Registrar tenant existente para permitir alternância de contexto
+     */
+    public function registerExistingTenant(string $tenantId, array $tenantData = []): void
+    {
+        if ($this->credentialManager === null) {
+            throw new AuthenticationException('Credential manager not initialized');
+        }
+
+        // Se o contexto já existe, não fazer nada
+        if ($this->credentialManager->hasContext($tenantId)) {
+            return;
+        }
+
+        // Verificar se o tenant tem API key. Se não tiver, tentar obter ou provisionar
+        $apiKey = $tenantData['api_key'] ?? null;
+
+        if (!$apiKey) {
+            try {
+                // Tentar obter credenciais existentes primeiro
+                $credentials = $this->httpClient->get("tenants/{$tenantId}");
+                $credentialsResponse = json_decode($credentials->getBody()->getContents(), true);
+                $credentialsData = $credentialsResponse['data'] ?? $credentialsResponse;
+                $apiKey = $credentialsData['api_key'] ?? null;
+
+                // Se ainda não tem API key, pode ser que precise provisionar
+                // (deixar isso como responsabilidade manual por agora para evitar criação acidental)
+                if (!$apiKey) {
+                    error_log("Tenant registered without API key - manual provisioning may be required. Tenant ID: {$tenantId}");
+                }
+            } catch (\Exception $e) {
+                error_log("Could not retrieve tenant credentials during registration. Tenant ID: {$tenantId}, Error: " . $e->getMessage());
+            }
+        }
+
+        // Adicionar contexto do tenant existente
+        $this->credentialManager->addTenantContext($tenantId, [
+            'tenant_id' => $tenantId,
+            'name' => $tenantData['name'] ?? null,
+            'domain' => $tenantData['domain'] ?? $tenantData['custom_domain'] ?? null,
+            'subdomain' => $tenantData['subdomain'] ?? null,
+            'api_key' => $apiKey,
+            'created_at' => time()
+        ]);
+    }
+
+    /**
      * Alternar para tenant específico
      */
     public function switchToTenant(string $tenantId): void

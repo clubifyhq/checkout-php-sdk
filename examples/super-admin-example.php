@@ -82,6 +82,37 @@ function getOrCreateOrganization($sdk, $organizationData) {
             $tenantData = $existingTenant['data'] ?? $existingTenant;
             $tenantId = $tenantData['_id'] ?? $tenantData['id'] ?? 'unknown';
 
+            // Registrar tenant existente para permitir alternância de contexto
+            try {
+                echo "🔑 Registrando tenant existente para alternância de contexto...\n";
+                $sdk->registerExistingTenant($tenantId, $tenantData);
+                echo "✅ Tenant registrado com sucesso para alternância de contexto\n";
+
+                // Tentar provisionar credenciais se necessário
+                if (!isset($tenantData['api_key']) || empty($tenantData['api_key'])) {
+                    echo "🔧 Tenant sem API key detectado, tentando provisionar credenciais...\n";
+                    try {
+                        $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, [
+                            'admin_email' => $organizationData['admin_email'] ?? "admin@{$tenantId}.local",
+                            'admin_name' => $organizationData['admin_name'] ?? 'Tenant Administrator'
+                        ]);
+                        echo "✅ Credenciais de tenant provisionadas com sucesso\n";
+
+                        // Atualizar dados do tenant com as novas credenciais
+                        $provisionData = $provisionResult['data'] ?? $provisionResult;
+                        if (isset($provisionData['api_key'])) {
+                            $tenantData['api_key'] = $provisionData['api_key'];
+                            echo "   API Key: " . substr($provisionData['api_key'], 0, 20) . "...\n";
+                        }
+                    } catch (Exception $e) {
+                        echo "⚠️  Aviso: Não foi possível provisionar credenciais automaticamente: " . $e->getMessage() . "\n";
+                        echo "   Será necessário criar um usuário tenant_admin e API key manualmente\n";
+                    }
+                }
+            } catch (Exception $e) {
+                echo "⚠️  Aviso: Não foi possível registrar tenant para alternância: " . $e->getMessage() . "\n";
+            }
+
             return [
                 'organization' => ['id' => $tenantId],
                 'tenant' => ['id' => $tenantId] + $tenantData,
@@ -99,6 +130,37 @@ function getOrCreateOrganization($sdk, $organizationData) {
             // Ajustar para a estrutura da API: {success, data, message}
             $tenantData = $existingTenant['data'] ?? $existingTenant;
             $tenantId = $tenantData['_id'] ?? $tenantData['id'] ?? 'unknown';
+
+            // Registrar tenant existente para permitir alternância de contexto
+            try {
+                echo "🔑 Registrando tenant existente para alternância de contexto...\n";
+                $sdk->registerExistingTenant($tenantId, $tenantData);
+                echo "✅ Tenant registrado com sucesso para alternância de contexto\n";
+
+                // Tentar provisionar credenciais se necessário
+                if (!isset($tenantData['api_key']) || empty($tenantData['api_key'])) {
+                    echo "🔧 Tenant sem API key detectado, tentando provisionar credenciais...\n";
+                    try {
+                        $provisionResult = $sdk->superAdmin()->provisionTenantCredentials($tenantId, [
+                            'admin_email' => $organizationData['admin_email'] ?? "admin@{$tenantId}.local",
+                            'admin_name' => $organizationData['admin_name'] ?? 'Tenant Administrator'
+                        ]);
+                        echo "✅ Credenciais de tenant provisionadas com sucesso\n";
+
+                        // Atualizar dados do tenant com as novas credenciais
+                        $provisionData = $provisionResult['data'] ?? $provisionResult;
+                        if (isset($provisionData['api_key'])) {
+                            $tenantData['api_key'] = $provisionData['api_key'];
+                            echo "   API Key: " . substr($provisionData['api_key'], 0, 20) . "...\n";
+                        }
+                    } catch (Exception $e) {
+                        echo "⚠️  Aviso: Não foi possível provisionar credenciais automaticamente: " . $e->getMessage() . "\n";
+                        echo "   Será necessário criar um usuário tenant_admin e API key manualmente\n";
+                    }
+                }
+            } catch (Exception $e) {
+                echo "⚠️  Aviso: Não foi possível registrar tenant para alternância: " . $e->getMessage() . "\n";
+            }
 
             return [
                 'organization' => ['id' => $tenantId],

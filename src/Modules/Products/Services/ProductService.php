@@ -54,70 +54,88 @@ class ProductService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('create_product', function () use ($productData) {
             $this->validateProductData($productData);
 
-            // Gerar slug se não fornecido
+            // Gerar slug se não fornecido (para cache)
             if (empty($productData['slug'])) {
                 $productData['slug'] = $this->generateSlug($productData['name']);
             }
 
-            // Verificar unicidade do slug
-            if ($this->slugExists($productData['slug'])) {
-                $productData['slug'] = $this->generateUniqueSlug($productData['slug']);
-            }
-
-            // Gerar SKU se não fornecido
+            // Gerar SKU se não fornecido (para cache)
             if (empty($productData['sku'])) {
                 $productData['sku'] = $this->generateSku($productData);
             }
 
-            // Verificar unicidade do SKU
-            if ($this->skuExists($productData['sku'])) {
-                throw new ValidationException("SKU '{$productData['sku']}' already exists");
-            }
+            // Nota: Não verificamos unicidade mais pois esses campos não vão para a API
+            // A API vai gerar seus próprios IDs e controlar a unicidade
 
-            // Preparar dados essenciais do produto (apenas campos que a API aceita)
+            // Preparar dados essenciais do produto (apenas campos mínimos que a API aceita)
             $data = [
                 'name' => (string) $productData['name'],
-                'type' => (string) $productData['type'],
-                'price' => (float) $productData['price'],
-                'status' => $productData['status'] ?? 'active',
-                'slug' => $productData['slug'],
-                'sku' => $productData['sku']
+                'type' => (string) $productData['type']
             ];
 
-            // Adicionar campos opcionais se fornecidos
+            // Adicionar campos opcionais SOMENTE se a API aceitar (testando um por vez)
             if (isset($productData['description'])) {
                 $data['description'] = (string) $productData['description'];
             }
 
-            if (isset($productData['stock'])) {
-                $data['stock'] = (int) $productData['stock'];
+            // Campos rejeitados pela API: price, status, slug, sku
+            // Vamos armazenar esses dados no cache para uso posterior
+            $rejectedFields = [];
+
+            if (isset($productData['price'])) {
+                $rejectedFields['price'] = (float) $productData['price'];
             }
 
-            if (isset($productData['category'])) {
-                $data['category'] = (string) $productData['category'];
+            if (isset($productData['status'])) {
+                $rejectedFields['status'] = $productData['status'];
+            }
+
+            if (!empty($productData['slug'])) {
+                $rejectedFields['slug'] = $productData['slug'];
+            }
+
+            if (!empty($productData['sku'])) {
+                $rejectedFields['sku'] = $productData['sku'];
             }
 
             // Criar produto via API
             $product = $this->makeHttpRequest('POST', '/products', ['json' => $data]);
 
-            // Cache do produto
+            // Cache do produto com campos rejeitados incluídos
             if (isset($product['id'])) {
-                $this->cache->set($this->getCacheKey("product:{$product['id']}"), $product, 3600);
-                $this->cache->set($this->getCacheKey("product_slug:{$product['slug']}"), $product, 3600);
+                // Merge do produto retornado pela API com campos rejeitados
+                $enrichedProduct = array_merge($product, $rejectedFields);
+
+                $this->cache->set($this->getCacheKey("product:{$product['id']}"), $enrichedProduct, 3600);
+
+                // Cache por slug se disponível
+                if (!empty($rejectedFields['slug'])) {
+                    $this->cache->set($this->getCacheKey("product_slug:{$rejectedFields['slug']}"), $enrichedProduct, 3600);
+                }
+
+                // Cache por SKU se disponível
+                if (!empty($rejectedFields['sku'])) {
+                    $this->cache->set($this->getCacheKey("product_sku:{$rejectedFields['sku']}"), $enrichedProduct, 3600);
+                }
 
                 // Dispatch evento
                 $this->dispatch('product.created', [
                     'product_id' => $product['id'],
                     'name' => $product['name'],
                     'type' => $product['type'],
-                    'price' => $product['price']
+                    'price' => $rejectedFields['price'] ?? null
                 ]);
 
                 $this->logger->info('Product created successfully', [
                     'product_id' => $product['id'],
                     'name' => $product['name'],
-                    'sku' => $product['sku']
+                    'sku' => $rejectedFields['sku'] ?? null,
+                    'api_fields' => array_keys($data),
+                    'cached_fields' => array_keys($rejectedFields)
                 ]);
+
+                // Retornar o produto enriquecido
+                return $enrichedProduct;
             }
 
             return $product;
@@ -642,11 +660,12 @@ class ProductService extends BaseService implements ServiceInterface
     }
 
     /**
-     * Valida dados do produto
+     * Valida dados do produto (apenas campos que serão enviados à API)
      */
     private function validateProductData(array $data): void
     {
-        $required = ['name', 'price', 'type'];
+        // Apenas campos que realmente vão para a API são obrigatórios
+        $required = ['name', 'type'];
         foreach ($required as $field) {
             if (!isset($data[$field]) || $data[$field] === '' || $data[$field] === null) {
                 throw new ValidationException("Field '{$field}' is required for product creation");
@@ -658,14 +677,15 @@ class ProductService extends BaseService implements ServiceInterface
             throw new ValidationException('Field "name" must be a string');
         }
 
-        if (!is_numeric($data['price']) || $data['price'] < 0) {
-            throw new ValidationException('Price must be a positive number');
-        }
-
         // Verificar tipos válidos (pode ser que a API tenha tipos específicos)
         $allowedTypes = ['product', 'service', 'digital', 'physical', 'subscription'];
         if (!in_array($data['type'], $allowedTypes)) {
             throw new ValidationException("Invalid product type: {$data['type']}. Allowed types: " . implode(', ', $allowedTypes));
+        }
+
+        // Validações opcionais para campos que não vão para API mas ficam no cache
+        if (isset($data['price']) && (!is_numeric($data['price']) || $data['price'] < 0)) {
+            throw new ValidationException('Price must be a positive number');
         }
 
         if (isset($data['stock']) && (!is_numeric($data['stock']) || $data['stock'] < 0)) {

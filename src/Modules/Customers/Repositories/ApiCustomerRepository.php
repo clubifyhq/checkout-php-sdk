@@ -92,20 +92,16 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
         return $this->getCachedOrExecute(
             $this->getCacheKey("customer:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/email/{$fieldValue}");
-
-                if (!ResponseHelper::isSuccessful($response)) {
-                    if ($response->getStatusCode() === 404) {
+                try {
+                    $data = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/email/{$fieldValue}");
+                    return $data['customer'] ?? $data;
+                } catch (HttpException $e) {
+                    // If 404, customer not found - return null
+                    if ($e->getCode() === 404) {
                         return null;
                     }
-                    throw new HttpException(
-                        "Failed to find customer by email: " . "HTTP request failed",
-                        $response->getStatusCode()
-                    );
+                    throw $e;
                 }
-
-                $data = ResponseHelper::getData($response);
-                return $data['customer'] ?? $data;
             },
             300 // 5 minutes cache
         );
@@ -126,11 +122,11 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function updateStatus(string $customerId, string $status): bool
     {
         return $this->executeWithMetrics('update_customer_status', function () use ($customerId, $status) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/status", [
-                'status' => $status
-            ]);
+            try {
+                $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/status", [
+                    'status' => $status
+                ]);
 
-            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($customerId);
 
@@ -142,9 +138,9 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 ]);
 
                 return true;
+            } catch (HttpException $e) {
+                return false;
             }
-
-            return false;
         });
     }
 
@@ -161,16 +157,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                $response = $this->makeHttpRequest('GET', $endpoint);
-
-                if (!ResponseHelper::isSuccessful($response)) {
-                    throw new HttpException(
-                        "Failed to get customer stats: " . "HTTP request failed",
-                        $response->getStatusCode()
-                    );
-                }
-
-                return ResponseHelper::getData($response);
+                return $this->makeHttpRequest('GET', $endpoint);
             },
             600 // 10 minutes cache for stats
         );
@@ -182,18 +169,9 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function bulkCreate(array $customersData): array
     {
         return $this->executeWithMetrics('bulk_create_customers', function () use ($customersData) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
+            $result = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
                 'customers' => $customersData
             ]);
-
-            if (!ResponseHelper::isSuccessful($response)) {
-                throw new HttpException(
-                    "Failed to bulk create customers: " . "HTTP request failed",
-                    $response->getStatusCode()
-                );
-            }
-
-            $result = ResponseHelper::getData($response);
 
             // Dispatch event
             $this->eventDispatcher?->emit('Clubify.Checkout.Customer.BulkCreated', [
@@ -212,18 +190,9 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_customers', function () use ($updates) {
-            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
+            $result = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
-
-            if (!ResponseHelper::isSuccessful($response)) {
-                throw new HttpException(
-                    "Failed to bulk update customers: " . "HTTP request failed",
-                    $response->getStatusCode()
-                );
-            }
-
-            $result = ResponseHelper::getData($response);
 
             // Clear cache for updated customers
             foreach (array_keys($updates) as $customerId) {
@@ -256,16 +225,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                     'limit' => $limit,
                     'offset' => $offset
                 ]);
-                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
-
-                if (!ResponseHelper::isSuccessful($response)) {
-                    throw new HttpException(
-                        "Failed to search customers: " . "HTTP request failed",
-                        $response->getStatusCode()
-                    );
-                }
-
-                return ResponseHelper::getData($response);
+                return $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
             },
             180 // 3 minutes cache for search results
         );
@@ -277,9 +237,9 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function archive(string $customerId): bool
     {
         return $this->executeWithMetrics('archive_customer', function () use ($customerId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/archive");
+            try {
+                $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/archive");
 
-            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($customerId);
 
@@ -290,9 +250,9 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 ]);
 
                 return true;
+            } catch (HttpException $e) {
+                return false;
             }
-
-            return false;
         });
     }
 
@@ -302,9 +262,9 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function restore(string $customerId): bool
     {
         return $this->executeWithMetrics('restore_customer', function () use ($customerId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/restore");
+            try {
+                $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/restore");
 
-            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
                 $this->invalidateCache($customerId);
 
@@ -315,9 +275,9 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 ]);
 
                 return true;
+            } catch (HttpException $e) {
+                return false;
             }
-
-            return false;
         });
     }
 
@@ -336,19 +296,14 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint);
-
-                if (!ResponseHelper::isSuccessful($response)) {
-                    if ($response->getStatusCode() === 404) {
+                try {
+                    return $this->makeHttpRequest('GET', $endpoint);
+                } catch (HttpException $e) {
+                    if ($e->getCode() === 404) {
                         throw new CustomerNotFoundException("No history found for customer ID: {$customerId}");
                     }
-                    throw new HttpException(
-                        "Failed to get customer history: " . "HTTP request failed",
-                        $response->getStatusCode()
-                    );
+                    throw $e;
                 }
-
-                return ResponseHelper::getData($response);
             },
             900 // 15 minutes cache for history
         );
@@ -373,16 +328,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint);
-
-                if (!ResponseHelper::isSuccessful($response)) {
-                    throw new HttpException(
-                        "Failed to get related {$relationType}: " . "HTTP request failed",
-                        $response->getStatusCode()
-                    );
-                }
-
-                return ResponseHelper::getData($response);
+                return $this->makeHttpRequest('GET', $endpoint);
             },
             300 // 5 minutes cache for relationships
         );
@@ -394,19 +340,19 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function addRelationship(string $customerId, string $relatedId, string $relationType, array $metadata = []): bool
     {
         return $this->executeWithMetrics('add_relationship', function () use ($customerId, $relatedId, $relationType, $metadata) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$customerId}/{$relationType}", [
-                'related_id' => $relatedId,
-                'metadata' => $metadata
-            ]);
+            try {
+                $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$customerId}/{$relationType}", [
+                    'related_id' => $relatedId,
+                    'metadata' => $metadata
+                ]);
 
-            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("customer:related:{$customerId}:{$relationType}:*"));
 
                 return true;
+            } catch (HttpException $e) {
+                return false;
             }
-
-            return false;
         });
     }
 
@@ -416,16 +362,16 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function removeRelationship(string $customerId, string $relatedId, string $relationType): bool
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($customerId, $relatedId, $relationType) {
-            $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$customerId}/{$relationType}/{$relatedId}");
+            try {
+                $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$customerId}/{$relationType}/{$relatedId}");
 
-            if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("customer:related:{$customerId}:{$relationType}:*"));
 
                 return true;
+            } catch (HttpException $e) {
+                return false;
             }
-
-            return false;
         });
     }
 

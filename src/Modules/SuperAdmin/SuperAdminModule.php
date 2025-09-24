@@ -1116,19 +1116,19 @@ class SuperAdminModule implements ModuleInterface
         $keyData = [
             'name' => $options['api_key_name'] ?? 'Tenant Admin API Key',
             'description' => $options['api_key_description'] ?? 'API key for tenant admin operations',
+            'type' => $options['api_key_type'] ?? 'production',
             'environment' => $options['environment'] ?? 'production',
             'permissions' => [
-                'integration:advanced',
-                'customer:read',
-                'customer:write',
-                'analytics:read',
-                'user:write',
-                'api-key:write',
-                'tenant:write',
-                'products:read',
-                'products:write',
-                'checkout:read',
-                'checkout:write'
+                'checkout.read',
+                'checkout.write',
+                'products.read',
+                'orders.read',
+                'orders.write',
+                'payments.read',
+                'payments.write',
+                'customers.read',
+                'customers.write',
+                'webhooks.read'
             ]
         ];
 

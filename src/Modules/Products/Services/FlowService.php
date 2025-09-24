@@ -532,13 +532,29 @@ class FlowService extends BaseService implements ServiceInterface
     }
 
     /**
-     * Busca flow por slug via API
+     * Busca flow por slug via API (usando search)
      */
     private function fetchFlowBySlug(string $slug): ?array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/sales-flows/slug/{$slug}");
-            return ResponseHelper::getData($response);
+            // Usar o endpoint de listagem com busca de texto
+            $response = $this->makeHttpRequest('GET', '/sales-flows', [
+                'query' => ['q' => $slug, 'limit' => 50] // Busca por texto, limite maior para filtrar depois
+            ]);
+
+            $data = ResponseHelper::getData($response);
+            $flows = $data['data'] ?? $data ?? [];
+
+            // Retorna o primeiro flow que corresponde exatamente ao slug
+            if (is_array($flows) && !empty($flows)) {
+                foreach ($flows as $flow) {
+                    if (isset($flow['slug']) && $flow['slug'] === $slug) {
+                        return $flow;
+                    }
+                }
+            }
+
+            return null;
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

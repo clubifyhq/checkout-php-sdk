@@ -477,13 +477,29 @@ class ProductService extends BaseService implements ServiceInterface
     }
 
     /**
-     * Busca produto por slug via API
+     * Busca produto por slug via API (usando search)
      */
     private function fetchProductBySlug(string $slug): ?array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/products/slug/{$slug}");
-            return ResponseHelper::getData($response);
+            // Usar o endpoint de search com busca de texto
+            $response = $this->makeHttpRequest('GET', '/products', [
+                'query' => ['q' => $slug, 'limit' => 50] // Busca por texto, limite maior para filtrar depois
+            ]);
+
+            $data = ResponseHelper::getData($response);
+            $products = $data['data'] ?? $data ?? [];
+
+            // Retorna o primeiro produto que corresponde exatamente ao slug
+            if (is_array($products) && !empty($products)) {
+                foreach ($products as $product) {
+                    if (isset($product['slug']) && $product['slug'] === $slug) {
+                        return $product;
+                    }
+                }
+            }
+
+            return null;
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -493,13 +509,29 @@ class ProductService extends BaseService implements ServiceInterface
     }
 
     /**
-     * Busca produto por SKU via API
+     * Busca produto por SKU via API (usando search)
      */
     private function fetchProductBySku(string $sku): ?array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/products/sku/{$sku}");
-            return ResponseHelper::getData($response);
+            // Usar o endpoint de search com busca de texto
+            $response = $this->makeHttpRequest('GET', '/products', [
+                'query' => ['q' => $sku, 'limit' => 50] // Busca por texto, limite maior para filtrar depois
+            ]);
+
+            $data = ResponseHelper::getData($response);
+            $products = $data['data'] ?? $data ?? [];
+
+            // Retorna o primeiro produto que corresponde exatamente ao SKU
+            if (is_array($products) && !empty($products)) {
+                foreach ($products as $product) {
+                    if (isset($product['sku']) && $product['sku'] === $sku) {
+                        return $product;
+                    }
+                }
+            }
+
+            return null;
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

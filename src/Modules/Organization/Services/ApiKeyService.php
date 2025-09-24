@@ -47,48 +47,42 @@ class ApiKeyService extends BaseService
     }
 
     /**
-     * Gera API keys iniciais para uma organização
+     * Gera API keys iniciais para um tenant
      */
-    public function generateInitialKeys(string $organizationId): array
+    public function generateInitialKeys(string $tenantId): array
     {
-        return $this->executeWithMetrics('generate_initial_keys', function () use ($organizationId) {
+        return $this->executeWithMetrics('generate_initial_keys', function () use ($tenantId) {
             $keys = [];
 
             // Gerar chave de produção
-            $keys['production'] = $this->generateApiKey($organizationId, [
+            $keys['production'] = $this->generateApiKey($tenantId, [
                 'name' => 'Production Key',
-                'type' => 'production',
-                'permissions' => $this->getProductionPermissions(),
-                'rate_limit' => 10000,
-                'expires_at' => null // Não expira
+                'environment' => 'production',
+                'permissions' => $this->getProductionPermissions()
             ]);
 
             // Gerar chave de teste
-            $keys['test'] = $this->generateApiKey($organizationId, [
+            $keys['test'] = $this->generateApiKey($tenantId, [
                 'name' => 'Test Key',
-                'type' => 'test',
-                'permissions' => $this->getTestPermissions(),
-                'rate_limit' => 1000,
-                'expires_at' => null // Não expira
+                'environment' => 'test',
+                'permissions' => $this->getTestPermissions()
             ]);
 
             // Gerar chave de sandbox
-            $keys['sandbox'] = $this->generateApiKey($organizationId, [
+            $keys['sandbox'] = $this->generateApiKey($tenantId, [
                 'name' => 'Sandbox Key',
-                'type' => 'sandbox',
-                'permissions' => $this->getSandboxPermissions(),
-                'rate_limit' => 100,
-                'expires_at' => date('Y-m-d H:i:s', strtotime('+1 year'))
+                'environment' => 'sandbox',
+                'permissions' => $this->getSandboxPermissions()
             ]);
 
             // Dispatch evento
             $this->dispatch('api_keys.initial_generated', [
-                'organization_id' => $organizationId,
+                'tenant_id' => $tenantId,
                 'keys_generated' => array_keys($keys)
             ]);
 
             $this->logger->info('Initial API keys generated', [
-                'organization_id' => $organizationId,
+                'tenant_id' => $tenantId,
                 'keys_count' => count($keys)
             ]);
 
@@ -99,25 +93,28 @@ class ApiKeyService extends BaseService
     /**
      * Gera uma nova API key
      */
-    public function generateApiKey(string $organizationId, array $keyData): array
+    public function generateApiKey(string $tenantId, array $keyData): array
     {
-        return $this->executeWithMetrics('generate_api_key', function () use ($organizationId, $keyData) {
+        return $this->executeWithMetrics('generate_api_key', function () use ($tenantId, $keyData) {
             $this->validateApiKeyData($keyData);
 
-            // Preparar dados da chave
-            $data = array_merge($keyData, [
-                'organization_id' => $organizationId,
-                'key' => $this->generateSecureKey($keyData['type'] ?? 'standard'),
-                'secret' => $this->generateSecureSecret(),
-                'status' => 'active',
-                'created_at' => date('Y-m-d H:i:s'),
-                'last_used_at' => null,
-                'usage_count' => 0,
-                'settings' => $this->getDefaultKeySettings()
-            ]);
+            // Preparar dados da chave - apenas campos aceitos pela API
+            $data = [
+                'name' => $keyData['name'] ?? 'API Key',
+                'description' => $keyData['description'] ?? 'Generated API key',
+                'permissions' => $keyData['permissions'] ?? ['checkout.read']
+            ];
 
-            // Criar API key via API
-            $response = $this->makeHttpRequest('POST', 'api-keys', ['json' => $data]);
+            // Usar environment baseado no keyData ou configuração do SDK
+            $data['environment'] = $keyData['environment'] ?? $this->config->getEnvironment();
+
+            // Criar API key via API usando header X-Tenant-Id
+            $response = $this->makeHttpRequest('POST', 'api-keys', [
+                'json' => $data,
+                'headers' => [
+                    'X-Tenant-Id' => $tenantId
+                ]
+            ]);
             $apiKey = $response;
 
             if (!$apiKey) {
@@ -125,21 +122,25 @@ class ApiKeyService extends BaseService
             }
 
             // Cache da chave
-            $this->cache->set($this->getCacheKey("api_key:{$apiKey['id']}"), $apiKey, 7200);
-            $this->cache->set($this->getCacheKey("api_key_by_key:{$apiKey['key']}"), $apiKey, 7200);
+            if (isset($apiKey['id'])) {
+                $this->cache->set($this->getCacheKey("api_key:{$apiKey['id']}"), $apiKey, 7200);
+            }
+            if (isset($apiKey['key'])) {
+                $this->cache->set($this->getCacheKey("api_key_by_key:{$apiKey['key']}"), $apiKey, 7200);
+            }
 
             // Dispatch evento
             $this->dispatch('api_key.generated', [
-                'api_key_id' => $apiKey['id'],
-                'organization_id' => $organizationId,
-                'type' => $apiKey['type'],
-                'permissions' => $apiKey['permissions']
+                'api_key_id' => $apiKey['id'] ?? null,
+                'tenant_id' => $tenantId,
+                'type' => $apiKey['type'] ?? 'unknown',
+                'permissions' => $apiKey['permissions'] ?? []
             ]);
 
             $this->logger->info('API key generated successfully', [
-                'api_key_id' => $apiKey['id'],
-                'organization_id' => $organizationId,
-                'type' => $apiKey['type']
+                'api_key_id' => $apiKey['id'] ?? null,
+                'tenant_id' => $tenantId,
+                'type' => $apiKey['type'] ?? 'unknown'
             ]);
 
             return $apiKey;
@@ -171,14 +172,27 @@ class ApiKeyService extends BaseService
     }
 
     /**
-     * Lista API keys de uma organização
+     * Lista API keys de um tenant
+     */
+    public function getApiKeysByTenant(string $tenantId): array
+    {
+        return $this->executeWithMetrics('get_api_keys_by_tenant', function () use ($tenantId) {
+            $response = $this->makeHttpRequest('GET', "/api-keys", [
+                'headers' => [
+                    'X-Tenant-Id' => $tenantId
+                ]
+            ]);
+            return $response ?? [];
+        });
+    }
+
+    /**
+     * @deprecated Use getApiKeysByTenant instead
      */
     public function getApiKeysByOrganization(string $organizationId): array
     {
-        return $this->executeWithMetrics('get_api_keys_by_organization', function () use ($organizationId) {
-            $response = $this->makeHttpRequest('GET', "/api-keys");
-            return $response ?? [];
-        });
+        // Para compatibilidade, assumir que organizationId é tenantId
+        return $this->getApiKeysByTenant($organizationId);
     }
 
     /**

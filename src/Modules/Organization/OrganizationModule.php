@@ -575,6 +575,7 @@ class OrganizationModule implements ModuleInterface
     {
         return $this->apiKey()->generateApiKey($organizationId, [
             'name' => 'Organization Default Key',
+            'type' => 'organization_default',
             'permissions' => ['read', 'write', 'admin']
         ]);
     }

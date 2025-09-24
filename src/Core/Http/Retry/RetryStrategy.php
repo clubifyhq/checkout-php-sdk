@@ -104,7 +104,7 @@ class RetryStrategy
      */
     private function calculateExponentialDelay(int $attempt): int
     {
-        return $this->baseDelay * (2 ** ($attempt - 1));
+        return (int) ($this->baseDelay * (2 ** ($attempt - 1)));
     }
 
     /**

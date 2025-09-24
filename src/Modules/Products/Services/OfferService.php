@@ -547,13 +547,29 @@ class OfferService extends BaseService implements ServiceInterface
     }
 
     /**
-     * Busca oferta por slug via API
+     * Busca oferta por slug via API (usando search)
      */
     private function fetchOfferBySlug(string $slug): ?array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/offers/slug/{$slug}");
-            return ResponseHelper::getData($response);
+            // Usar o endpoint de listagem com busca de texto
+            $response = $this->makeHttpRequest('GET', '/offers', [
+                'query' => ['q' => $slug, 'limit' => 50] // Busca por texto, limite maior para filtrar depois
+            ]);
+
+            $data = ResponseHelper::getData($response);
+            $offers = $data['data'] ?? $data ?? [];
+
+            // Retorna a primeira oferta que corresponde exatamente ao slug
+            if (is_array($offers) && !empty($offers)) {
+                foreach ($offers as $offer) {
+                    if (isset($offer['slug']) && $offer['slug'] === $slug) {
+                        return $offer;
+                    }
+                }
+            }
+
+            return null;
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;

@@ -273,7 +273,7 @@ class OrganizationSetupRollbackService extends BaseService
             case 'api_keys':
                 return [
                     'step' => 'revoke_api_keys',
-                    'endpoint' => "/organizations/{$organizationId}/api-keys",
+                    'endpoint' => "/api-keys",
                     'method' => 'DELETE',
                     'description' => 'Revoke API keys',
                     'required' => true

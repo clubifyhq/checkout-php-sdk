@@ -55,9 +55,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
         return $this->getCachedOrExecute(
             $this->getCacheKey("user:email:{$email}"),
             function () use ($email) {
-                $response = $this->httpClient->get("users/search/advanced", ['email' => $email]);
-
-                $data = \Clubify\Checkout\Core\Http\ResponseHelper::getDataIfSuccessful($response);
+                $data = $this->makeHttpRequest('GET', "users/search/advanced", ['email' => $email]);
                 if (!$data) {
                     return null;
                 }
@@ -83,7 +81,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     public function updateProfile(string $userId, array $profileData): array
     {
         return $this->executeWithMetrics('update_user_profile', function () use ($userId, $profileData) {
-            $response = $this->httpClient->patch("users/{$userId}/profile", $profileData);
+            $response = $this->makeHttpRequest('PATCH', "users/{$userId}/profile", $profileData);
 
             if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
@@ -114,7 +112,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     public function changePassword(string $userId, string $newPassword): bool
     {
         return $this->executeWithMetrics('change_password', function () use ($userId, $newPassword) {
-            $response = $this->httpClient->patch("users/{$userId}/password", [
+            $response = $this->makeHttpRequest('PATCH', "users/{$userId}/password", [
                 'password' => $newPassword
             ]);
 
@@ -155,7 +153,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
         return $this->getCachedOrExecute(
             $this->getCacheKey("user_roles:{$userId}"),
             function () use ($userId) {
-                $response = $this->httpClient->get("users/{$userId}/roles");
+                $response = $this->makeHttpRequest('GET', "users/{$userId}/roles");
 
                 if (ResponseHelper::isSuccessful($response)) {
                     return ResponseHelper::getData($response);
@@ -173,7 +171,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     public function assignRole(string $userId, string $role): bool
     {
         return $this->executeWithMetrics('assign_role', function () use ($userId, $role) {
-            $response = $this->httpClient->post("users/{$userId}/roles", ['role' => $role]);
+            $response = $this->makeHttpRequest('POST', "users/{$userId}/roles", ['role' => $role]);
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate roles cache
@@ -198,7 +196,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     public function removeRole(string $userId, string $role): bool
     {
         return $this->executeWithMetrics('remove_role', function () use ($userId, $role) {
-            $response = $this->httpClient->delete("users/{$userId}/roles/{$role}");
+            $response = $this->makeHttpRequest('DELETE', "users/{$userId}/roles/{$role}");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate roles cache
@@ -262,7 +260,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
                     $filters['tenant_id'] = $tenantId;
                 }
 
-                $response = $this->httpClient->get("users/by-role?" . http_build_query($filters));
+                $response = $this->makeHttpRequest('GET', "users/by-role?" . http_build_query($filters));
                 return ResponseHelper::isSuccessful($response) ? ResponseHelper::getData($response) : [];
             },
             300 // 5 minutes cache
@@ -280,7 +278,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
             $cacheKey,
             function () use ($tenantId) {
                 $filters = $tenantId ? ['tenant_id' => $tenantId] : [];
-                $response = $this->httpClient->get("users/stats?" . http_build_query($filters));
+                $response = $this->makeHttpRequest('GET', "users/stats?" . http_build_query($filters));
 
                 if (ResponseHelper::isSuccessful($response)) {
                     return ResponseHelper::getData($response);
@@ -303,7 +301,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     public function verifyPassword(string $email, string $password): bool
     {
         return $this->executeWithMetrics('verify_password', function () use ($email, $password) {
-            $response = $this->httpClient->post("users/verify-password", [
+            $response = $this->makeHttpRequest('POST', "users/verify-password", [
                 'email' => $email,
                 'password' => $password
             ]);
@@ -323,7 +321,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     private function updateUserStatus(string $userId, string $status): bool
     {
         return $this->executeWithMetrics('update_user_status', function () use ($userId, $status) {
-            $response = $this->httpClient->patch("users/{$userId}", ['status' => $status]);
+            $response = $this->makeHttpRequest('PATCH', "users/{$userId}", ['status' => $status]);
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate user cache
@@ -359,4 +357,55 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
             return false;
         }
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

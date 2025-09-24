@@ -9,6 +9,7 @@ use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Exceptions\HttpException;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Implementação base para Repository Pattern
@@ -43,7 +44,7 @@ abstract class BaseRepository implements RepositoryInterface
     {
         try {
             $url = $this->buildUrl("/{$id}");
-            $response = $this->httpClient->get($url);
+            $response = $this->makeHttpRequest('GET', $url);
 
             if ($response->getStatusCode() === 404) {
                 return null;
@@ -68,7 +69,7 @@ abstract class BaseRepository implements RepositoryInterface
         }
 
         $url = $this->buildUrl('', ['ids' => implode(',', $ids)]);
-        $response = $this->httpClient->get($url);
+        $response = $this->makeHttpRequest('GET', $url);
 
         return $response->getData() ?? [];
     }
@@ -83,7 +84,7 @@ abstract class BaseRepository implements RepositoryInterface
             'offset' => $offset
         ]);
 
-        $response = $this->httpClient->get($url);
+        $response = $this->makeHttpRequest('GET', $url);
         return $response->getData() ?? [];
     }
 
@@ -98,7 +99,7 @@ abstract class BaseRepository implements RepositoryInterface
         ]);
 
         $url = $this->buildUrl('', $params);
-        $response = $this->httpClient->get($url);
+        $response = $this->makeHttpRequest('GET', $url);
 
         return $response->getData() ?? [];
     }
@@ -118,7 +119,7 @@ abstract class BaseRepository implements RepositoryInterface
     public function create(array $data): array
     {
         $url = $this->buildUrl();
-        $response = $this->httpClient->post($url, $data);
+        $response = $this->makeHttpRequest('POST', $url, $data);
 
         return $response->getData();
     }
@@ -129,7 +130,7 @@ abstract class BaseRepository implements RepositoryInterface
     public function update(string $id, array $data): array
     {
         $url = $this->buildUrl("/{$id}");
-        $response = $this->httpClient->put($url, $data);
+        $response = $this->makeHttpRequest('PUT', $url, $data);
 
         return $response->getData();
     }
@@ -141,7 +142,7 @@ abstract class BaseRepository implements RepositoryInterface
     {
         try {
             $url = $this->buildUrl("/{$id}");
-            $response = $this->httpClient->delete($url);
+            $response = $this->makeHttpRequest('DELETE', $url);
 
             return $response->getStatusCode() === 204 || $response->getStatusCode() === 200;
         } catch (HttpException $e) {
@@ -159,7 +160,7 @@ abstract class BaseRepository implements RepositoryInterface
     {
         try {
             $url = $this->buildUrl("/{$id}");
-            $response = $this->httpClient->head($url);
+            $response = $this->httpClient->request('HEAD', $url);
 
             return $response->getStatusCode() === 200;
         } catch (HttpException $e) {
@@ -177,7 +178,7 @@ abstract class BaseRepository implements RepositoryInterface
     {
         $params = array_merge($criteria, ['count' => true]);
         $url = $this->buildUrl('/count', $params);
-        $response = $this->httpClient->get($url);
+        $response = $this->makeHttpRequest('GET', $url);
 
         $data = $response->getData();
         return $data['count'] ?? 0;
@@ -196,7 +197,7 @@ abstract class BaseRepository implements RepositoryInterface
         ];
 
         $url = $this->buildUrl('/search');
-        $response = $this->httpClient->post($url, $params);
+        $response = $this->makeHttpRequest('POST', $url, $params);
 
         return $response->getData() ?? [];
     }
@@ -230,4 +231,55 @@ abstract class BaseRepository implements RepositoryInterface
      * Obtém o endpoint específico do repository
      */
     abstract protected function getEndpoint(): string;
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

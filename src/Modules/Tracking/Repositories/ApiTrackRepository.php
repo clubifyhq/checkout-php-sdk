@@ -91,7 +91,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
         return $this->getCachedOrExecute(
             $this->getCacheKey("track:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
                     'email' => $fieldValue
                 ]);
 
@@ -127,7 +127,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function updateStatus(string $trackId, string $status): bool
     {
         return $this->executeWithMetrics('update_track_status', function () use ($trackId, $status) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$trackId}/status", [
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$trackId}/status", [
                 'status' => $status
             ]);
 
@@ -162,9 +162,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                $response = $this->httpClient->get($endpoint);
-
-                if (!ResponseHelper::isSuccessful($response)) {
+                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
                     throw new HttpException(
                         "Failed to get track stats: " . "HTTP request failed",
                         $response->getStatusCode()
@@ -183,7 +181,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function bulkCreate(array $tracksData): array
     {
         return $this->executeWithMetrics('bulk_create_tracks', function () use ($tracksData) {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
                 'tracks' => $tracksData
             ]);
 
@@ -213,7 +211,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_tracks', function () use ($updates) {
-            $response = $this->httpClient->put("{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
 
@@ -253,7 +251,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
             $cacheKey,
             function () use ($criteria, $options) {
                 $payload = array_merge(['criteria' => $criteria], $options);
-                $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
+                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -274,7 +272,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function archive(string $trackId): bool
     {
         return $this->executeWithMetrics('archive_track', function () use ($trackId) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$trackId}/archive");
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$trackId}/archive");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -299,7 +297,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function restore(string $trackId): bool
     {
         return $this->executeWithMetrics('restore_track', function () use ($trackId) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$trackId}/restore");
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$trackId}/restore");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -333,9 +331,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->httpClient->get($endpoint);
-
-                if (!ResponseHelper::isSuccessful($response)) {
+                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
                     if ($response->getStatusCode() === 404) {
                         throw new TrackNotFoundException("No history found for track ID: {$trackId}");
                     }
@@ -370,9 +366,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->httpClient->get($endpoint);
-
-                if (!ResponseHelper::isSuccessful($response)) {
+                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
                     throw new HttpException(
                         "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
@@ -391,7 +385,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function addRelationship(string $trackId, string $relatedId, string $relationType, array $metadata = []): bool
     {
         return $this->executeWithMetrics('add_relationship', function () use ($trackId, $relatedId, $relationType, $metadata) {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/{$trackId}/{$relationType}", [
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$trackId}/{$relationType}", [
                 'related_id' => $relatedId,
                 'metadata' => $metadata
             ]);
@@ -413,7 +407,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function removeRelationship(string $trackId, string $relatedId, string $relationType): bool
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($trackId, $relatedId, $relationType) {
-            $response = $this->httpClient->delete("{$this->getEndpoint()}/{$trackId}/{$relationType}/{$relatedId}");
+            $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$trackId}/{$relationType}/{$relatedId}");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
@@ -477,4 +471,55 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
 
         $this->logger->info('All track caches cleared');
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

@@ -96,6 +96,18 @@ class EncryptedFileStorage implements CredentialStorageInterface
         } catch (Exception $e) {
             // Log error but don't expose sensitive information
             error_log("Failed to retrieve credentials for context '{$context}': " . $e->getMessage());
+
+            // If decryption failed, the file might be corrupted or encrypted with an old key
+            // Remove it to allow fresh credential storage
+            if (str_contains($e->getMessage(), 'Decryption failed')) {
+                try {
+                    $this->secureDelete($filePath);
+                    error_log("Removed corrupted credential file for context '{$context}'");
+                } catch (Exception $deleteException) {
+                    error_log("Failed to remove corrupted credential file for context '{$context}': " . $deleteException->getMessage());
+                }
+            }
+
             return null;
         }
     }

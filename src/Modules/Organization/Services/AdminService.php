@@ -75,7 +75,7 @@ class AdminService extends BaseService
             }
 
             // Criar admin via API
-            $response = $this->httpClient->post('/admins', $data);
+            $response = $this->makeHttpRequest('POST', '/admins', $data);
             $admin = ResponseHelper::getData($response);
 
             // Cache do admin
@@ -130,7 +130,7 @@ class AdminService extends BaseService
     public function getAdminsByOrganization(string $organizationId): array
     {
         return $this->executeWithMetrics('get_admins_by_organization', function () use ($organizationId) {
-            $response = $this->httpClient->get("/organizations/{$organizationId}/admins");
+            $response = $this->makeHttpRequest('GET', "/organizations/{$organizationId}/admins");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -151,7 +151,7 @@ class AdminService extends BaseService
                 }
             }
 
-            $response = $this->httpClient->put("/admins/{$adminId}", $data);
+            $response = $this->makeHttpRequest('PUT', "/admins/{$adminId}", $data);
             $admin = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -175,7 +175,7 @@ class AdminService extends BaseService
         return $this->executeWithMetrics('update_admin_permissions', function () use ($adminId, $permissions) {
             $this->validatePermissions($permissions);
 
-            $response = $this->httpClient->put("/admins/{$adminId}/permissions", [
+            $response = $this->makeHttpRequest('PUT', "/admins/{$adminId}/permissions", [
                 'permissions' => $permissions
             ]);
 
@@ -204,7 +204,7 @@ class AdminService extends BaseService
 
             $permissions = $this->getDefaultPermissions($newRole);
 
-            $response = $this->httpClient->put("/admins/{$adminId}/role", [
+            $response = $this->makeHttpRequest('PUT', "/admins/{$adminId}/role", [
                 'role' => $newRole,
                 'permissions' => $permissions
             ]);
@@ -256,7 +256,7 @@ class AdminService extends BaseService
     {
         return $this->executeWithMetrics('force_password_reset', function () use ($adminId) {
             try {
-                $response = $this->httpClient->post("/admins/{$adminId}/force-password-reset", []);
+                $response = $this->makeHttpRequest('POST', "/admins/{$adminId}/force-password-reset", []);
 
                 // Dispatch evento
                 $this->dispatch('admin.password_reset_forced', [
@@ -281,7 +281,7 @@ class AdminService extends BaseService
     {
         return $this->executeWithMetrics('send_admin_invitation', function () use ($adminId) {
             try {
-                $response = $this->httpClient->post("/admins/{$adminId}/send-invitation", []);
+                $response = $this->makeHttpRequest('POST', "/admins/{$adminId}/send-invitation", []);
 
                 // Dispatch evento
                 $this->dispatch('admin.invitation_sent', [
@@ -334,7 +334,7 @@ class AdminService extends BaseService
     public function getActiveSessions(string $adminId): array
     {
         return $this->executeWithMetrics('get_admin_active_sessions', function () use ($adminId) {
-            $response = $this->httpClient->get("/admins/{$adminId}/sessions");
+            $response = $this->makeHttpRequest('GET', "/admins/{$adminId}/sessions");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -346,7 +346,7 @@ class AdminService extends BaseService
     {
         return $this->executeWithMetrics('revoke_admin_sessions', function () use ($adminId) {
             try {
-                $response = $this->httpClient->delete("/admins/{$adminId}/sessions");
+                $response = $this->makeHttpRequest('DELETE', "/admins/{$adminId}/sessions");
 
                 // Dispatch evento
                 $this->dispatch('admin.sessions_revoked', [
@@ -370,7 +370,7 @@ class AdminService extends BaseService
     public function getActivityLogs(string $adminId, int $limit = 50): array
     {
         return $this->executeWithMetrics('get_admin_activity_logs', function () use ($adminId, $limit) {
-            $response = $this->httpClient->get("/admins/{$adminId}/activity-logs", [
+            $response = $this->makeHttpRequest('GET', "/admins/{$adminId}/activity-logs", [
                 'limit' => $limit
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -383,7 +383,7 @@ class AdminService extends BaseService
     public function emailExists(string $email): bool
     {
         try {
-            $response = $this->httpClient->get("/admins/email/{$email}/exists");
+            $response = $this->makeHttpRequest('GET', "/admins/email/{$email}/exists");
             $data = ResponseHelper::getData($response);
             return $data['exists'] ?? false;
         } catch (HttpException $e) {
@@ -400,7 +400,7 @@ class AdminService extends BaseService
     private function fetchAdminById(string $adminId): ?array
     {
         try {
-            $response = $this->httpClient->get("/admins/{$adminId}");
+            $response = $this->makeHttpRequest('GET', "/admins/{$adminId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -416,7 +416,7 @@ class AdminService extends BaseService
     private function fetchAdminByEmail(string $email): ?array
     {
         try {
-            $response = $this->httpClient->get("/admins/email/{$email}");
+            $response = $this->makeHttpRequest('GET', "/admins/email/{$email}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -433,7 +433,7 @@ class AdminService extends BaseService
     {
         return $this->executeWithMetrics("update_admin_status_{$status}", function () use ($adminId, $status) {
             try {
-                $response = $this->httpClient->put("/admins/{$adminId}/status", [
+                $response = $this->makeHttpRequest('PUT', "/admins/{$adminId}/status", [
                     'status' => $status
                 ]);
 
@@ -598,4 +598,55 @@ class AdminService extends BaseService
     {
         return bin2hex(random_bytes(8));
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

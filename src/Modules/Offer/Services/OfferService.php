@@ -74,7 +74,7 @@ class OfferService extends BaseService implements ServiceInterface
             ]);
 
             // Criar oferta via API
-            $response = $this->httpClient->post('/offers', $data);
+            $response = $this->makeHttpRequest('POST', '/offers', $data);
             $offer = ResponseHelper::getData($response);
 
             // Cache da oferta
@@ -137,7 +137,7 @@ class OfferService extends BaseService implements ServiceInterface
                 'limit' => $limit
             ]);
 
-            $response = $this->httpClient->get('/offers', [
+            $response = $this->makeHttpRequest('GET', '/offers', [
                 'query' => $queryParams
             ]);
 
@@ -169,7 +169,7 @@ class OfferService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $response = $this->httpClient->put("/offers/{$offerId}", $data);
+            $response = $this->makeHttpRequest('PUT', "/offers/{$offerId}", $data);
             $offer = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -193,7 +193,7 @@ class OfferService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('delete_offer', function () use ($offerId) {
             try {
-                $response = $this->httpClient->delete("/offers/{$offerId}");
+                $response = $this->makeHttpRequest('DELETE', "/offers/{$offerId}");
 
                 // Invalidar cache
                 $this->invalidateOfferCache($offerId);
@@ -223,7 +223,7 @@ class OfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('update_offer_theme', function () use ($offerId, $themeConfig) {
             $this->validateThemeConfig($themeConfig);
 
-            $response = $this->httpClient->put("/offers/{$offerId}/config/theme", [
+            $response = $this->makeHttpRequest('PUT', "/offers/{$offerId}/config/theme", [
                 'theme' => $themeConfig
             ]);
 
@@ -251,7 +251,7 @@ class OfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('update_offer_layout', function () use ($offerId, $layoutConfig) {
             $this->validateLayoutConfig($layoutConfig);
 
-            $response = $this->httpClient->put("/offers/{$offerId}/config/layout", [
+            $response = $this->makeHttpRequest('PUT', "/offers/{$offerId}/config/layout", [
                 'layout' => $layoutConfig
             ]);
 
@@ -277,7 +277,7 @@ class OfferService extends BaseService implements ServiceInterface
     public function getUpsells(string $offerId): array
     {
         return $this->executeWithMetrics('get_offer_upsells', function () use ($offerId) {
-            $response = $this->httpClient->get("/offers/{$offerId}/upsells");
+            $response = $this->makeHttpRequest('GET', "/offers/{$offerId}/upsells");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -291,7 +291,7 @@ class OfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('add_offer_upsell', function () use ($offerId, $upsellData) {
             $this->validateUpsellData($upsellData);
 
-            $response = $this->httpClient->post("/offers/{$offerId}/upsells", $upsellData);
+            $response = $this->makeHttpRequest('POST', "/offers/{$offerId}/upsells", $upsellData);
             $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache da oferta
@@ -315,7 +315,7 @@ class OfferService extends BaseService implements ServiceInterface
     public function getSubscriptionPlans(string $offerId): array
     {
         return $this->executeWithMetrics('get_offer_subscription_plans', function () use ($offerId) {
-            $response = $this->httpClient->get("/offers/{$offerId}/subscription/plans");
+            $response = $this->makeHttpRequest('GET', "/offers/{$offerId}/subscription/plans");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -329,7 +329,7 @@ class OfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('add_offer_subscription_plan', function () use ($offerId, $planData) {
             $this->validateSubscriptionPlanData($planData);
 
-            $response = $this->httpClient->post("/offers/{$offerId}/subscription/plans", $planData);
+            $response = $this->makeHttpRequest('POST', "/offers/{$offerId}/subscription/plans", $planData);
             $plan = ResponseHelper::getData($response);
 
             // Invalidar cache da oferta
@@ -354,7 +354,7 @@ class OfferService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('get_public_offer', function () use ($slug) {
             try {
-                $response = $this->httpClient->get("/offers/public/{$slug}");
+                $response = $this->makeHttpRequest('GET', "/offers/public/{$slug}");
                 return ResponseHelper::getData($response);
             } catch (HttpException $e) {
                 if ($e->getStatusCode() === 404) {
@@ -395,7 +395,7 @@ class OfferService extends BaseService implements ServiceInterface
     public function getStats(string $offerId): array
     {
         return $this->executeWithMetrics('get_offer_stats', function () use ($offerId) {
-            $response = $this->httpClient->get("/offers/{$offerId}/stats");
+            $response = $this->makeHttpRequest('GET', "/offers/{$offerId}/stats");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -406,7 +406,7 @@ class OfferService extends BaseService implements ServiceInterface
     public function duplicate(string $offerId, array $overrideData = []): array
     {
         return $this->executeWithMetrics('duplicate_offer', function () use ($offerId, $overrideData) {
-            $response = $this->httpClient->post("/offers/{$offerId}/duplicate", $overrideData);
+            $response = $this->makeHttpRequest('POST', "/offers/{$offerId}/duplicate", $overrideData);
             $offer = ResponseHelper::getData($response);
 
             // Dispatch evento
@@ -425,7 +425,7 @@ class OfferService extends BaseService implements ServiceInterface
     public function count(array $filters = []): int
     {
         try {
-            $response = $this->httpClient->get('/offers/count', [
+            $response = $this->makeHttpRequest('GET', '/offers/count', [
                 'query' => $filters
             ]);
             $data = ResponseHelper::getData($response);
@@ -540,7 +540,7 @@ class OfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('list_offers_by_category', function () use ($category) {
             $filters = $category ? ['category' => $category] : [];
 
-            $response = $this->httpClient->get('/offers/by-category', [
+            $response = $this->makeHttpRequest('GET', '/offers/by-category', [
                 'query' => $filters
             ]);
 
@@ -559,7 +559,7 @@ class OfferService extends BaseService implements ServiceInterface
                 throw new ValidationException("Invalid status: {$status}");
             }
 
-            $response = $this->httpClient->get('/offers', [
+            $response = $this->makeHttpRequest('GET', '/offers', [
                 'query' => ['status' => $status]
             ]);
 
@@ -573,7 +573,7 @@ class OfferService extends BaseService implements ServiceInterface
     public function listPopular(int $limit = 10): array
     {
         return $this->executeWithMetrics('list_popular_offers', function () use ($limit) {
-            $response = $this->httpClient->get('/offers/popular', [
+            $response = $this->makeHttpRequest('GET', '/offers/popular', [
                 'query' => ['limit' => $limit]
             ]);
 
@@ -587,7 +587,7 @@ class OfferService extends BaseService implements ServiceInterface
     public function listRecent(int $limit = 10): array
     {
         return $this->executeWithMetrics('list_recent_offers', function () use ($limit) {
-            $response = $this->httpClient->get('/offers/recent', [
+            $response = $this->makeHttpRequest('GET', '/offers/recent', [
                 'query' => ['limit' => $limit]
             ]);
 
@@ -606,7 +606,7 @@ class OfferService extends BaseService implements ServiceInterface
                 throw new ValidationException("Invalid offer type: {$type}");
             }
 
-            $response = $this->httpClient->get('/offers', [
+            $response = $this->makeHttpRequest('GET', '/offers', [
                 'query' => ['type' => $type]
             ]);
 
@@ -624,7 +624,7 @@ class OfferService extends BaseService implements ServiceInterface
                 'q' => $query
             ]);
 
-            $response = $this->httpClient->get('/offers/search', [
+            $response = $this->makeHttpRequest('GET', '/offers/search', [
                 'query' => $searchParams
             ]);
 
@@ -640,7 +640,7 @@ class OfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('list_offers_advanced', function () use ($criteria) {
             $this->validateAdvancedCriteria($criteria);
 
-            $response = $this->httpClient->get('/offers/advanced-search', [
+            $response = $this->makeHttpRequest('GET', '/offers/advanced-search', [
                 'query' => $criteria
             ]);
 
@@ -654,7 +654,7 @@ class OfferService extends BaseService implements ServiceInterface
     public function getRelated(string $offerId, int $limit = 5): array
     {
         return $this->executeWithMetrics('get_related_offers', function () use ($offerId, $limit) {
-            $response = $this->httpClient->get("/offers/{$offerId}/related", [
+            $response = $this->makeHttpRequest('GET', "/offers/{$offerId}/related", [
                 'query' => ['limit' => $limit]
             ]);
 
@@ -672,7 +672,7 @@ class OfferService extends BaseService implements ServiceInterface
                 throw new ValidationException('Invalid price range');
             }
 
-            $response = $this->httpClient->get('/offers', [
+            $response = $this->makeHttpRequest('GET', '/offers', [
                 'query' => [
                     'price_min' => $minPrice,
                     'price_max' => $maxPrice
@@ -689,7 +689,7 @@ class OfferService extends BaseService implements ServiceInterface
     public function listOnPromotion(): array
     {
         return $this->executeWithMetrics('list_offers_on_promotion', function () {
-            $response = $this->httpClient->get('/offers/promotions');
+            $response = $this->makeHttpRequest('GET', '/offers/promotions');
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -700,7 +700,7 @@ class OfferService extends BaseService implements ServiceInterface
     private function fetchOfferById(string $offerId): ?array
     {
         try {
-            $response = $this->httpClient->get("/offers/{$offerId}");
+            $response = $this->makeHttpRequest('GET', "/offers/{$offerId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -716,7 +716,7 @@ class OfferService extends BaseService implements ServiceInterface
     private function fetchOfferBySlug(string $slug): ?array
     {
         try {
-            $response = $this->httpClient->get("/offers/slug/{$slug}");
+            $response = $this->makeHttpRequest('GET', "/offers/slug/{$slug}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -733,7 +733,7 @@ class OfferService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics("update_offer_status_{$status}", function () use ($offerId, $status) {
             try {
-                $response = $this->httpClient->put("/offers/{$offerId}/status", [
+                $response = $this->makeHttpRequest('PUT', "/offers/{$offerId}/status", [
                     'status' => $status
                 ]);
 
@@ -979,4 +979,55 @@ class OfferService extends BaseService implements ServiceInterface
             }
         }
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

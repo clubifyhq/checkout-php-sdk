@@ -176,7 +176,7 @@ class OrderService extends BaseService implements ServiceInterface
             ]);
 
             // Criar pedido via API
-            $response = $this->httpClient->post('/orders', $data);
+            $response = $this->makeHttpRequest('POST', '/orders', $data);
             $order = ResponseHelper::getData($response);
 
             // Cache do pedido
@@ -238,7 +238,7 @@ class OrderService extends BaseService implements ServiceInterface
                 'limit' => $limit
             ]);
 
-            $response = $this->httpClient->get('/orders', [
+            $response = $this->makeHttpRequest('GET', '/orders', [
                 'query' => $queryParams
             ]);
 
@@ -272,7 +272,7 @@ class OrderService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $response = $this->httpClient->put("/orders/{$orderId}", $data);
+            $response = $this->makeHttpRequest('PUT', "/orders/{$orderId}", $data);
             $order = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -316,7 +316,7 @@ class OrderService extends BaseService implements ServiceInterface
                 'cancellation_reason' => $cancelData['reason'] ?? 'Cancelled by user'
             ]);
 
-            $response = $this->httpClient->post("/orders/{$orderId}/cancel", $data);
+            $response = $this->makeHttpRequest('POST', "/orders/{$orderId}/cancel", $data);
 
             // Invalidar cache
             $this->invalidateOrderCache($orderId);
@@ -344,7 +344,7 @@ class OrderService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('search_orders', function () use ($query, $filters) {
             $queryParams = array_merge($filters, ['q' => $query]);
 
-            $response = $this->httpClient->get('/orders/search', [
+            $response = $this->makeHttpRequest('GET', '/orders/search', [
                 'query' => $queryParams
             ]);
 
@@ -360,7 +360,7 @@ class OrderService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_orders_by_customer', function () use ($customerId, $filters) {
             $queryParams = array_merge($filters, ['customer_id' => $customerId]);
 
-            $response = $this->httpClient->get('/orders', [
+            $response = $this->makeHttpRequest('GET', '/orders', [
                 'query' => $queryParams
             ]);
 
@@ -376,7 +376,7 @@ class OrderService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_orders_by_product', function () use ($productId, $filters) {
             $queryParams = array_merge($filters, ['product_id' => $productId]);
 
-            $response = $this->httpClient->get('/orders', [
+            $response = $this->makeHttpRequest('GET', '/orders', [
                 'query' => $queryParams
             ]);
 
@@ -395,7 +395,7 @@ class OrderService extends BaseService implements ServiceInterface
                 'end_date' => $endDate
             ]);
 
-            $response = $this->httpClient->get('/orders', [
+            $response = $this->makeHttpRequest('GET', '/orders', [
                 'query' => $queryParams
             ]);
 
@@ -411,7 +411,7 @@ class OrderService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('add_order_item', function () use ($orderId, $itemData) {
             $this->validateOrderItemData($itemData);
 
-            $response = $this->httpClient->post("/orders/{$orderId}/items", $itemData);
+            $response = $this->makeHttpRequest('POST', "/orders/{$orderId}/items", $itemData);
             $item = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
@@ -434,7 +434,7 @@ class OrderService extends BaseService implements ServiceInterface
     public function removeItem(string $orderId, string $itemId): bool
     {
         return $this->executeWithMetrics('remove_order_item', function () use ($orderId, $itemId) {
-            $response = $this->httpClient->delete("/orders/{$orderId}/items/{$itemId}");
+            $response = $this->makeHttpRequest('DELETE', "/orders/{$orderId}/items/{$itemId}");
 
             // Invalidar cache do pedido
             $this->invalidateOrderCache($orderId);
@@ -457,7 +457,7 @@ class OrderService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('update_order_item', function () use ($orderId, $itemId, $itemData) {
             $this->validateOrderItemUpdateData($itemData);
 
-            $response = $this->httpClient->put("/orders/{$orderId}/items/{$itemId}", $itemData);
+            $response = $this->makeHttpRequest('PUT', "/orders/{$orderId}/items/{$itemId}", $itemData);
             $item = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
@@ -480,7 +480,7 @@ class OrderService extends BaseService implements ServiceInterface
     public function getItems(string $orderId): array
     {
         return $this->executeWithMetrics('get_order_items', function () use ($orderId) {
-            $response = $this->httpClient->get("/orders/{$orderId}/items");
+            $response = $this->makeHttpRequest('GET', "/orders/{$orderId}/items");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -491,7 +491,7 @@ class OrderService extends BaseService implements ServiceInterface
     public function count(array $filters = []): int
     {
         try {
-            $response = $this->httpClient->get('/orders/count', [
+            $response = $this->makeHttpRequest('GET', '/orders/count', [
                 'query' => $filters
             ]);
             $data = ResponseHelper::getData($response);
@@ -511,7 +511,7 @@ class OrderService extends BaseService implements ServiceInterface
     private function fetchOrderById(string $orderId): ?array
     {
         try {
-            $response = $this->httpClient->get("/orders/{$orderId}");
+            $response = $this->makeHttpRequest('GET', "/orders/{$orderId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -527,7 +527,7 @@ class OrderService extends BaseService implements ServiceInterface
     private function fetchOrderByNumber(string $orderNumber): ?array
     {
         try {
-            $response = $this->httpClient->get("/orders/number/{$orderNumber}");
+            $response = $this->makeHttpRequest('GET', "/orders/number/{$orderNumber}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -764,4 +764,55 @@ class OrderService extends BaseService implements ServiceInterface
             'has_discounts' => !empty($orderData['discounts']) || ($orderData['discount_amount'] ?? 0) > 0
         ];
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

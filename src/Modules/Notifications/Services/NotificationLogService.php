@@ -9,6 +9,7 @@ use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Serviço de logs de notificações
@@ -63,7 +64,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
     public function isHealthy(): bool
     {
         try {
-            $response = $this->httpClient->get('/notifications/logs/health');
+            $response = $this->makeHttpRequest('GET', '/notifications/logs/health');
             return $response->getStatusCode() === 200;
         } catch (\Exception $e) {
             return false;
@@ -135,7 +136,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
                 'sort' => $filters['sort'] ?? 'created_at:desc'
             ]);
 
-            $response = $this->httpClient->get('/notifications/logs', [
+            $response = $this->makeHttpRequest('GET', '/notifications/logs', [
                 'query' => $params
             ]);
 
@@ -187,7 +188,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
         }
 
         try {
-            $response = $this->httpClient->get("/notifications/logs/{$logId}");
+            $response = $this->makeHttpRequest('GET', "/notifications/logs/{$logId}");
             $data = $response->toArray();
 
             // Enriquece os dados
@@ -305,7 +306,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
         }
 
         try {
-            $response = $this->httpClient->get('/notifications/logs/statistics', [
+            $response = $this->makeHttpRequest('GET', '/notifications/logs/statistics', [
                 'query' => $filters
             ]);
 
@@ -348,7 +349,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
         $this->validateInitialization();
 
         try {
-            $response = $this->httpClient->get('/notifications/logs/count-by-status', [
+            $response = $this->makeHttpRequest('GET', '/notifications/logs/count-by-status', [
                 'query' => $filters
             ]);
 
@@ -383,7 +384,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
                 'status' => 'failed'
             ]);
 
-            $response = $this->httpClient->get('/notifications/logs/top-errors', [
+            $response = $this->makeHttpRequest('GET', '/notifications/logs/top-errors', [
                 'query' => $params
             ]);
 
@@ -413,7 +414,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
                 'group_by' => 'day'
             ]);
 
-            $response = $this->httpClient->get('/notifications/logs/trends', [
+            $response = $this->makeHttpRequest('GET', '/notifications/logs/trends', [
                 'query' => $params
             ]);
 
@@ -443,7 +444,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
                 'export' => true
             ]);
 
-            $response = $this->httpClient->get('/notifications/logs/export', [
+            $response = $this->makeHttpRequest('GET', '/notifications/logs/export', [
                 'query' => $params
             ]);
 
@@ -485,7 +486,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
                 'only_successful' => $options['only_successful'] ?? false
             ];
 
-            $response = $this->httpClient->post('/notifications/logs/cleanup', [
+            $response = $this->makeHttpRequest('POST', '/notifications/logs/cleanup', [
                 'json' => $params
             ]);
 
@@ -554,7 +555,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
         $this->validateInitialization();
 
         try {
-            $response = $this->httpClient->get("/notifications/logs/webhook/{$webhookId}/summary");
+            $response = $this->makeHttpRequest('GET', "/notifications/logs/webhook/{$webhookId}/summary");
             return $response->toArray();
 
         } catch (\Exception $e) {
@@ -730,4 +731,55 @@ class NotificationLogService extends BaseService implements ServiceInterface
         $cacheKey = self::CACHE_PREFIX . $logId;
         return $this->cache->get($cacheKey);
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

@@ -131,14 +131,16 @@ class ClubifySDKHelper
      */
     public static function getConfig(): array
     {
-        return [
+        return config('clubify-checkout', [
             'credentials' => [
                 'api_key' => env('CLUBIFY_CHECKOUT_API_KEY'),
                 'api_secret' => env('CLUBIFY_CHECKOUT_API_SECRET'),
                 'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID'),
             ],
             'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'sandbox'),
-            'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'https://checkout.svelve.com/api/v1'),
+            'api' => [
+                'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'https://checkout.svelve.com/api/v1'),
+            ],
 
             'http' => [
                 'timeout' => (int) env('CLUBIFY_CHECKOUT_TIMEOUT', 30),
@@ -168,7 +170,11 @@ class ClubifySDKHelper
                 'secret' => env('CLUBIFY_CHECKOUT_WEBHOOK_SECRET'),
                 'tolerance' => (int) env('CLUBIFY_CHECKOUT_WEBHOOK_TOLERANCE', 300),
             ],
-        ];
+
+            'features' => [
+                'auto_initialize' => env('CLUBIFY_CHECKOUT_AUTO_INITIALIZE', true),
+            ],
+        ]);
     }
 
     /**

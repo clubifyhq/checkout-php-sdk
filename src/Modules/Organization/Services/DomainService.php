@@ -73,7 +73,7 @@ class DomainService extends BaseService
             ];
 
             // Criar configuração de domínio via API
-            $response = $this->httpClient->post('/domains', $data);
+            $response = $this->makeHttpRequest('POST', '/domains', $data);
             $domainConfig = ResponseHelper::getData($response);
 
             // Cache da configuração
@@ -96,6 +96,11 @@ class DomainService extends BaseService
 
             return $domainConfig;
         });
+    }
+
+    public function configureDomain(string $organizationId, string $domain): array
+    {
+        return $this->configure(  $organizationId, $domain);
     }
 
     /**
@@ -128,7 +133,7 @@ class DomainService extends BaseService
     public function getDomainsByOrganization(string $organizationId): array
     {
         return $this->executeWithMetrics('get_domains_by_organization', function () use ($organizationId) {
-            $response = $this->httpClient->get("/organizations/{$organizationId}/domains");
+            $response = $this->makeHttpRequest('GET', "/organizations/{$organizationId}/domains");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -139,7 +144,7 @@ class DomainService extends BaseService
     public function verifyDns(string $domainId): array
     {
         return $this->executeWithMetrics('verify_domain_dns', function () use ($domainId) {
-            $response = $this->httpClient->post("/domains/{$domainId}/verify-dns", []);
+            $response = $this->makeHttpRequest('POST', "/domains/{$domainId}/verify-dns", []);
             $result = ResponseHelper::getData($response);
 
             // Invalidar cache se verificação foi bem-sucedida
@@ -164,7 +169,7 @@ class DomainService extends BaseService
     public function provisionSsl(string $domainId): array
     {
         return $this->executeWithMetrics('provision_ssl_certificate', function () use ($domainId) {
-            $response = $this->httpClient->post("/domains/{$domainId}/provision-ssl", []);
+            $response = $this->makeHttpRequest('POST', "/domains/{$domainId}/provision-ssl", []);
             $result = ResponseHelper::getData($response);
 
             // Invalidar cache se SSL foi provisionado
@@ -189,7 +194,7 @@ class DomainService extends BaseService
     public function renewSsl(string $domainId): array
     {
         return $this->executeWithMetrics('renew_ssl_certificate', function () use ($domainId) {
-            $response = $this->httpClient->post("/domains/{$domainId}/renew-ssl", []);
+            $response = $this->makeHttpRequest('POST', "/domains/{$domainId}/renew-ssl", []);
             $result = ResponseHelper::getData($response);
 
             // Invalidar cache se SSL foi renovado
@@ -216,7 +221,7 @@ class DomainService extends BaseService
         return $this->executeWithMetrics('update_domain_settings', function () use ($domainId, $settings) {
             $this->validateDomainSettings($settings);
 
-            $response = $this->httpClient->put("/domains/{$domainId}/settings", [
+            $response = $this->makeHttpRequest('PUT', "/domains/{$domainId}/settings", [
                 'settings' => $settings
             ]);
 
@@ -241,7 +246,7 @@ class DomainService extends BaseService
     public function checkHealth(string $domainId): array
     {
         return $this->executeWithMetrics('check_domain_health', function () use ($domainId) {
-            $response = $this->httpClient->get("/domains/{$domainId}/health");
+            $response = $this->makeHttpRequest('GET', "/domains/{$domainId}/health");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -252,7 +257,7 @@ class DomainService extends BaseService
     public function getSslStatus(string $domainId): array
     {
         return $this->executeWithMetrics('get_ssl_status', function () use ($domainId) {
-            $response = $this->httpClient->get("/domains/{$domainId}/ssl-status");
+            $response = $this->makeHttpRequest('GET', "/domains/{$domainId}/ssl-status");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -288,7 +293,7 @@ class DomainService extends BaseService
     {
         return $this->executeWithMetrics('remove_domain', function () use ($domainId) {
             try {
-                $response = $this->httpClient->delete("/domains/{$domainId}");
+                $response = $this->makeHttpRequest('DELETE', "/domains/{$domainId}");
 
                 // Invalidar cache
                 $this->invalidateDomainCache($domainId);
@@ -315,7 +320,7 @@ class DomainService extends BaseService
     public function isDomainInUse(string $domain): bool
     {
         try {
-            $response = $this->httpClient->get("/domains/check-availability/{$domain}");
+            $response = $this->makeHttpRequest('GET', "/domains/check-availability/{$domain}");
             $data = ResponseHelper::getData($response);
             return !($data['available'] ?? false);
         } catch (HttpException $e) {
@@ -332,7 +337,7 @@ class DomainService extends BaseService
     public function getDnsRecords(string $domainId): array
     {
         return $this->executeWithMetrics('get_dns_records', function () use ($domainId) {
-            $response = $this->httpClient->get("/domains/{$domainId}/dns-records");
+            $response = $this->makeHttpRequest('GET', "/domains/{$domainId}/dns-records");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -343,7 +348,7 @@ class DomainService extends BaseService
     public function testConnectivity(string $domain): array
     {
         return $this->executeWithMetrics('test_domain_connectivity', function () use ($domain) {
-            $response = $this->httpClient->post('/domains/test-connectivity', [
+            $response = $this->makeHttpRequest('POST', '/domains/test-connectivity', [
                 'domain' => $domain
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -356,7 +361,7 @@ class DomainService extends BaseService
     public function getExpiringCertificates(int $days = 30): array
     {
         return $this->executeWithMetrics('get_expiring_certificates', function () use ($days) {
-            $response = $this->httpClient->get('/domains/expiring-certificates', [
+            $response = $this->makeHttpRequest('GET', '/domains/expiring-certificates', [
                 'days' => $days
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -405,7 +410,7 @@ class DomainService extends BaseService
     private function fetchDomainById(string $domainId): ?array
     {
         try {
-            $response = $this->httpClient->get("/domains/{$domainId}");
+            $response = $this->makeHttpRequest('GET', "/domains/{$domainId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -421,7 +426,7 @@ class DomainService extends BaseService
     private function fetchDomainByName(string $domain): ?array
     {
         try {
-            $response = $this->httpClient->get("/domains/by-name/{$domain}");
+            $response = $this->makeHttpRequest('GET', "/domains/by-name/{$domain}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -438,7 +443,7 @@ class DomainService extends BaseService
     {
         return $this->executeWithMetrics("update_domain_status_{$status}", function () use ($domainId, $status) {
             try {
-                $response = $this->httpClient->put("/domains/{$domainId}/status", [
+                $response = $this->makeHttpRequest('PUT', "/domains/{$domainId}/status", [
                     'status' => $status
                 ]);
 
@@ -567,4 +572,55 @@ class DomainService extends BaseService
             'hsts_max_age' => 31536000
         ];
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

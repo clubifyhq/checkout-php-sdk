@@ -164,12 +164,27 @@ class SecurityValidator
     }
 
     /**
-     * Validate UUID
+     * Validate UUID or MongoDB ObjectId
+     *
+     * Accepts both formats:
+     * - Standard UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+     * - MongoDB ObjectId: 24 hexadecimal characters
      */
     public static function validateUuid(string $uuid): bool
     {
         $uuid = self::sanitizeString($uuid);
-        return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $uuid) === 1;
+
+        // Check for standard UUID format
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $uuid) === 1) {
+            return true;
+        }
+
+        // Check for MongoDB ObjectId format (24 hexadecimal characters)
+        if (preg_match('/^[0-9a-f]{24}$/i', $uuid) === 1) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

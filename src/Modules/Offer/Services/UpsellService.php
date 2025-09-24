@@ -64,7 +64,7 @@ class UpsellService extends BaseService implements ServiceInterface
             ]);
 
             // Criar upsell via API
-            $response = $this->httpClient->post('/upsells', $data);
+            $response = $this->makeHttpRequest('POST', '/upsells', $data);
             $upsell = ResponseHelper::getData($response);
 
             // Cache do upsell
@@ -107,7 +107,7 @@ class UpsellService extends BaseService implements ServiceInterface
     public function getByOffer(string $offerId): array
     {
         return $this->executeWithMetrics('get_upsells_by_offer', function () use ($offerId) {
-            $response = $this->httpClient->get("/offers/{$offerId}/upsells");
+            $response = $this->makeHttpRequest('GET', "/offers/{$offerId}/upsells");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -128,7 +128,7 @@ class UpsellService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $response = $this->httpClient->put("/upsells/{$upsellId}", $data);
+            $response = $this->makeHttpRequest('PUT', "/upsells/{$upsellId}", $data);
             $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -151,7 +151,7 @@ class UpsellService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('delete_upsell', function () use ($upsellId) {
             try {
-                $response = $this->httpClient->delete("/upsells/{$upsellId}");
+                $response = $this->makeHttpRequest('DELETE', "/upsells/{$upsellId}");
 
                 // Invalidar cache
                 $this->invalidateUpsellCache($upsellId);
@@ -180,7 +180,7 @@ class UpsellService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_upsell_sequence', function () use ($offerId, $upsellSequence) {
             $this->validateUpsellSequence($upsellSequence);
 
-            $response = $this->httpClient->put("/offers/{$offerId}/upsell-sequence", [
+            $response = $this->makeHttpRequest('PUT', "/offers/{$offerId}/upsell-sequence", [
                 'sequence' => $upsellSequence
             ]);
 
@@ -211,7 +211,7 @@ class UpsellService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('update_upsell_targeting', function () use ($upsellId, $targetingRules) {
             $this->validateTargetingRules($targetingRules);
 
-            $response = $this->httpClient->put("/upsells/{$upsellId}/targeting", [
+            $response = $this->makeHttpRequest('PUT', "/upsells/{$upsellId}/targeting", [
                 'targeting_rules' => $targetingRules
             ]);
 
@@ -238,7 +238,7 @@ class UpsellService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('update_upsell_template', function () use ($upsellId, $templateConfig) {
             $this->validateTemplateConfig($templateConfig);
 
-            $response = $this->httpClient->put("/upsells/{$upsellId}/template", $templateConfig);
+            $response = $this->makeHttpRequest('PUT', "/upsells/{$upsellId}/template", $templateConfig);
             $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -284,7 +284,7 @@ class UpsellService extends BaseService implements ServiceInterface
     public function getAnalytics(string $upsellId, array $filters = []): array
     {
         return $this->executeWithMetrics('get_upsell_analytics', function () use ($upsellId, $filters) {
-            $response = $this->httpClient->get("/upsells/{$upsellId}/analytics", [
+            $response = $this->makeHttpRequest('GET', "/upsells/{$upsellId}/analytics", [
                 'query' => $filters
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -297,7 +297,7 @@ class UpsellService extends BaseService implements ServiceInterface
     public function getSequencePerformance(string $offerId): array
     {
         return $this->executeWithMetrics('get_upsell_sequence_performance', function () use ($offerId) {
-            $response = $this->httpClient->get("/offers/{$offerId}/upsell-sequence/performance");
+            $response = $this->makeHttpRequest('GET', "/offers/{$offerId}/upsell-sequence/performance");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -313,7 +313,7 @@ class UpsellService extends BaseService implements ServiceInterface
                 'limit' => $limit
             ]);
 
-            $response = $this->httpClient->get('/upsells', [
+            $response = $this->makeHttpRequest('GET', '/upsells', [
                 'query' => $queryParams
             ]);
 
@@ -327,7 +327,7 @@ class UpsellService extends BaseService implements ServiceInterface
     public function duplicate(string $upsellId, array $overrideData = []): array
     {
         return $this->executeWithMetrics('duplicate_upsell', function () use ($upsellId, $overrideData) {
-            $response = $this->httpClient->post("/upsells/{$upsellId}/duplicate", $overrideData);
+            $response = $this->makeHttpRequest('POST', "/upsells/{$upsellId}/duplicate", $overrideData);
             $upsell = ResponseHelper::getData($response);
 
             // Dispatch evento
@@ -346,7 +346,7 @@ class UpsellService extends BaseService implements ServiceInterface
     private function fetchUpsellById(string $upsellId): ?array
     {
         try {
-            $response = $this->httpClient->get("/upsells/{$upsellId}");
+            $response = $this->makeHttpRequest('GET', "/upsells/{$upsellId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -388,7 +388,7 @@ class UpsellService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics("update_upsell_status_{$status}", function () use ($upsellId, $status) {
             try {
-                $response = $this->httpClient->put("/upsells/{$upsellId}/status", [
+                $response = $this->makeHttpRequest('PUT', "/upsells/{$upsellId}/status", [
                     'status' => $status
                 ]);
 
@@ -537,4 +537,55 @@ class UpsellService extends BaseService implements ServiceInterface
             'last_updated' => date('Y-m-d H:i:s')
         ];
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

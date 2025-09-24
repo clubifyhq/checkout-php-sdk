@@ -33,10 +33,21 @@ class QuickDiagnostic
             'credentials' => [
                 'tenant_id' => $_ENV['CLUBIFY_CHECKOUT_TENANT_ID'] ?? 'demo_tenant',
                 'api_key' => $_ENV['CLUBIFY_CHECKOUT_API_KEY'] ?? 'demo_key',
-                'environment' => $_ENV['CLUBIFY_CHECKOUT_ENVIRONMENT'] ?? 'sandbox'
+                'api_secret' => $_ENV['CLUBIFY_CHECKOUT_API_SECRET'] ?? 'demo_secret',
             ],
-            'http' => ['timeout' => 5000, 'connect_timeout' => 3, 'retries' => 1],
-            'endpoints' => ['base_url' => $_ENV['CLUBIFY_CHECKOUT_API_URL'] ?? 'https://checkout.svelve.com/api/v1']
+            'environment' => $_ENV['CLUBIFY_CHECKOUT_ENVIRONMENT'] ?? 'sandbox',
+            'api' => [
+                'base_url' => $_ENV['CLUBIFY_CHECKOUT_BASE_URL'] ?? 'https://checkout.svelve.com/api/v1'
+            ],
+            'http' => [
+                'timeout' => 30,
+                'connect_timeout' => 10,
+                'retry' => [
+                    'enabled' => true,
+                    'attempts' => 3,
+                    'delay' => 1000,
+                ]
+            ]
         ];
 
         $this->sdk = new ClubifyCheckoutSDK($config);

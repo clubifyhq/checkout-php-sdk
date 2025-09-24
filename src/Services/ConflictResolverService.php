@@ -9,6 +9,7 @@ use Clubify\Checkout\Exceptions\ConflictException;
 use Clubify\Checkout\ValueObjects\ConflictResolution;
 use Clubify\Checkout\Core\Http\Client;
 use Psr\Log\LoggerInterface;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Service for automatically resolving resource conflicts
@@ -43,7 +44,7 @@ class ConflictResolverService implements ConflictResolverInterface
                 'retrieval_endpoint' => $resolution->retrievalEndpoint
             ]);
 
-            $response = $this->httpClient->get($resolution->retrievalEndpoint);
+            $response = $this->makeHttpRequest('GET', $resolution->retrievalEndpoint);
             $existingResource = $response->getData();
 
             $this->logger->info('Conflict resolved successfully', [
@@ -77,7 +78,7 @@ class ConflictResolverService implements ConflictResolverInterface
         }
 
         try {
-            $response = $this->httpClient->get($checkEndpoint);
+            $response = $this->makeHttpRequest('GET', $checkEndpoint);
             $result = $response->getData();
 
             // If the check endpoint returns availability info
@@ -107,7 +108,7 @@ class ConflictResolverService implements ConflictResolverInterface
         bool $autoResolveConflicts = true
     ): array {
         try {
-            $response = $this->httpClient->post($endpoint, $data);
+            $response = $this->makeHttpRequest('POST', $endpoint, $data);
             return $response->getData();
 
         } catch (ConflictException $conflict) {
@@ -153,4 +154,55 @@ class ConflictResolverService implements ConflictResolverInterface
             default => null
         };
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

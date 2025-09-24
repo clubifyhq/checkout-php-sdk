@@ -7,6 +7,7 @@ namespace Clubify\Checkout\Modules\Webhooks\Repositories;
 use Clubify\Checkout\Repositories\BaseRepository;
 use Clubify\Checkout\Modules\Webhooks\Repositories\WebhookRepositoryInterface;
 use DateTime;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Repositório de webhooks
@@ -73,7 +74,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function activate(string $id): bool
     {
-        $response = $this->httpClient->patch(
+        $response = $this->makeHttpRequest('PATCH', 
             $this->buildUrl("{$this->endpoint}/{$id}/activate")
         );
 
@@ -85,7 +86,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function deactivate(string $id): bool
     {
-        $response = $this->httpClient->patch(
+        $response = $this->makeHttpRequest('PATCH', 
             $this->buildUrl("{$this->endpoint}/{$id}/deactivate")
         );
 
@@ -97,7 +98,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function updateLastDelivery(string $id, array $deliveryData): bool
     {
-        $response = $this->httpClient->patch(
+        $response = $this->makeHttpRequest('PATCH', 
             $this->buildUrl("{$this->endpoint}/{$id}/last-delivery"),
             ['json' => $deliveryData]
         );
@@ -110,7 +111,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function incrementFailureCount(string $id): bool
     {
-        $response = $this->httpClient->patch(
+        $response = $this->makeHttpRequest('PATCH', 
             $this->buildUrl("{$this->endpoint}/{$id}/increment-failures")
         );
 
@@ -122,7 +123,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function resetFailureCount(string $id): bool
     {
-        $response = $this->httpClient->patch(
+        $response = $this->makeHttpRequest('PATCH', 
             $this->buildUrl("{$this->endpoint}/{$id}/reset-failures")
         );
 
@@ -134,7 +135,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function createDeliveryLog(string $webhookId, array $deliveryData): string
     {
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             $this->buildUrl("/webhook-deliveries"),
             ['json' => array_merge($deliveryData, ['webhook_id' => $webhookId])]
         );
@@ -150,7 +151,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
     {
         $filters['webhook_id'] = $webhookId;
 
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             $this->buildUrl("/webhook-deliveries", $filters)
         );
 
@@ -165,7 +166,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
         $filters['status'] = 'failed';
         $filters['since'] = $since;
 
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             $this->buildUrl("/webhook-deliveries", $filters)
         );
 
@@ -185,7 +186,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
             'status' => 'pending',
         ];
 
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             $this->buildUrl("/webhook-retries"),
             ['json' => $data]
         );
@@ -206,7 +207,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
             'sort' => 'scheduled_at:asc',
         ];
 
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             $this->buildUrl("/webhook-retries", $filters)
         );
 
@@ -224,7 +225,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
             'result' => $result,
         ];
 
-        $response = $this->httpClient->patch(
+        $response = $this->makeHttpRequest('PATCH', 
             $this->buildUrl("/webhook-retries/{$retryId}"),
             ['json' => $data]
         );
@@ -237,7 +238,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function getWebhookStats(string $webhookId, string $period = '24 hours'): array
     {
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             $this->buildUrl("{$this->endpoint}/{$webhookId}/stats", ['period' => $period])
         );
 
@@ -251,7 +252,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
     {
         $filters['period'] = $period;
 
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             $this->buildUrl("/webhook-stats", $filters)
         );
 
@@ -265,7 +266,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
     {
         $cutoffDate = (new DateTime())->modify("-{$daysToKeep} days")->format('Y-m-d');
 
-        $response = $this->httpClient->delete(
+        $response = $this->makeHttpRequest('DELETE', 
             $this->buildUrl("{$this->endpoint}/cleanup/inactive", [
                 'cutoff_date' => $cutoffDate,
             ])
@@ -282,7 +283,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
     {
         $cutoffDate = (new DateTime())->modify("-{$daysToKeep} days")->format('Y-m-d');
 
-        $response = $this->httpClient->delete(
+        $response = $this->makeHttpRequest('DELETE', 
             $this->buildUrl("/webhook-deliveries/cleanup", [
                 'cutoff_date' => $cutoffDate,
             ])
@@ -299,7 +300,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
     {
         $cutoffDate = (new DateTime())->modify("-{$daysToKeep} days")->format('Y-m-d');
 
-        $response = $this->httpClient->delete(
+        $response = $this->makeHttpRequest('DELETE', 
             $this->buildUrl("/webhook-retries/cleanup", [
                 'cutoff_date' => $cutoffDate,
             ])
@@ -314,7 +315,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function validateUrl(string $url): array
     {
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             $this->buildUrl("/webhook-validation"),
             ['json' => ['url' => $url]]
         );
@@ -327,7 +328,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function getGlobalConfig(): array
     {
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             $this->buildUrl("/webhook-config")
         );
 
@@ -339,7 +340,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function updateGlobalConfig(array $config): bool
     {
-        $response = $this->httpClient->put(
+        $response = $this->makeHttpRequest('PUT', 
             $this->buildUrl("/webhook-config"),
             ['json' => $config]
         );
@@ -352,7 +353,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function findWithAdvancedFilters(array $filters): array
     {
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             $this->buildUrl("{$this->endpoint}/search"),
             ['json' => ['filters' => $filters]]
         );
@@ -365,7 +366,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function countDeliveriesByStatus(string $webhookId, string $period = '24 hours'): array
     {
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             $this->buildUrl("/webhook-deliveries/count-by-status", [
                 'webhook_id' => $webhookId,
                 'period' => $period,
@@ -393,7 +394,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function findMostActive(string $period = '24 hours'): ?array
     {
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             $this->buildUrl("{$this->endpoint}/most-active", ['period' => $period])
         );
 
@@ -406,7 +407,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function findMostDeliveredEvents(string $period = '24 hours', int $limit = 10): array
     {
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             $this->buildUrl("/webhook-events/most-delivered", [
                 'period' => $period,
                 'limit' => $limit,
@@ -421,7 +422,7 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
      */
     public function exportWebhookData(string $webhookId, array $options = []): array
     {
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             $this->buildUrl("{$this->endpoint}/{$webhookId}/export"),
             ['json' => $options]
         );
@@ -439,11 +440,62 @@ class WebhookRepository extends BaseRepository implements WebhookRepositoryInter
             'options' => $options,
         ];
 
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             $this->buildUrl("{$this->endpoint}/import"),
             ['json' => $payload]
         );
 
         return json_decode($response->getBody()->getContents(), true);
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

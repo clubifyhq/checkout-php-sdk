@@ -89,7 +89,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     public function validateUrl(string $url): array
     {
         return $this->executeWithMetrics('validate_url', function () use ($url) {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/validate-url", [
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/validate-url", [
                 'url' => $url
             ]);
 
@@ -118,7 +118,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->getCachedOrExecute(
             $this->getCacheKey("webhook:event:{$eventType}"),
             function () use ($eventType) {
-                $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
                     'event_type' => $eventType,
                     'active' => true
                 ]);
@@ -145,7 +145,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->getCachedOrExecute(
             $this->getCacheKey("webhook:org:{$organizationId}"),
             function () use ($organizationId) {
-                $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
                     'organization_id' => $organizationId,
                     'active' => true
                 ]);
@@ -170,7 +170,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     public function resetFailureCount(string $webhookId): bool
     {
         return $this->executeWithMetrics('reset_failure_count', function () use ($webhookId) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/reset-failures");
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$webhookId}/reset-failures");
 
             if (ResponseHelper::isSuccessful($response)) {
                 $this->invalidateCache($webhookId);
@@ -187,7 +187,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     public function incrementFailureCount(string $webhookId): bool
     {
         return $this->executeWithMetrics('increment_failure_count', function () use ($webhookId) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/increment-failures");
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$webhookId}/increment-failures");
 
             if (ResponseHelper::isSuccessful($response)) {
                 $this->invalidateCache($webhookId);
@@ -204,7 +204,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     public function updateLastDelivery(string $webhookId, array $deliveryData): bool
     {
         return $this->executeWithMetrics('update_last_delivery', function () use ($webhookId, $deliveryData) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/last-delivery", $deliveryData);
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$webhookId}/last-delivery", $deliveryData);
 
             if (ResponseHelper::isSuccessful($response)) {
                 $this->invalidateCache($webhookId);
@@ -239,7 +239,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->getCachedOrExecute(
             $this->getCacheKey("webhook:stats:{$webhookId}"),
             function () use ($webhookId) {
-                $response = $this->httpClient->get("{$this->getEndpoint()}/{$webhookId}/stats");
+                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$webhookId}/stats");
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
@@ -272,7 +272,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -303,7 +303,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     'period' => $period
                 ]);
 
-                $response = $this->httpClient->get("{$this->getEndpoint()}/delivery-logs?" . http_build_query($params));
+                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/delivery-logs?" . http_build_query($params));
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -327,7 +327,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->getCachedOrExecute(
             $this->getCacheKey("webhook:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
                     'email' => $fieldValue
                 ]);
 
@@ -356,7 +356,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->getCachedOrExecute(
             $this->getCacheKey("webhook:url:" . md5($url)),
             function () use ($url) {
-                $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
                     'url' => $url
                 ]);
 
@@ -392,7 +392,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     public function updateStatus(string $webhookId, string $status): bool
     {
         return $this->executeWithMetrics('update_webhook_status', function () use ($webhookId, $status) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/status", [
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$webhookId}/status", [
                 'status' => $status
             ]);
 
@@ -427,7 +427,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -448,7 +448,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     public function bulkCreate(array $webhooksData): array
     {
         return $this->executeWithMetrics('bulk_create_webhooks', function () use ($webhooksData) {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
                 'webhooks' => $webhooksData
             ]);
 
@@ -478,7 +478,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_webhooks', function () use ($updates) {
-            $response = $this->httpClient->put("{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
 
@@ -523,7 +523,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     'limit' => $limit,
                     'offset' => $offset
                 ];
-                $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
+                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -544,7 +544,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     public function archive(string $webhookId): bool
     {
         return $this->executeWithMetrics('archive_webhook', function () use ($webhookId) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/archive");
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$webhookId}/archive");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -569,7 +569,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     public function restore(string $webhookId): bool
     {
         return $this->executeWithMetrics('restore_webhook', function () use ($webhookId) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$webhookId}/restore");
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$webhookId}/restore");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -603,7 +603,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
@@ -640,7 +640,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -661,7 +661,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     public function addRelationship(string $webhookId, string $relatedId, string $relationType, array $metadata = []): bool
     {
         return $this->executeWithMetrics('add_relationship', function () use ($webhookId, $relatedId, $relationType, $metadata) {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/{$webhookId}/{$relationType}", [
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$webhookId}/{$relationType}", [
                 'related_id' => $relatedId,
                 'metadata' => $metadata
             ]);
@@ -683,7 +683,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     public function removeRelationship(string $webhookId, string $relatedId, string $relationType): bool
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($webhookId, $relatedId, $relationType) {
-            $response = $this->httpClient->delete("{$this->getEndpoint()}/{$webhookId}/{$relationType}/{$relatedId}");
+            $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$webhookId}/{$relationType}/{$relatedId}");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
@@ -747,4 +747,55 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
 
         $this->logger->info('All webhook caches cleared');
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

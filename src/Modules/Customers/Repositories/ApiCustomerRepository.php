@@ -45,7 +45,8 @@ use Clubify\Checkout\Exceptions\HttpException;
  * - GET    customers/{id}           - Get customer by ID
  * - PUT    customers/{id}           - Update customer
  * - DELETE customers/{id}           - Delete customer
- * - GET    customers/search         - Search customers
+ * - GET    customers/email/{email}  - Find customer by email
+ * - POST   customers/search         - Search customers (advanced)
  * - PATCH  customers/{id}/status    - Update status
  *
  * @package Clubify\Checkout\Modules\Customers\Repositories
@@ -91,9 +92,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
         return $this->getCachedOrExecute(
             $this->getCacheKey("customer:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
-                    'email' => $fieldValue
-                ]);
+                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/email/{$fieldValue}");
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
@@ -106,7 +105,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 }
 
                 $data = ResponseHelper::getData($response);
-                return $data['customers'][0] ?? null;
+                return $data['customer'] ?? $data;
             },
             300 // 5 minutes cache
         );
@@ -127,7 +126,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function updateStatus(string $customerId, string $status): bool
     {
         return $this->executeWithMetrics('update_customer_status', function () use ($customerId, $status) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$customerId}/status", [
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/status", [
                 'status' => $status
             ]);
 
@@ -162,7 +161,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -183,7 +182,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function bulkCreate(array $customersData): array
     {
         return $this->executeWithMetrics('bulk_create_customers', function () use ($customersData) {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
                 'customers' => $customersData
             ]);
 
@@ -213,7 +212,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_customers', function () use ($updates) {
-            $response = $this->httpClient->put("{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
 
@@ -257,7 +256,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                     'limit' => $limit,
                     'offset' => $offset
                 ]);
-                $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
+                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -278,7 +277,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function archive(string $customerId): bool
     {
         return $this->executeWithMetrics('archive_customer', function () use ($customerId) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$customerId}/archive");
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/archive");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -303,7 +302,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function restore(string $customerId): bool
     {
         return $this->executeWithMetrics('restore_customer', function () use ($customerId) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$customerId}/restore");
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/restore");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -337,7 +336,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
@@ -374,7 +373,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -395,7 +394,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function addRelationship(string $customerId, string $relatedId, string $relationType, array $metadata = []): bool
     {
         return $this->executeWithMetrics('add_relationship', function () use ($customerId, $relatedId, $relationType, $metadata) {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/{$customerId}/{$relationType}", [
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$customerId}/{$relationType}", [
                 'related_id' => $relatedId,
                 'metadata' => $metadata
             ]);
@@ -417,7 +416,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function removeRelationship(string $customerId, string $relatedId, string $relationType): bool
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($customerId, $relatedId, $relationType) {
-            $response = $this->httpClient->delete("{$this->getEndpoint()}/{$customerId}/{$relationType}/{$relatedId}");
+            $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$customerId}/{$relationType}/{$relatedId}");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
@@ -481,4 +480,55 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
 
         $this->logger->info('All customer caches cleared');
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

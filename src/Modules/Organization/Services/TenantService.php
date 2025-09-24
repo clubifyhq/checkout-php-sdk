@@ -66,7 +66,7 @@ class TenantService extends BaseService
             }
 
             // Criar tenant via API
-            $response = $this->httpClient->post('/tenants', $data);
+            $response = $this->makeHttpRequest('POST', '/tenants', $data);
             $tenant = ResponseHelper::getData($response);
 
             // Cache do tenant
@@ -133,7 +133,7 @@ class TenantService extends BaseService
         return $this->executeWithMetrics('update_tenant_settings', function () use ($tenantId, $settings) {
             $this->validateTenantSettings($settings);
 
-            $response = $this->httpClient->put("/tenants/{$tenantId}/settings", [
+            $response = $this->makeHttpRequest('PUT', "/tenants/{$tenantId}/settings", [
                 'settings' => $settings
             ]);
 
@@ -160,7 +160,7 @@ class TenantService extends BaseService
         return $this->executeWithMetrics('set_resource_limits', function () use ($tenantId, $limits) {
             $this->validateResourceLimits($limits);
 
-            $response = $this->httpClient->put("/tenants/{$tenantId}/limits", $limits);
+            $response = $this->makeHttpRequest('PUT', "/tenants/{$tenantId}/limits", $limits);
             $result = ResponseHelper::getData($response);
 
             // Cache dos limites
@@ -194,7 +194,7 @@ class TenantService extends BaseService
     public function getResourceUsage(string $tenantId): array
     {
         return $this->executeWithMetrics('get_resource_usage', function () use ($tenantId) {
-            $response = $this->httpClient->get("/tenants/{$tenantId}/usage");
+            $response = $this->makeHttpRequest('GET', "/tenants/{$tenantId}/usage");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -247,7 +247,7 @@ class TenantService extends BaseService
     public function isSubdomainAvailable(string $subdomain): bool
     {
         try {
-            $response = $this->httpClient->get("tenants/subdomain/{$subdomain}");
+            $response = $this->makeHttpRequest('GET', "tenants/subdomain/{$subdomain}");
             $data = ResponseHelper::getData($response);
             return $data['available'] ?? false;
         } catch (HttpException $e) {
@@ -264,7 +264,7 @@ class TenantService extends BaseService
     public function listTenantsByOrganization(string $organizationId): array
     {
         return $this->executeWithMetrics('list_tenants_by_organization', function () use ($organizationId) {
-            $response = $this->httpClient->get("/organizations/{$organizationId}/tenants");
+            $response = $this->makeHttpRequest('GET', "/organizations/{$organizationId}/tenants");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -275,7 +275,7 @@ class TenantService extends BaseService
     public function getTenantStats(string $tenantId): array
     {
         return $this->executeWithMetrics('get_tenant_stats', function () use ($tenantId) {
-            $response = $this->httpClient->get("/tenants/{$tenantId}/stats");
+            $response = $this->makeHttpRequest('GET', "/tenants/{$tenantId}/stats");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -286,7 +286,7 @@ class TenantService extends BaseService
     private function fetchTenantById(string $tenantId): ?array
     {
         try {
-            $response = $this->httpClient->get("/tenants/{$tenantId}");
+            $response = $this->makeHttpRequest('GET', "/tenants/{$tenantId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -302,7 +302,7 @@ class TenantService extends BaseService
     private function fetchTenantByOrganization(string $organizationId): ?array
     {
         try {
-            $response = $this->httpClient->get("/organizations/{$organizationId}/tenant");
+            $response = $this->makeHttpRequest('GET', "/organizations/{$organizationId}/tenant");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -318,8 +318,7 @@ class TenantService extends BaseService
     private function fetchTenantBySubdomain(string $subdomain): ?array
     {
         try {
-            $response = $this->httpClient->get("tenants/subdomain/{$subdomain}");
-            return ResponseHelper::getDataIfSuccessful($response);
+            return $this->makeHttpRequest('GET', "tenants/subdomain/{$subdomain}");
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -334,7 +333,7 @@ class TenantService extends BaseService
     private function fetchResourceLimits(string $tenantId): array
     {
         try {
-            $response = $this->httpClient->get("/tenants/{$tenantId}/limits");
+            $response = $this->makeHttpRequest('GET', "/tenants/{$tenantId}/limits");
             return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -351,7 +350,7 @@ class TenantService extends BaseService
     {
         return $this->executeWithMetrics("update_tenant_status_{$status}", function () use ($tenantId, $status) {
             try {
-                $response = $this->httpClient->put("/tenants/{$tenantId}/status", [
+                $response = $this->makeHttpRequest('PUT', "/tenants/{$tenantId}/status", [
                     'status' => $status
                 ]);
 
@@ -468,4 +467,55 @@ class TenantService extends BaseService
             'bandwidth_mb' => 10240
         ];
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

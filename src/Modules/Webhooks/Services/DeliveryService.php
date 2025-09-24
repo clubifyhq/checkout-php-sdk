@@ -9,6 +9,7 @@ use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
 use GuzzleHttp\Exception\RequestException;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Serviço de entrega de webhooks
@@ -319,7 +320,7 @@ class DeliveryService extends BaseService implements ServiceInterface
             $options['verify'] = $webhook['verify_ssl'];
         }
 
-        return $this->httpClient->post($url, $options);
+        return $this->makeHttpRequest('POST', $url, $options);
     }
 
     /**
@@ -452,4 +453,55 @@ class DeliveryService extends BaseService implements ServiceInterface
 
         return $total > 0 ? $successful / $total : 0.0;
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

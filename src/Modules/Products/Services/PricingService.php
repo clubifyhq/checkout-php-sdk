@@ -64,7 +64,7 @@ class PricingService extends BaseService implements ServiceInterface
             ]);
 
             // Criar estratégia via API
-            $response = $this->httpClient->post('/pricing-strategies', $data);
+            $response = $this->makeHttpRequest('POST', '/pricing-strategies', $data);
             $strategy = ResponseHelper::getData($response);
 
             // Cache da estratégia
@@ -106,7 +106,7 @@ class PricingService extends BaseService implements ServiceInterface
     public function getStrategiesByProduct(string $productId): array
     {
         return $this->executeWithMetrics('get_strategies_by_product', function () use ($productId) {
-            $response = $this->httpClient->get('/pricing-strategies', [
+            $response = $this->makeHttpRequest('GET', '/pricing-strategies', [
                 'query' => ['product_id' => $productId]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -119,7 +119,7 @@ class PricingService extends BaseService implements ServiceInterface
     public function calculateDynamicPrice(string $productId, array $context = []): array
     {
         return $this->executeWithMetrics('calculate_dynamic_price', function () use ($productId, $context) {
-            $response = $this->httpClient->post('/pricing/calculate', [
+            $response = $this->makeHttpRequest('POST', '/pricing/calculate', [
                 'product_id' => $productId,
                 'context' => $context
             ]);
@@ -155,7 +155,7 @@ class PricingService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $response = $this->httpClient->put("/pricing-strategies/{$strategyId}", $data);
+            $response = $this->makeHttpRequest('PUT', "/pricing-strategies/{$strategyId}", $data);
             $strategy = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -179,7 +179,7 @@ class PricingService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_discount_rules', function () use ($strategyId, $rules) {
             $this->validateDiscountRules($rules);
 
-            $response = $this->httpClient->put("/pricing-strategies/{$strategyId}/discount-rules", [
+            $response = $this->makeHttpRequest('PUT', "/pricing-strategies/{$strategyId}/discount-rules", [
                 'rules' => $rules
             ]);
 
@@ -206,7 +206,7 @@ class PricingService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_location_pricing', function () use ($strategyId, $locationRules) {
             $this->validateLocationRules($locationRules);
 
-            $response = $this->httpClient->put("/pricing-strategies/{$strategyId}/location-pricing", [
+            $response = $this->makeHttpRequest('PUT', "/pricing-strategies/{$strategyId}/location-pricing", [
                 'location_rules' => $locationRules
             ]);
 
@@ -233,7 +233,7 @@ class PricingService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_segment_pricing', function () use ($strategyId, $segmentRules) {
             $this->validateSegmentRules($segmentRules);
 
-            $response = $this->httpClient->put("/pricing-strategies/{$strategyId}/segment-pricing", [
+            $response = $this->makeHttpRequest('PUT', "/pricing-strategies/{$strategyId}/segment-pricing", [
                 'segment_rules' => $segmentRules
             ]);
 
@@ -260,7 +260,7 @@ class PricingService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_pricing_ab_testing', function () use ($strategyId, $testConfig) {
             $this->validateAbTestConfig($testConfig);
 
-            $response = $this->httpClient->put("/pricing-strategies/{$strategyId}/ab-testing", $testConfig);
+            $response = $this->makeHttpRequest('PUT', "/pricing-strategies/{$strategyId}/ab-testing", $testConfig);
             $strategy = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -283,7 +283,7 @@ class PricingService extends BaseService implements ServiceInterface
     public function getAbTestResults(string $strategyId): array
     {
         return $this->executeWithMetrics('get_pricing_ab_test_results', function () use ($strategyId) {
-            $response = $this->httpClient->get("/pricing-strategies/{$strategyId}/ab-testing/results");
+            $response = $this->makeHttpRequest('GET', "/pricing-strategies/{$strategyId}/ab-testing/results");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -296,7 +296,7 @@ class PricingService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_smart_pricing', function () use ($strategyId, $mlConfig) {
             $this->validateSmartPricingConfig($mlConfig);
 
-            $response = $this->httpClient->put("/pricing-strategies/{$strategyId}/smart-pricing", $mlConfig);
+            $response = $this->makeHttpRequest('PUT', "/pricing-strategies/{$strategyId}/smart-pricing", $mlConfig);
             $strategy = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -318,7 +318,7 @@ class PricingService extends BaseService implements ServiceInterface
     public function analyzeElasticity(string $productId, array $priceRange = []): array
     {
         return $this->executeWithMetrics('analyze_price_elasticity', function () use ($productId, $priceRange) {
-            $response = $this->httpClient->post('/pricing/elasticity-analysis', [
+            $response = $this->makeHttpRequest('POST', '/pricing/elasticity-analysis', [
                 'product_id' => $productId,
                 'price_range' => $priceRange
             ]);
@@ -333,7 +333,7 @@ class PricingService extends BaseService implements ServiceInterface
     public function getOptimizedPriceSuggestions(string $productId, array $criteria = []): array
     {
         return $this->executeWithMetrics('get_optimized_price_suggestions', function () use ($productId, $criteria) {
-            $response = $this->httpClient->post('/pricing/optimize', [
+            $response = $this->makeHttpRequest('POST', '/pricing/optimize', [
                 'product_id' => $productId,
                 'criteria' => $criteria
             ]);
@@ -350,7 +350,7 @@ class PricingService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_automatic_promotions', function () use ($strategyId, $promotionRules) {
             $this->validatePromotionRules($promotionRules);
 
-            $response = $this->httpClient->put("/pricing-strategies/{$strategyId}/automatic-promotions", [
+            $response = $this->makeHttpRequest('PUT', "/pricing-strategies/{$strategyId}/automatic-promotions", [
                 'promotion_rules' => $promotionRules
             ]);
 
@@ -399,7 +399,7 @@ class PricingService extends BaseService implements ServiceInterface
     public function duplicateStrategy(string $strategyId, array $overrideData = []): array
     {
         return $this->executeWithMetrics('duplicate_pricing_strategy', function () use ($strategyId, $overrideData) {
-            $response = $this->httpClient->post("/pricing-strategies/{$strategyId}/duplicate", $overrideData);
+            $response = $this->makeHttpRequest('POST', "/pricing-strategies/{$strategyId}/duplicate", $overrideData);
             $strategy = ResponseHelper::getData($response);
 
             // Dispatch evento
@@ -418,7 +418,7 @@ class PricingService extends BaseService implements ServiceInterface
     public function getStrategyAnalytics(string $strategyId, array $filters = []): array
     {
         return $this->executeWithMetrics('get_strategy_analytics', function () use ($strategyId, $filters) {
-            $response = $this->httpClient->get("/pricing-strategies/{$strategyId}/analytics", [
+            $response = $this->makeHttpRequest('GET', "/pricing-strategies/{$strategyId}/analytics", [
                 'query' => $filters
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -431,7 +431,7 @@ class PricingService extends BaseService implements ServiceInterface
     public function getPriceHistory(string $productId, array $dateRange = []): array
     {
         return $this->executeWithMetrics('get_price_history', function () use ($productId, $dateRange) {
-            $response = $this->httpClient->get("/products/{$productId}/price-history", [
+            $response = $this->makeHttpRequest('GET', "/products/{$productId}/price-history", [
                 'query' => $dateRange
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -444,7 +444,7 @@ class PricingService extends BaseService implements ServiceInterface
     public function getPerformanceReport(string $strategyId, array $metrics = []): array
     {
         return $this->executeWithMetrics('get_pricing_performance_report', function () use ($strategyId, $metrics) {
-            $response = $this->httpClient->get("/pricing-strategies/{$strategyId}/performance", [
+            $response = $this->makeHttpRequest('GET', "/pricing-strategies/{$strategyId}/performance", [
                 'query' => ['metrics' => $metrics]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -462,7 +462,7 @@ class PricingService extends BaseService implements ServiceInterface
                 'limit' => $limit
             ]);
 
-            $response = $this->httpClient->get('/pricing-strategies', [
+            $response = $this->makeHttpRequest('GET', '/pricing-strategies', [
                 'query' => $queryParams
             ]);
 
@@ -477,7 +477,7 @@ class PricingService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('delete_pricing_strategy', function () use ($strategyId) {
             try {
-                $response = $this->httpClient->delete("/pricing-strategies/{$strategyId}");
+                $response = $this->makeHttpRequest('DELETE', "/pricing-strategies/{$strategyId}");
 
                 // Invalidar cache
                 $this->invalidateStrategyCache($strategyId);
@@ -504,7 +504,7 @@ class PricingService extends BaseService implements ServiceInterface
     public function countStrategies(): int
     {
         try {
-            $response = $this->httpClient->get('/pricing-strategies/count');
+            $response = $this->makeHttpRequest('GET', '/pricing-strategies/count');
             $data = ResponseHelper::getData($response);
             return $data['count'] ?? 0;
         } catch (HttpException $e) {
@@ -521,7 +521,7 @@ class PricingService extends BaseService implements ServiceInterface
     private function fetchStrategyById(string $strategyId): ?array
     {
         try {
-            $response = $this->httpClient->get("/pricing-strategies/{$strategyId}");
+            $response = $this->makeHttpRequest('GET', "/pricing-strategies/{$strategyId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -538,7 +538,7 @@ class PricingService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics("update_strategy_status_{$status}", function () use ($strategyId, $status) {
             try {
-                $response = $this->httpClient->put("/pricing-strategies/{$strategyId}/status", [
+                $response = $this->makeHttpRequest('PUT', "/pricing-strategies/{$strategyId}/status", [
                     'status' => $status
                 ]);
 
@@ -744,4 +744,55 @@ class PricingService extends BaseService implements ServiceInterface
             'last_updated' => date('Y-m-d H:i:s')
         ];
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

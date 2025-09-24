@@ -63,7 +63,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
             ]);
 
             // Criar plano via API
-            $response = $this->httpClient->post('/subscription-plans', $data);
+            $response = $this->makeHttpRequest('POST', '/subscription-plans', $data);
             $plan = ResponseHelper::getData($response);
 
             // Cache do plano
@@ -106,7 +106,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     public function getByOffer(string $offerId): array
     {
         return $this->executeWithMetrics('get_plans_by_offer', function () use ($offerId) {
-            $response = $this->httpClient->get("/offers/{$offerId}/subscription/plans");
+            $response = $this->makeHttpRequest('GET', "/offers/{$offerId}/subscription/plans");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -122,7 +122,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
                 'limit' => $limit
             ]);
 
-            $response = $this->httpClient->get('/subscription-plans', [
+            $response = $this->makeHttpRequest('GET', '/subscription-plans', [
                 'query' => $queryParams
             ]);
 
@@ -146,7 +146,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $response = $this->httpClient->put("/subscription-plans/{$planId}", $data);
+            $response = $this->makeHttpRequest('PUT', "/subscription-plans/{$planId}", $data);
             $plan = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -169,7 +169,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('delete_subscription_plan', function () use ($planId) {
             try {
-                $response = $this->httpClient->delete("/subscription-plans/{$planId}");
+                $response = $this->makeHttpRequest('DELETE', "/subscription-plans/{$planId}");
 
                 // Invalidar cache
                 $this->invalidatePlanCache($planId);
@@ -198,7 +198,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_plan_trial', function () use ($planId, $trialConfig) {
             $this->validateTrialConfig($trialConfig);
 
-            $response = $this->httpClient->put("/subscription-plans/{$planId}/trial", [
+            $response = $this->makeHttpRequest('PUT', "/subscription-plans/{$planId}/trial", [
                 'trial' => $trialConfig
             ]);
 
@@ -225,7 +225,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_plan_discount', function () use ($planId, $discountConfig) {
             $this->validateDiscountConfig($discountConfig);
 
-            $response = $this->httpClient->put("/subscription-plans/{$planId}/discount", [
+            $response = $this->makeHttpRequest('PUT', "/subscription-plans/{$planId}/discount", [
                 'discount' => $discountConfig
             ]);
 
@@ -253,7 +253,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_plan_upgrade', function () use ($planId, $upgradeConfig) {
             $this->validateUpgradeConfig($upgradeConfig);
 
-            $response = $this->httpClient->put("/subscription-plans/{$planId}/upgrade", [
+            $response = $this->makeHttpRequest('PUT', "/subscription-plans/{$planId}/upgrade", [
                 'upgrade' => $upgradeConfig
             ]);
 
@@ -302,7 +302,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     public function getMetrics(string $planId, array $filters = []): array
     {
         return $this->executeWithMetrics('get_plan_metrics', function () use ($planId, $filters) {
-            $response = $this->httpClient->get("/subscription-plans/{$planId}/metrics", [
+            $response = $this->makeHttpRequest('GET', "/subscription-plans/{$planId}/metrics", [
                 'query' => $filters
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -315,7 +315,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     public function getChurnAnalysis(string $planId, array $dateRange = []): array
     {
         return $this->executeWithMetrics('get_plan_churn_analysis', function () use ($planId, $dateRange) {
-            $response = $this->httpClient->get("/subscription-plans/{$planId}/churn-analysis", [
+            $response = $this->makeHttpRequest('GET', "/subscription-plans/{$planId}/churn-analysis", [
                 'query' => $dateRange
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -328,7 +328,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     public function getRetentionReport(string $planId, array $filters = []): array
     {
         return $this->executeWithMetrics('get_plan_retention_report', function () use ($planId, $filters) {
-            $response = $this->httpClient->get("/subscription-plans/{$planId}/retention-report", [
+            $response = $this->makeHttpRequest('GET', "/subscription-plans/{$planId}/retention-report", [
                 'query' => $filters
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -341,7 +341,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     public function getRevenueForecast(string $planId, int $months = 12): array
     {
         return $this->executeWithMetrics('get_plan_revenue_forecast', function () use ($planId, $months) {
-            $response = $this->httpClient->get("/subscription-plans/{$planId}/revenue-forecast", [
+            $response = $this->makeHttpRequest('GET', "/subscription-plans/{$planId}/revenue-forecast", [
                 'query' => ['months' => $months]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -354,7 +354,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     public function duplicate(string $planId, array $overrideData = []): array
     {
         return $this->executeWithMetrics('duplicate_subscription_plan', function () use ($planId, $overrideData) {
-            $response = $this->httpClient->post("/subscription-plans/{$planId}/duplicate", $overrideData);
+            $response = $this->makeHttpRequest('POST', "/subscription-plans/{$planId}/duplicate", $overrideData);
             $plan = ResponseHelper::getData($response);
 
             // Dispatch evento
@@ -373,7 +373,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     private function fetchPlanById(string $planId): ?array
     {
         try {
-            $response = $this->httpClient->get("/subscription-plans/{$planId}");
+            $response = $this->makeHttpRequest('GET', "/subscription-plans/{$planId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -390,7 +390,7 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics("update_plan_status_{$status}", function () use ($planId, $status) {
             try {
-                $response = $this->httpClient->put("/subscription-plans/{$planId}/status", [
+                $response = $this->makeHttpRequest('PUT', "/subscription-plans/{$planId}/status", [
                     'status' => $status
                 ]);
 
@@ -541,4 +541,55 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
             'last_updated' => date('Y-m-d H:i:s')
         ];
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

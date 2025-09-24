@@ -40,7 +40,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     {
         try {
             $queryParams = array_merge($filters, ['category_id' => $categoryId]);
-            $response = $this->httpClient->get($this->getEndpoint(), [
+            $response = $this->makeHttpRequest('GET', $this->getEndpoint(), [
                 'query' => $queryParams
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -61,7 +61,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     {
         try {
             $queryParams = array_merge($filters, ['type' => $type]);
-            $response = $this->httpClient->get($this->getEndpoint(), [
+            $response = $this->makeHttpRequest('GET', $this->getEndpoint(), [
                 'query' => $queryParams
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -81,7 +81,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function findByStatus(string $status): array
     {
         try {
-            $response = $this->httpClient->get($this->getEndpoint(), [
+            $response = $this->makeHttpRequest('GET', $this->getEndpoint(), [
                 'query' => ['status' => $status]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -108,7 +108,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function findByOrganization(string $organizationId): array
     {
         try {
-            $response = $this->httpClient->get($this->getEndpoint(), [
+            $response = $this->makeHttpRequest('GET', $this->getEndpoint(), [
                 'query' => ['organization_id' => $organizationId]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -127,7 +127,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function findBySlug(string $slug): ?array
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/slug/{$slug}");
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/slug/{$slug}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -143,7 +143,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function findBySku(string $sku): ?array
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/sku/{$sku}");
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/sku/{$sku}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -160,7 +160,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     {
         try {
             $queryParams = array_merge($filters, ['q' => $query]);
-            $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
                 'query' => $queryParams
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -180,7 +180,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function getFeatured(int $limit = 10): array
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/featured", [
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/featured", [
                 'query' => ['limit' => $limit]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -199,7 +199,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function getBestSellers(int $limit = 10): array
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/best-sellers", [
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/best-sellers", [
                 'query' => ['limit' => $limit]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -218,7 +218,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function getRelated(string $productId, int $limit = 5): array
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/{$productId}/related", [
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$productId}/related", [
                 'query' => ['limit' => $limit]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -238,7 +238,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function checkStock(string $productId, int $quantity = 1): bool
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/{$productId}/stock", [
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$productId}/stock", [
                 'query' => ['quantity' => $quantity]
             ]);
             $data = ResponseHelper::getData($response);
@@ -259,7 +259,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function updateStock(string $productId, int $quantity, string $operation = 'set'): bool
     {
         try {
-            $response = $this->httpClient->put("{$this->getEndpoint()}/{$productId}/stock", [
+            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/{$productId}/stock", [
                 'quantity' => $quantity,
                 'operation' => $operation
             ]);
@@ -281,7 +281,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function getLowStock(int $threshold = 10): array
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/low-stock", [
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/low-stock", [
                 'query' => ['threshold' => $threshold]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -316,7 +316,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function getVariations(string $productId): array
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/{$productId}/variations");
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$productId}/variations");
             return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -336,7 +336,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function getPriceHistory(string $productId): array
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/{$productId}/price-history");
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$productId}/price-history");
             return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get product price history', [
@@ -353,7 +353,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function getSalesStats(string $productId): array
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/{$productId}/sales-stats");
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$productId}/sales-stats");
             return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get product sales stats', [
@@ -370,7 +370,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function duplicate(string $id, array $overrideData = []): array
     {
         try {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/{$id}/duplicate", $overrideData);
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$id}/duplicate", $overrideData);
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             $this->logger->error('Failed to duplicate product', [
@@ -388,7 +388,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     private function updateStatus(string $id, string $status): bool
     {
         try {
-            $response = $this->httpClient->put("{$this->getEndpoint()}/{$id}/status", [
+            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/{$id}/status", [
                 'status' => $status
             ]);
             return $response->getStatusCode() === 200;
@@ -433,4 +433,55 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             throw new ValidationException('Invalid product status');
         }
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

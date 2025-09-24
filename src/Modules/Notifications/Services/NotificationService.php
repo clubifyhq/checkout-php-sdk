@@ -11,6 +11,7 @@ use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Modules\Notifications\DTOs\NotificationData;
 use Clubify\Checkout\Modules\Notifications\Enums\NotificationType;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Serviço de gestão de notificações
@@ -73,7 +74,7 @@ class NotificationService extends BaseService implements ServiceInterface
     public function isHealthy(): bool
     {
         try {
-            $response = $this->httpClient->get('/notifications/health');
+            $response = $this->makeHttpRequest('GET', '/notifications/health');
             return $response->getStatusCode() === 200;
         } catch (\Exception $e) {
             return false;
@@ -211,7 +212,7 @@ class NotificationService extends BaseService implements ServiceInterface
         }
 
         try {
-            $response = $this->httpClient->get("/notifications/{$notificationId}");
+            $response = $this->makeHttpRequest('GET', "/notifications/{$notificationId}");
             $data = $response->toArray();
 
             // Cache o resultado
@@ -242,7 +243,7 @@ class NotificationService extends BaseService implements ServiceInterface
                 'limit' => $limit
             ]);
 
-            $response = $this->httpClient->get('/notifications', ['query' => $params]);
+            $response = $this->makeHttpRequest('GET', '/notifications', ['query' => $params]);
             $data = $response->toArray();
 
             $this->logger->info('Notificações listadas', [
@@ -277,7 +278,7 @@ class NotificationService extends BaseService implements ServiceInterface
         $this->validateInitialization();
 
         try {
-            $response = $this->httpClient->post("/notifications/{$notificationId}/retry");
+            $response = $this->makeHttpRequest('POST', "/notifications/{$notificationId}/retry");
 
             if ($response->getStatusCode() === 200) {
                 $this->metrics['total_retries']++;
@@ -312,7 +313,7 @@ class NotificationService extends BaseService implements ServiceInterface
         $this->validateInitialization();
 
         try {
-            $response = $this->httpClient->post("/notifications/{$notificationId}/cancel");
+            $response = $this->makeHttpRequest('POST', "/notifications/{$notificationId}/cancel");
 
             if ($response->getStatusCode() === 200) {
                 $this->logger->info('Notificação cancelada', [
@@ -438,7 +439,7 @@ class NotificationService extends BaseService implements ServiceInterface
                 'test_id' => uniqid('test_', true)
             ], $testData);
 
-            $response = $this->httpClient->post('/notifications/test', ['json' => $payload]);
+            $response = $this->makeHttpRequest('POST', '/notifications/test', ['json' => $payload]);
 
             $result = [
                 'success' => $response->getStatusCode() === 200,
@@ -512,7 +513,7 @@ class NotificationService extends BaseService implements ServiceInterface
     public function healthCheck(): array
     {
         try {
-            $response = $this->httpClient->get('/notifications/health');
+            $response = $this->makeHttpRequest('GET', '/notifications/health');
 
             return [
                 'healthy' => $response->getStatusCode() === 200,
@@ -589,7 +590,7 @@ class NotificationService extends BaseService implements ServiceInterface
             default => '/notifications/send'
         };
 
-        $response = $this->httpClient->post($endpoint, [
+        $response = $this->makeHttpRequest('POST', $endpoint, [
             'json' => $payload,
             'timeout' => $notification->timeout
         ]);
@@ -686,4 +687,55 @@ class NotificationService extends BaseService implements ServiceInterface
             'cache_size' => 0
         ];
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

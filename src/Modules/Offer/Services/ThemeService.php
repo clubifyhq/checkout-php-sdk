@@ -52,7 +52,7 @@ class ThemeService extends BaseService implements ServiceInterface
     public function list(array $filters = []): array
     {
         return $this->executeWithMetrics('list_themes', function () use ($filters) {
-            $response = $this->httpClient->get('/themes', [
+            $response = $this->makeHttpRequest('GET', '/themes', [
                 'query' => $filters
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -88,7 +88,7 @@ class ThemeService extends BaseService implements ServiceInterface
             ]);
 
             // Criar tema via API
-            $response = $this->httpClient->post('/themes', $data);
+            $response = $this->makeHttpRequest('POST', '/themes', $data);
             $theme = ResponseHelper::getData($response);
 
             // Cache do tema
@@ -126,7 +126,7 @@ class ThemeService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $response = $this->httpClient->put("/themes/{$themeId}", $data);
+            $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}", $data);
             $theme = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -150,7 +150,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('apply_theme_to_offer', function () use ($offerId, $themeData) {
             $this->validateOfferThemeData($themeData);
 
-            $response = $this->httpClient->put("/offers/{$offerId}/config/theme", [
+            $response = $this->makeHttpRequest('PUT', "/offers/{$offerId}/config/theme", [
                 'theme' => $themeData
             ]);
 
@@ -175,7 +175,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_offer_layout', function () use ($offerId, $layoutData) {
             $this->validateLayoutData($layoutData);
 
-            $response = $this->httpClient->put("/offers/{$offerId}/config/layout", [
+            $response = $this->makeHttpRequest('PUT', "/offers/{$offerId}/config/layout", [
                 'layout' => $layoutData
             ]);
 
@@ -197,7 +197,7 @@ class ThemeService extends BaseService implements ServiceInterface
     public function getPreview(string $themeId, array $options = []): array
     {
         return $this->executeWithMetrics('get_theme_preview', function () use ($themeId, $options) {
-            $response = $this->httpClient->get("/themes/{$themeId}/preview", [
+            $response = $this->makeHttpRequest('GET', "/themes/{$themeId}/preview", [
                 'query' => $options
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -210,7 +210,7 @@ class ThemeService extends BaseService implements ServiceInterface
     public function duplicate(string $themeId, array $overrideData = []): array
     {
         return $this->executeWithMetrics('duplicate_theme', function () use ($themeId, $overrideData) {
-            $response = $this->httpClient->post("/themes/{$themeId}/duplicate", $overrideData);
+            $response = $this->makeHttpRequest('POST', "/themes/{$themeId}/duplicate", $overrideData);
             $theme = ResponseHelper::getData($response);
 
             // Dispatch evento
@@ -229,7 +229,7 @@ class ThemeService extends BaseService implements ServiceInterface
     public function export(string $themeId): array
     {
         return $this->executeWithMetrics('export_theme', function () use ($themeId) {
-            $response = $this->httpClient->get("/themes/{$themeId}/export");
+            $response = $this->makeHttpRequest('GET', "/themes/{$themeId}/export");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -242,7 +242,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('import_theme', function () use ($themeData) {
             $this->validateImportData($themeData);
 
-            $response = $this->httpClient->post('/themes/import', $themeData);
+            $response = $this->makeHttpRequest('POST', '/themes/import', $themeData);
             $theme = ResponseHelper::getData($response);
 
             // Cache do tema
@@ -266,7 +266,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_predefined_themes', function () use ($category) {
             $query = $category ? ['category' => $category] : [];
 
-            $response = $this->httpClient->get('/themes/predefined', [
+            $response = $this->makeHttpRequest('GET', '/themes/predefined', [
                 'query' => $query
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -281,7 +281,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('update_theme_colors', function () use ($themeId, $colors) {
             $this->validateColors($colors);
 
-            $response = $this->httpClient->put("/themes/{$themeId}/colors", [
+            $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}/colors", [
                 'colors' => $colors
             ]);
 
@@ -308,7 +308,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('update_theme_fonts', function () use ($themeId, $fonts) {
             $this->validateFonts($fonts);
 
-            $response = $this->httpClient->put("/themes/{$themeId}/fonts", [
+            $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}/fonts", [
                 'fonts' => $fonts
             ]);
 
@@ -334,7 +334,7 @@ class ThemeService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('delete_theme', function () use ($themeId) {
             try {
-                $response = $this->httpClient->delete("/themes/{$themeId}");
+                $response = $this->makeHttpRequest('DELETE', "/themes/{$themeId}");
 
                 // Invalidar cache
                 $this->invalidateThemeCache($themeId);
@@ -363,7 +363,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_responsive_layout', function () use ($themeId, $responsiveConfig) {
             $this->validateResponsiveConfig($responsiveConfig);
 
-            $response = $this->httpClient->put("/themes/{$themeId}/responsive-layout", [
+            $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}/responsive-layout", [
                 'responsive_config' => $responsiveConfig
             ]);
 
@@ -390,7 +390,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_grid_system', function () use ($themeId, $gridConfig) {
             $this->validateGridConfig($gridConfig);
 
-            $response = $this->httpClient->put("/themes/{$themeId}/grid-system", [
+            $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}/grid-system", [
                 'grid_config' => $gridConfig
             ]);
 
@@ -418,7 +418,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_layout_components', function () use ($themeId, $components) {
             $this->validateLayoutComponents($components);
 
-            $response = $this->httpClient->put("/themes/{$themeId}/layout-components", [
+            $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}/layout-components", [
                 'components' => $components
             ]);
 
@@ -445,7 +445,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_theme_spacing', function () use ($themeId, $spacingConfig) {
             $this->validateSpacingConfig($spacingConfig);
 
-            $response = $this->httpClient->put("/themes/{$themeId}/spacing", [
+            $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}/spacing", [
                 'spacing_config' => $spacingConfig
             ]);
 
@@ -472,7 +472,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_advanced_typography', function () use ($themeId, $typographyConfig) {
             $this->validateAdvancedTypography($typographyConfig);
 
-            $response = $this->httpClient->put("/themes/{$themeId}/advanced-typography", [
+            $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}/advanced-typography", [
                 'typography_config' => $typographyConfig
             ]);
 
@@ -499,7 +499,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_advanced_color_system', function () use ($themeId, $colorSystem) {
             $this->validateAdvancedColorSystem($colorSystem);
 
-            $response = $this->httpClient->put("/themes/{$themeId}/advanced-colors", [
+            $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}/advanced-colors", [
                 'color_system' => $colorSystem
             ]);
 
@@ -526,7 +526,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_theme_animations', function () use ($themeId, $animationConfig) {
             $this->validateAnimationConfig($animationConfig);
 
-            $response = $this->httpClient->put("/themes/{$themeId}/animations", [
+            $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}/animations", [
                 'animation_config' => $animationConfig
             ]);
 
@@ -553,7 +553,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_custom_css', function () use ($themeId, $customCSS, $options) {
             $this->validateCustomCSS($customCSS);
 
-            $response = $this->httpClient->put("/themes/{$themeId}/custom-css", [
+            $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}/custom-css", [
                 'custom_css' => $customCSS,
                 'options' => $options
             ]);
@@ -582,7 +582,7 @@ class ThemeService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('generate_theme_variations', function () use ($themeId, $variationRules) {
             $this->validateVariationRules($variationRules);
 
-            $response = $this->httpClient->post("/themes/{$themeId}/generate-variations", [
+            $response = $this->makeHttpRequest('POST', "/themes/{$themeId}/generate-variations", [
                 'variation_rules' => $variationRules
             ]);
 
@@ -604,7 +604,7 @@ class ThemeService extends BaseService implements ServiceInterface
     public function optimizeForPerformance(string $themeId, array $optimizationOptions = []): array
     {
         return $this->executeWithMetrics('optimize_theme_performance', function () use ($themeId, $optimizationOptions) {
-            $response = $this->httpClient->post("/themes/{$themeId}/optimize-performance", [
+            $response = $this->makeHttpRequest('POST', "/themes/{$themeId}/optimize-performance", [
                 'optimization_options' => $optimizationOptions
             ]);
 
@@ -632,7 +632,7 @@ class ThemeService extends BaseService implements ServiceInterface
             $defaultDevices = ['desktop', 'tablet', 'mobile'];
             $testDevices = empty($devices) ? $defaultDevices : $devices;
 
-            $response = $this->httpClient->post("/themes/{$themeId}/validate-devices", [
+            $response = $this->makeHttpRequest('POST', "/themes/{$themeId}/validate-devices", [
                 'devices' => $testDevices
             ]);
 
@@ -646,7 +646,7 @@ class ThemeService extends BaseService implements ServiceInterface
     public function generateAccessibilityReport(string $themeId): array
     {
         return $this->executeWithMetrics('generate_accessibility_report', function () use ($themeId) {
-            $response = $this->httpClient->get("/themes/{$themeId}/accessibility-report");
+            $response = $this->makeHttpRequest('GET', "/themes/{$themeId}/accessibility-report");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -657,7 +657,7 @@ class ThemeService extends BaseService implements ServiceInterface
     private function fetchThemeById(string $themeId): ?array
     {
         try {
-            $response = $this->httpClient->get("/themes/{$themeId}");
+            $response = $this->makeHttpRequest('GET', "/themes/{$themeId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -989,4 +989,55 @@ class ThemeService extends BaseService implements ServiceInterface
             }
         }
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

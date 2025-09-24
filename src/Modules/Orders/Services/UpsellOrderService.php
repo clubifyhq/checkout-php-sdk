@@ -176,7 +176,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
             ]);
 
             // Adicionar upsell via API
-            $response = $this->httpClient->post("/orders/{$orderId}/upsells", $data);
+            $response = $this->makeHttpRequest('POST', "/orders/{$orderId}/upsells", $data);
             $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
@@ -224,7 +224,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
                 throw new ValidationException("Upsell not found: {$upsellId}");
             }
 
-            $response = $this->httpClient->delete("/orders/{$orderId}/upsells/{$upsellId}");
+            $response = $this->makeHttpRequest('DELETE', "/orders/{$orderId}/upsells/{$upsellId}");
 
             // Invalidar cache do pedido
             $this->invalidateOrderCache($orderId);
@@ -253,7 +253,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
     public function getOrderUpsells(string $orderId): array
     {
         return $this->executeWithMetrics('get_order_upsells', function () use ($orderId) {
-            $response = $this->httpClient->get("/orders/{$orderId}/upsells");
+            $response = $this->makeHttpRequest('GET', "/orders/{$orderId}/upsells");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -264,7 +264,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
     public function getUpsellById(string $orderId, string $upsellId): ?array
     {
         try {
-            $response = $this->httpClient->get("/orders/{$orderId}/upsells/{$upsellId}");
+            $response = $this->makeHttpRequest('GET', "/orders/{$orderId}/upsells/{$upsellId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -290,7 +290,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $response = $this->httpClient->put("/orders/{$orderId}/upsells/{$upsellId}", $data);
+            $response = $this->makeHttpRequest('PUT', "/orders/{$orderId}/upsells/{$upsellId}", $data);
             $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
@@ -313,7 +313,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
     public function getAvailableUpsells(string $orderId): array
     {
         return $this->executeWithMetrics('get_available_upsells', function () use ($orderId) {
-            $response = $this->httpClient->get("/orders/{$orderId}/available-upsells");
+            $response = $this->makeHttpRequest('GET', "/orders/{$orderId}/available-upsells");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -324,7 +324,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
     public function getRecommendedUpsells(string $orderId, int $limit = 5): array
     {
         return $this->executeWithMetrics('get_recommended_upsells', function () use ($orderId, $limit) {
-            $response = $this->httpClient->get("/orders/{$orderId}/recommended-upsells", [
+            $response = $this->makeHttpRequest('GET', "/orders/{$orderId}/recommended-upsells", [
                 'query' => ['limit' => $limit]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -376,7 +376,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
     public function getUpsellStatistics(array $filters = []): array
     {
         return $this->executeWithMetrics('get_upsell_statistics', function () use ($filters) {
-            $response = $this->httpClient->get('/orders/upsell-statistics', [
+            $response = $this->makeHttpRequest('GET', '/orders/upsell-statistics', [
                 'query' => $filters
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -389,7 +389,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
     public function getUpsellConversion(array $dateRange = []): array
     {
         return $this->executeWithMetrics('get_upsell_conversion', function () use ($dateRange) {
-            $response = $this->httpClient->get('/orders/upsell-conversion', [
+            $response = $this->makeHttpRequest('GET', '/orders/upsell-conversion', [
                 'query' => $dateRange
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -402,7 +402,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
     public function getTopUpsellProducts(int $limit = 10): array
     {
         return $this->executeWithMetrics('get_top_upsell_products', function () use ($limit) {
-            $response = $this->httpClient->get('/orders/top-upsell-products', [
+            $response = $this->makeHttpRequest('GET', '/orders/top-upsell-products', [
                 'query' => ['limit' => $limit]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -445,7 +445,7 @@ class UpsellOrderService extends BaseService implements ServiceInterface
 
         if ($order === null) {
             try {
-                $response = $this->httpClient->get("/orders/{$orderId}");
+                $response = $this->makeHttpRequest('GET', "/orders/{$orderId}");
                 $order = ResponseHelper::getData($response);
 
                 $this->cache->set($cacheKey, $order, 300);
@@ -573,4 +573,55 @@ class UpsellOrderService extends BaseService implements ServiceInterface
             'applied_by' => $upsellData['applied_by'] ?? 'system'
         ];
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

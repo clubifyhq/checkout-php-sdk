@@ -149,14 +149,11 @@ class Client
         // Adicionar Authorization header APENAS se AuthManager estiver disponível e autenticado
         if ($this->authManager && $this->authManager->isAuthenticated()) {
             $accessToken = $this->authManager->getAccessToken();
-            error_log('HTTP Client - Is Authenticated: ' . ($this->authManager->isAuthenticated() ? 'yes' : 'no'));
-            error_log('HTTP Client - Access Token: ' . ($accessToken ? 'present (' . substr($accessToken, 0, 20) . '...)' : 'missing'));
             if ($accessToken) {
                 $headers['Authorization'] = 'Bearer ' . $accessToken;
             }
-        } else {
-            error_log('HTTP Client - AuthManager not available or not authenticated');
         }
+        // Note: Não logamos "not authenticated" durante inicialização pois é comportamento esperado
         // IMPORTANTE: NÃO usar API key como fallback no Authorization header
         // API key é apenas para validação, não para autenticação de requests
 
@@ -194,38 +191,13 @@ class Client
      */
     private function createGuzzleClient(): GuzzleClient
     {
-        $stack = HandlerStack::create();
-
-        // Adicionar middleware de retry
-        $stack->push(
-            Middleware::retry(
-                function (
-                    $retries,
-                    RequestInterface $request,
-                    ?ResponseInterface $response = null,
-                    ?\Throwable $exception = null
-                ) {
-                    return $this->retryStrategy->shouldRetry(
-                        $retries,
-                        $exception,
-                        $response,
-                        $request
-                    );
-                },
-                function ($retries) {
-                    $delay = $this->retryStrategy->calculateDelay($retries);
-                    return $delay * 1000; // Guzzle espera microsegundos
-                }
-            )
-        );
-
         return new GuzzleClient([
             'base_uri' => rtrim($this->config->getBaseUrl(), '/') . '/',
             'timeout' => $this->config->getTimeout() / 1000, // Guzzle espera segundos
             'connect_timeout' => $this->config->getHttpConfig()['connect_timeout'] ?? 10,
             'verify' => $this->config->getHttpConfig()['verify_ssl'] ?? true,
             'headers' => $this->config->getDefaultHeaders(),
-            'handler' => $stack,
+            // Use default Guzzle handler - custom HandlerStack was causing the hang
         ]);
     }
 
@@ -364,11 +336,19 @@ class Client
      */
     private function resolveUri(string $uri, array $query = []): string
     {
-        $fullUri = $uri;
+        // Se URI já é absoluta, usar como está
+        if (preg_match('/^https?:\/\//', $uri)) {
+            $fullUri = $uri;
+        } else {
+            // Construir URI completa com base_url
+            $baseUrl = rtrim($this->config->getBaseUrl(), '/');
+            $uri = ltrim($uri, '/');
+            $fullUri = $baseUrl . '/' . $uri;
+        }
 
         if (!empty($query)) {
             $queryString = http_build_query($query);
-            $separator = str_contains($uri, '?') ? '&' : '?';
+            $separator = str_contains($fullUri, '?') ? '&' : '?';
             $fullUri .= $separator . $queryString;
         }
 

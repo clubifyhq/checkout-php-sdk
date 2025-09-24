@@ -221,7 +221,8 @@ class ClubifyCheckoutSDK
 
         // Criar storage criptografado para credenciais
         $storageDir = sys_get_temp_dir() . '/clubify_sdk_storage';
-        $encryptionKey = hash('sha256', 'clubify_sdk_encryption_key_' . time());
+        // Usar chave consistente baseada na configuração, não timestamp
+        $encryptionKey = hash('sha256', 'clubify_sdk_encryption_key_' . ($this->config->getApiKey() ?? 'default_key'));
 
         $storage = new EncryptedFileStorage($storageDir, $encryptionKey);
         $this->credentialManager = new CredentialManager($storage);

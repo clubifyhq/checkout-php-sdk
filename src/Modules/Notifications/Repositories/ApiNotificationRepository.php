@@ -91,7 +91,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
         return $this->getCachedOrExecute(
             $this->getCacheKey("notification:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
                     'email' => $fieldValue
                 ]);
 
@@ -127,7 +127,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
     public function updateStatus(string $notificationId, string $status): bool
     {
         return $this->executeWithMetrics('update_notification_status', function () use ($notificationId, $status) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$notificationId}/status", [
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$notificationId}/status", [
                 'status' => $status
             ]);
 
@@ -162,9 +162,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                $response = $this->httpClient->get($endpoint);
-
-                if (!ResponseHelper::isSuccessful($response)) {
+                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
                     throw new HttpException(
                         "Failed to get notification stats: " . "HTTP request failed",
                         $response->getStatusCode()
@@ -183,7 +181,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
     public function bulkCreate(array $notificationsData): array
     {
         return $this->executeWithMetrics('bulk_create_notifications', function () use ($notificationsData) {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
                 'notifications' => $notificationsData
             ]);
 
@@ -213,7 +211,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_notifications', function () use ($updates) {
-            $response = $this->httpClient->put("{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
 
@@ -253,7 +251,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
             $cacheKey,
             function () use ($criteria, $options) {
                 $payload = array_merge(['criteria' => $criteria], $options);
-                $response = $this->httpClient->post("{$this->getEndpoint()}/search", $payload);
+                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -274,7 +272,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
     public function archive(string $notificationId): bool
     {
         return $this->executeWithMetrics('archive_notification', function () use ($notificationId) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$notificationId}/archive");
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$notificationId}/archive");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -299,7 +297,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
     public function restore(string $notificationId): bool
     {
         return $this->executeWithMetrics('restore_notification', function () use ($notificationId) {
-            $response = $this->httpClient->patch("{$this->getEndpoint()}/{$notificationId}/restore");
+            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$notificationId}/restore");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -333,9 +331,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->httpClient->get($endpoint);
-
-                if (!ResponseHelper::isSuccessful($response)) {
+                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
                     if ($response->getStatusCode() === 404) {
                         throw new NotificationNotFoundException("No history found for notification ID: {$notificationId}");
                     }
@@ -370,9 +366,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->httpClient->get($endpoint);
-
-                if (!ResponseHelper::isSuccessful($response)) {
+                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
                     throw new HttpException(
                         "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
@@ -391,7 +385,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
     public function addRelationship(string $notificationId, string $relatedId, string $relationType, array $metadata = []): bool
     {
         return $this->executeWithMetrics('add_relationship', function () use ($notificationId, $relatedId, $relationType, $metadata) {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/{$notificationId}/{$relationType}", [
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$notificationId}/{$relationType}", [
                 'related_id' => $relatedId,
                 'metadata' => $metadata
             ]);
@@ -413,7 +407,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
     public function removeRelationship(string $notificationId, string $relatedId, string $relationType): bool
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($notificationId, $relatedId, $relationType) {
-            $response = $this->httpClient->delete("{$this->getEndpoint()}/{$notificationId}/{$relationType}/{$relatedId}");
+            $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$notificationId}/{$relationType}/{$relatedId}");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
@@ -477,4 +471,55 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
 
         $this->logger->info('All notification caches cleared');
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

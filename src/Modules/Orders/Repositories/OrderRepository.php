@@ -51,7 +51,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     public function create(array $orderData): array
     {
         return $this->executeWithMetrics('create_order', function () use ($orderData) {
-            $response = $this->httpClient->post($this->getEndpoint(), $orderData);
+            $response = $this->makeHttpRequest('POST', $this->getEndpoint(), $orderData);
             $order = ResponseHelper::getData($response);
 
             // Cache do pedido
@@ -93,7 +93,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'limit' => $limit
         ]);
 
-        $response = $this->httpClient->get($this->getEndpoint(), [
+        $response = $this->makeHttpRequest('GET', $this->getEndpoint(), [
             'query' => $queryParams
         ]);
 
@@ -106,7 +106,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     public function update(string $orderId, array $data): array
     {
         return $this->executeWithMetrics('update_order', function () use ($orderId, $data) {
-            $response = $this->httpClient->put("{$this->getEndpoint()}/{$orderId}", $data);
+            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/{$orderId}", $data);
             $order = ResponseHelper::getData($response);
 
             // Atualizar cache
@@ -123,7 +123,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         return $this->executeWithMetrics('delete_order', function () use ($orderId) {
             try {
-                $response = $this->httpClient->delete("{$this->getEndpoint()}/{$orderId}");
+                $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$orderId}");
 
                 // Invalidar cache
                 $this->invalidateCache($orderId);
@@ -142,7 +142,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         $queryParams = array_merge($filters, ['q' => $query]);
 
-        $response = $this->httpClient->get("{$this->getEndpoint()}/search", [
+        $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
             'query' => $queryParams
         ]);
 
@@ -156,7 +156,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         $queryParams = array_merge($filters, ['customer_id' => $customerId]);
 
-        $response = $this->httpClient->get($this->getEndpoint(), [
+        $response = $this->makeHttpRequest('GET', $this->getEndpoint(), [
             'query' => $queryParams
         ]);
 
@@ -170,7 +170,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         $queryParams = array_merge($filters, ['product_id' => $productId]);
 
-        $response = $this->httpClient->get($this->getEndpoint(), [
+        $response = $this->makeHttpRequest('GET', $this->getEndpoint(), [
             'query' => $queryParams
         ]);
 
@@ -184,7 +184,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         $queryParams = array_merge($filters, ['status' => $status]);
 
-        $response = $this->httpClient->get($this->getEndpoint(), [
+        $response = $this->makeHttpRequest('GET', $this->getEndpoint(), [
             'query' => $queryParams
         ]);
 
@@ -201,7 +201,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             'end_date' => $endDate
         ]);
 
-        $response = $this->httpClient->get($this->getEndpoint(), [
+        $response = $this->makeHttpRequest('GET', $this->getEndpoint(), [
             'query' => $queryParams
         ]);
 
@@ -214,7 +214,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     public function count(array $filters = []): int
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/count", [
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/count", [
                 'query' => $filters
             ]);
             $data = ResponseHelper::getData($response);
@@ -229,7 +229,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
      */
     public function getStatistics(array $filters = []): array
     {
-        $response = $this->httpClient->get("{$this->getEndpoint()}/statistics", [
+        $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/statistics", [
             'query' => $filters
         ]);
 
@@ -241,7 +241,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
      */
     public function getRevenueStats(array $dateRange = []): array
     {
-        $response = $this->httpClient->get("{$this->getEndpoint()}/revenue-stats", [
+        $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/revenue-stats", [
             'query' => $dateRange
         ]);
 
@@ -256,7 +256,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
         return $this->executeWithMetrics('update_order_status', function () use ($orderId, $status, $metadata) {
             try {
                 $data = array_merge($metadata, ['status' => $status]);
-                $response = $this->httpClient->put("{$this->getEndpoint()}/{$orderId}/status", $data);
+                $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/{$orderId}/status", $data);
 
                 // Invalidar cache do pedido
                 $this->invalidateCache($orderId);
@@ -273,7 +273,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
      */
     public function getStatusHistory(string $orderId): array
     {
-        $response = $this->httpClient->get("{$this->getEndpoint()}/{$orderId}/status-history");
+        $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$orderId}/status-history");
         return ResponseHelper::getData($response) ?? [];
     }
 
@@ -284,7 +284,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         return $this->executeWithMetrics('cancel_order', function () use ($orderId, $cancelData) {
             try {
-                $response = $this->httpClient->post("{$this->getEndpoint()}/{$orderId}/cancel", $cancelData);
+                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$orderId}/cancel", $cancelData);
 
                 // Invalidar cache do pedido
                 $this->invalidateCache($orderId);
@@ -302,7 +302,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     public function addItem(string $orderId, array $itemData): array
     {
         return $this->executeWithMetrics('add_order_item', function () use ($orderId, $itemData) {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/{$orderId}/items", $itemData);
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$orderId}/items", $itemData);
             $item = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
@@ -319,7 +319,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         return $this->executeWithMetrics('remove_order_item', function () use ($orderId, $itemId) {
             try {
-                $response = $this->httpClient->delete("{$this->getEndpoint()}/{$orderId}/items/{$itemId}");
+                $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$orderId}/items/{$itemId}");
 
                 // Invalidar cache do pedido
                 $this->invalidateCache($orderId);
@@ -337,7 +337,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     public function updateItem(string $orderId, string $itemId, array $itemData): array
     {
         return $this->executeWithMetrics('update_order_item', function () use ($orderId, $itemId, $itemData) {
-            $response = $this->httpClient->put("{$this->getEndpoint()}/{$orderId}/items/{$itemId}", $itemData);
+            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/{$orderId}/items/{$itemId}", $itemData);
             $item = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
@@ -352,7 +352,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
      */
     public function getItems(string $orderId): array
     {
-        $response = $this->httpClient->get("{$this->getEndpoint()}/{$orderId}/items");
+        $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$orderId}/items");
         return ResponseHelper::getData($response) ?? [];
     }
 
@@ -362,7 +362,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     public function addUpsell(string $orderId, array $upsellData): array
     {
         return $this->executeWithMetrics('add_order_upsell', function () use ($orderId, $upsellData) {
-            $response = $this->httpClient->post("{$this->getEndpoint()}/{$orderId}/upsells", $upsellData);
+            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$orderId}/upsells", $upsellData);
             $upsell = ResponseHelper::getData($response);
 
             // Invalidar cache do pedido
@@ -379,7 +379,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     {
         return $this->executeWithMetrics('remove_order_upsell', function () use ($orderId, $upsellId) {
             try {
-                $response = $this->httpClient->delete("{$this->getEndpoint()}/{$orderId}/upsells/{$upsellId}");
+                $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$orderId}/upsells/{$upsellId}");
 
                 // Invalidar cache do pedido
                 $this->invalidateCache($orderId);
@@ -396,7 +396,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
      */
     public function getUpsells(string $orderId): array
     {
-        $response = $this->httpClient->get("{$this->getEndpoint()}/{$orderId}/upsells");
+        $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$orderId}/upsells");
         return ResponseHelper::getData($response) ?? [];
     }
 
@@ -418,7 +418,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
      */
     public function getTopCustomers(int $limit = 10): array
     {
-        $response = $this->httpClient->get("{$this->getEndpoint()}/top-customers", [
+        $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/top-customers", [
             'query' => ['limit' => $limit]
         ]);
 
@@ -430,7 +430,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
      */
     public function getTopProducts(int $limit = 10): array
     {
-        $response = $this->httpClient->get("{$this->getEndpoint()}/top-products", [
+        $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/top-products", [
             'query' => ['limit' => $limit]
         ]);
 
@@ -442,7 +442,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
      */
     public function getConversionMetrics(): array
     {
-        $response = $this->httpClient->get("{$this->getEndpoint()}/conversion-metrics");
+        $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/conversion-metrics");
         return ResponseHelper::getData($response) ?? [];
     }
 
@@ -452,7 +452,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     private function fetchByField(string $field, string $value): ?array
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/{$field}/{$value}");
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$field}/{$value}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -468,7 +468,7 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
     private function fetchById(string $id): ?array
     {
         try {
-            $response = $this->httpClient->get("{$this->getEndpoint()}/{$id}");
+            $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$id}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -477,4 +477,55 @@ class OrderRepository extends BaseRepository implements OrderRepositoryInterface
             throw $e;
         }
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

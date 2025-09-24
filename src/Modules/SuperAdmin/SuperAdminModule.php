@@ -16,6 +16,7 @@ use Clubify\Checkout\Modules\UserManagement\Services\UserService;
 use Clubify\Checkout\Modules\Organization\Services\ApiKeyService;
 use Clubify\Checkout\Modules\Organization\Services\TenantService as OrganizationTenantService;
 use Clubify\Checkout\Exceptions\SDKException;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Módulo Super Admin
@@ -187,16 +188,9 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->post('super-admin/organizations', [
+            $result = $this->makeHttpRequest('POST', 'organizations', [
                 'json' => $data
             ]);
-
-            $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 300) {
-                throw new SDKException('Failed to create organization');
-            }
-
-            $result = json_decode($response->getBody()->getContents(), true);
 
             $this->logger->info('Organization created successfully', [
                 'organization_id' => $result['organization']['id'] ?? 'unknown'
@@ -222,16 +216,9 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->get('tenants', [
+            $result = $this->makeHttpRequest('GET', 'tenants', [
                 'query' => $filters
             ]);
-
-            $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 300) {
-                throw new SDKException('Failed to list tenants');
-            }
-
-            $result = json_decode($response->getBody()->getContents(), true);
 
             return $result;
 
@@ -253,14 +240,7 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->get("tenants/{$tenantId}");
-
-            $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 300) {
-                throw new SDKException('Failed to get tenant credentials');
-            }
-
-            $result = json_decode($response->getBody()->getContents(), true);
+            $result = $this->makeHttpRequest('GET', "tenants/{$tenantId}");
 
             return $result;
 
@@ -283,19 +263,7 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->get("tenants/domain/{$domain}");
-
-            $statusCode = $response->getStatusCode();
-            if ($statusCode === 404) {
-                // Tenant não encontrado
-                return null;
-            }
-
-            if ($statusCode < 200 || $statusCode >= 300) {
-                throw new SDKException('Failed to get tenant by domain');
-            }
-
-            $result = json_decode($response->getBody()->getContents(), true);
+            $result = $this->makeHttpRequest('GET', "tenants/domain/{$domain}");
 
             $this->logger->info('Tenant found by domain', [
                 'domain' => $domain,
@@ -304,8 +272,14 @@ class SuperAdminModule implements ModuleInterface
 
             return $result;
 
-        } catch (\Exception $e) {
+        } catch (HttpException $e) {
             // Se for 404, retorna null (tenant não encontrado)
+            if ($e->getStatusCode() === 404) {
+                return null;
+            }
+            throw $e;
+        } catch (\Exception $e) {
+            // Para outros tipos de erro, verifica se é 404 na mensagem
             if (strpos($e->getMessage(), '404') !== false) {
                 return null;
             }
@@ -332,7 +306,7 @@ class SuperAdminModule implements ModuleInterface
                 'forceRotation' => $options['forceRotation'] ?? false
             ];
 
-            $response = $this->httpClient->post("api-keys/{$apiKeyId}/rotate", [
+            $response = $this->makeHttpRequest('POST', "api-keys/{$apiKeyId}/rotate", [
                 'json' => $payload
             ]);
 
@@ -368,7 +342,7 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->get("api-keys/{$apiKeyId}");
+            $response = $this->makeHttpRequest('GET', "api-keys/{$apiKeyId}");
 
             $statusCode = $response->getStatusCode();
             if ($statusCode < 200 || $statusCode >= 300) {
@@ -406,7 +380,7 @@ class SuperAdminModule implements ModuleInterface
                 $payload['clientIp'] = $clientIp;
             }
 
-            $response = $this->httpClient->post('api-keys/public/validate', [
+            $response = $this->makeHttpRequest('POST', 'api-keys/public/validate', [
                 'json' => $payload
             ]);
 
@@ -438,7 +412,7 @@ class SuperAdminModule implements ModuleInterface
 
         try {
             // Primeiro tentar buscar usuário por email no contexto do tenant
-            $response = $this->httpClient->get('users', [
+            $response = $this->makeHttpRequest('GET', 'users', [
                 'query' => [
                     'email' => $email,
                     'limit' => 1
@@ -523,7 +497,7 @@ class SuperAdminModule implements ModuleInterface
                 'tenantId' => $tenantId
             ];
 
-            $response = $this->httpClient->post('users', [
+            $response = $this->makeHttpRequest('POST', 'users', [
                 'json' => $payload,
                 'headers' => [
                     'X-Tenant-Id' => $tenantId
@@ -621,7 +595,7 @@ class SuperAdminModule implements ModuleInterface
             ];
 
             // Usar cabeçalho X-Tenant-Id para contexto
-            $response = $this->httpClient->post('api-keys', [
+            $response = $this->makeHttpRequest('POST', 'api-keys', [
                 'json' => $payload,
                 'headers' => [
                     'X-Tenant-Id' => $tenantId
@@ -823,7 +797,7 @@ class SuperAdminModule implements ModuleInterface
     private function checkExistingApiKey(string $tenantId): array
     {
         try {
-            $response = $this->httpClient->get('api-keys', [
+            $response = $this->makeHttpRequest('GET', 'api-keys', [
                 'headers' => [
                     'X-Tenant-Id' => $tenantId
                 ]
@@ -896,16 +870,9 @@ class SuperAdminModule implements ModuleInterface
 
         try {
             // Usar timeout customizado para esta operação específica
-            $response = $this->httpClient->get('tenants/stats', [
+            $result = $this->makeHttpRequest('GET', 'tenants/stats', [
                 'timeout' => $timeoutSeconds
             ]);
-
-            $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 300) {
-                throw new SDKException('Failed to get system stats');
-            }
-
-            $result = json_decode($response->getBody()->getContents(), true);
 
             return $result;
 
@@ -927,7 +894,7 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->put("tenants/{$tenantId}/suspend", [
+            $response = $this->makeHttpRequest('PUT', "tenants/{$tenantId}/suspend", [
                 'json' => [
                     'reason' => $reason
                 ]
@@ -965,7 +932,7 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->httpClient->put("tenants/{$tenantId}/activate");
+            $response = $this->makeHttpRequest('PUT', "tenants/{$tenantId}/activate");
 
             $statusCode = $response->getStatusCode();
             if ($statusCode < 200 || $statusCode >= 300) {
@@ -1260,7 +1227,7 @@ class SuperAdminModule implements ModuleInterface
 
         try {
             // Primeiro tentar obter informações detalhadas do tenant
-            $tenantResponse = $this->httpClient->get("tenants/{$tenantId}");
+            $tenantResponse = $this->makeHttpRequest('GET', "tenants/{$tenantId}");
             $tenantStatusCode = $tenantResponse->getStatusCode();
 
             if ($tenantStatusCode >= 200 && $tenantStatusCode < 300) {
@@ -1295,4 +1262,100 @@ class SuperAdminModule implements ModuleInterface
             ];
         }
     }
+
+    /**
+     * Alternar para tenant específico (compatibilidade com exemplo)
+     *
+     * Este método é uma ponte para o método do SDK principal
+     */
+    public function switchToTenant(string $tenantId): array
+    {
+        $this->ensureInitialized();
+
+        $this->logger->info('SuperAdmin: Switching to tenant context', [
+            'tenant_id' => $tenantId
+        ]);
+
+        // Retornar um resultado simulado para compatibilidade
+        // O contexto real deve ser gerenciado pelo SDK principal
+        return [
+            'success' => true,
+            'message' => 'Tenant context switch requested - use SDK main switchToTenant() method',
+            'current_tenant_id' => $tenantId,
+            'current_role' => 'tenant_admin',
+            'note' => 'This is a compatibility method. Use $sdk->switchToTenant() for actual switching.'
+        ];
+    }
+
+    /**
+     * Voltar para contexto de super admin (compatibilidade com exemplo)
+     *
+     * Este método é uma ponte para o método do SDK principal
+     */
+    public function switchToSuperAdmin(): array
+    {
+        $this->ensureInitialized();
+
+        $this->logger->info('SuperAdmin: Switching to super admin context');
+
+        // Retornar um resultado simulado para compatibilidade
+        // O contexto real deve ser gerenciado pelo SDK principal
+        return [
+            'success' => true,
+            'message' => 'Super admin context switch requested - use SDK main switchToSuperAdmin() method',
+            'current_role' => 'super_admin',
+            'note' => 'This is a compatibility method. Use $sdk->switchToSuperAdmin() for actual switching.'
+        ];
+    }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

@@ -11,6 +11,7 @@ use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Modules\Notifications\DTOs\WebhookConfigData;
 use Clubify\Checkout\Modules\Notifications\Enums\NotificationType;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Serviço de configuração de webhooks para notificações
@@ -78,7 +79,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
     public function isHealthy(): bool
     {
         try {
-            $response = $this->httpClient->get('/notifications/webhooks/health');
+            $response = $this->makeHttpRequest('GET', '/notifications/webhooks/health');
             return $response->getStatusCode() === 200;
         } catch (\Exception $e) {
             return false;
@@ -168,7 +169,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
             $this->validateEvents($webhookConfig->events);
 
             // Envia para API
-            $response = $this->httpClient->post('/notifications/webhook/config', [
+            $response = $this->makeHttpRequest('POST', '/notifications/webhook/config', [
                 'json' => $webhookConfig->toArray()
             ]);
 
@@ -214,7 +215,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
         }
 
         try {
-            $response = $this->httpClient->get("/notifications/webhook/config/{$configId}");
+            $response = $this->makeHttpRequest('GET', "/notifications/webhook/config/{$configId}");
             $data = $response->toArray();
 
             // Cache o resultado
@@ -270,7 +271,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
             }
 
             // Envia para API
-            $response = $this->httpClient->put("/notifications/webhook/config/{$configId}", [
+            $response = $this->makeHttpRequest('PUT', "/notifications/webhook/config/{$configId}", [
                 'json' => $configData
             ]);
 
@@ -312,7 +313,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
         $this->validateInitialization();
 
         try {
-            $response = $this->httpClient->delete("/notifications/webhook/config/{$configId}");
+            $response = $this->makeHttpRequest('DELETE', "/notifications/webhook/config/{$configId}");
 
             if ($response->getStatusCode() === 200) {
                 // Remove do cache
@@ -350,7 +351,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
         $this->validateInitialization();
 
         try {
-            $response = $this->httpClient->get('/notifications/webhook/configs', [
+            $response = $this->makeHttpRequest('GET', '/notifications/webhook/configs', [
                 'query' => $filters
             ]);
 
@@ -396,7 +397,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
                 'webhook_name' => $config['name'] ?? 'Unnamed'
             ], $testData);
 
-            $response = $this->httpClient->post('/notifications/test-webhook', [
+            $response = $this->makeHttpRequest('POST', '/notifications/test-webhook', [
                 'json' => [
                     'config_id' => $configId,
                     'test_data' => $payload
@@ -705,4 +706,55 @@ class WebhookConfigService extends BaseService implements ServiceInterface
         $cacheKey = self::CACHE_PREFIX . $configId;
         $this->cache->delete($cacheKey);
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

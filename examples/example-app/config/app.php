@@ -123,4 +123,14 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Configurações do Exemplo Laravel
+    |--------------------------------------------------------------------------
+    |
+    | Configurações usadas pelo laravel-complete-example.php
+    | Personalize conforme necessário no .env
+    |
+    */
+
 ];

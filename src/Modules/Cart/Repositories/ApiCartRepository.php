@@ -9,6 +9,7 @@ use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Security\SecurityValidator;
 use Clubify\Checkout\Modules\Cart\Contracts\CartRepositoryInterface;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Repositório de API para operações de carrinho
@@ -50,7 +51,7 @@ class ApiCartRepository implements CartRepositoryInterface
 
         $this->logger->info('Creating cart via API', ['data_keys' => array_keys($data)]);
 
-        $response = $this->httpClient->post(self::BASE_PATH, $data);
+        $response = $this->makeHttpRequest('POST', self::BASE_PATH, $data);
 
         $this->logger->info('Cart created successfully', [
             'cart_id' => $response['id'] ?? null
@@ -73,7 +74,7 @@ class ApiCartRepository implements CartRepositoryInterface
         $this->logger->debug('Fetching cart by ID', ['cart_id' => $id]);
 
         try {
-            $response = $this->httpClient->get(self::BASE_PATH . "/{$id}");
+            $response = $this->makeHttpRequest('GET', self::BASE_PATH . "/{$id}");
             return $response;
         } catch (\Exception $e) {
             if ($e->getCode() === 404) {
@@ -95,7 +96,7 @@ class ApiCartRepository implements CartRepositoryInterface
         $this->logger->debug('Fetching cart by session', ['session_id' => substr($sessionId, 0, 10) . '...']);
 
         try {
-            $response = $this->httpClient->get(self::BASE_PATH, [
+            $response = $this->makeHttpRequest('GET', self::BASE_PATH, [
                 'session_id' => $sessionId
             ]);
 
@@ -123,7 +124,7 @@ class ApiCartRepository implements CartRepositoryInterface
         $this->logger->debug('Fetching cart by customer', ['customer_id' => $customerId]);
 
         try {
-            $response = $this->httpClient->get(self::BASE_PATH, [
+            $response = $this->makeHttpRequest('GET', self::BASE_PATH, [
                 'customer_id' => $customerId,
                 'status' => 'active'
             ]);
@@ -155,7 +156,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'data_keys' => array_keys($data)
         ]);
 
-        $response = $this->httpClient->put(self::BASE_PATH . "/{$id}", $data);
+        $response = $this->makeHttpRequest('PUT', self::BASE_PATH . "/{$id}", $data);
 
         $this->logger->info('Cart updated successfully', ['cart_id' => $id]);
 
@@ -170,7 +171,7 @@ class ApiCartRepository implements CartRepositoryInterface
         $this->logger->info('Deleting cart via API', ['cart_id' => $id]);
 
         try {
-            $this->httpClient->delete(self::BASE_PATH . "/{$id}");
+            $this->makeHttpRequest('DELETE', self::BASE_PATH . "/{$id}");
 
             $this->logger->info('Cart deleted successfully', ['cart_id' => $id]);
 
@@ -206,7 +207,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'item_data_keys' => array_keys($itemData)
         ]);
 
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             self::BASE_PATH . "/{$cartId}/items",
             $itemData
         );
@@ -230,7 +231,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'updates' => $updates
         ]);
 
-        $response = $this->httpClient->put(
+        $response = $this->makeHttpRequest('PUT', 
             self::BASE_PATH . "/{$cartId}/items/{$itemId}",
             $updates
         );
@@ -253,7 +254,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'item_id' => $itemId
         ]);
 
-        $response = $this->httpClient->delete(
+        $response = $this->makeHttpRequest('DELETE', 
             self::BASE_PATH . "/{$cartId}/items/{$itemId}"
         );
 
@@ -272,7 +273,7 @@ class ApiCartRepository implements CartRepositoryInterface
     {
         $this->logger->debug('Fetching cart items', ['cart_id' => $cartId]);
 
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             self::BASE_PATH . "/{$cartId}/items"
         );
 
@@ -295,7 +296,7 @@ class ApiCartRepository implements CartRepositoryInterface
     {
         $this->logger->info('Clearing cart items', ['cart_id' => $cartId]);
 
-        $response = $this->httpClient->delete(
+        $response = $this->makeHttpRequest('DELETE', 
             self::BASE_PATH . "/{$cartId}/items"
         );
 
@@ -315,7 +316,7 @@ class ApiCartRepository implements CartRepositoryInterface
     {
         $this->logger->debug('Calculating cart subtotal', ['cart_id' => $cartId]);
 
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             self::BASE_PATH . "/{$cartId}/totals"
         );
 
@@ -329,7 +330,7 @@ class ApiCartRepository implements CartRepositoryInterface
     {
         $this->logger->debug('Calculating cart discount', ['cart_id' => $cartId]);
 
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             self::BASE_PATH . "/{$cartId}/totals"
         );
 
@@ -343,7 +344,7 @@ class ApiCartRepository implements CartRepositoryInterface
     {
         $this->logger->debug('Calculating cart taxes', ['cart_id' => $cartId]);
 
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             self::BASE_PATH . "/{$cartId}/totals"
         );
 
@@ -360,7 +361,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'shipping_data' => $shippingData
         ]);
 
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             self::BASE_PATH . "/{$cartId}/shipping/calculate",
             $shippingData
         );
@@ -375,7 +376,7 @@ class ApiCartRepository implements CartRepositoryInterface
     {
         $this->logger->debug('Fetching cart totals summary', ['cart_id' => $cartId]);
 
-        $response = $this->httpClient->get(
+        $response = $this->makeHttpRequest('GET', 
             self::BASE_PATH . "/{$cartId}/totals"
         );
 
@@ -403,7 +404,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'promotion_code' => substr($promotionCode, 0, 10) . '...'
         ]);
 
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             self::BASE_PATH . "/{$cartId}/promotions",
             ['code' => $promotionCode]
         );
@@ -423,7 +424,7 @@ class ApiCartRepository implements CartRepositoryInterface
     {
         $this->logger->info('Removing promotion from cart', ['cart_id' => $cartId]);
 
-        $response = $this->httpClient->delete(
+        $response = $this->makeHttpRequest('DELETE', 
             self::BASE_PATH . "/{$cartId}/promotions"
         );
 
@@ -442,7 +443,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'cart_id' => $cartId
         ]);
 
-        $response = $this->httpClient->post('/api/v1/promotions/validate', [
+        $response = $this->makeHttpRequest('POST', '/api/v1/promotions/validate', [
             'code' => $promotionCode,
             'cart_id' => $cartId
         ]);
@@ -486,7 +487,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'context' => $context
         ]);
 
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             self::NAVIGATION_PATH . "/{$offerId}",
             $context
         );
@@ -509,7 +510,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'step_data' => $stepData
         ]);
 
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             self::NAVIGATION_PATH . "/navigation/{$navigationId}/continue",
             $stepData
         );
@@ -531,7 +532,7 @@ class ApiCartRepository implements CartRepositoryInterface
         ]);
 
         try {
-            $response = $this->httpClient->get(
+            $response = $this->makeHttpRequest('GET', 
                 self::NAVIGATION_PATH . "/navigation/{$navigationId}"
             );
 
@@ -553,7 +554,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'navigation_id' => $navigationId
         ]);
 
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             self::NAVIGATION_PATH . "/navigation/{$navigationId}/complete"
         );
 
@@ -578,7 +579,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'payment_method' => $paymentData['payment_method'] ?? null
         ]);
 
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             self::BASE_PATH . "/{$cartId}/one-click",
             $paymentData
         );
@@ -600,7 +601,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'cart_id' => $cartId
         ]);
 
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             self::BASE_PATH . "/{$cartId}/one-click/validate",
             $paymentData
         );
@@ -621,7 +622,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'cart_id' => $cartId
         ]);
 
-        $response = $this->httpClient->put(
+        $response = $this->makeHttpRequest('PUT', 
             self::BASE_PATH . "/{$cartId}/shipping",
             $shippingData
         );
@@ -640,7 +641,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'cart_id' => $cartId
         ]);
 
-        $response = $this->httpClient->put(
+        $response = $this->makeHttpRequest('PUT', 
             self::BASE_PATH . "/{$cartId}/billing",
             $billingData
         );
@@ -661,7 +662,7 @@ class ApiCartRepository implements CartRepositoryInterface
     {
         $this->logger->info('Marking cart as abandoned', ['cart_id' => $cartId]);
 
-        $response = $this->httpClient->put(
+        $response = $this->makeHttpRequest('PUT', 
             self::BASE_PATH . "/{$cartId}/abandon"
         );
 
@@ -677,7 +678,7 @@ class ApiCartRepository implements CartRepositoryInterface
     {
         $this->logger->info('Converting cart to order', ['cart_id' => $cartId]);
 
-        $response = $this->httpClient->post(
+        $response = $this->makeHttpRequest('POST', 
             self::BASE_PATH . "/{$cartId}/convert"
         );
 
@@ -702,7 +703,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'hours_ago' => $hoursAgo
         ]);
 
-        $response = $this->httpClient->get(self::BASE_PATH . '/abandoned', [
+        $response = $this->makeHttpRequest('GET', self::BASE_PATH . '/abandoned', [
             'hours_ago' => $hoursAgo
         ]);
 
@@ -718,7 +719,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'days_ago' => $daysAgo
         ]);
 
-        $response = $this->httpClient->delete(self::BASE_PATH . '/abandoned', [
+        $response = $this->makeHttpRequest('DELETE', self::BASE_PATH . '/abandoned', [
             'days_ago' => $daysAgo
         ]);
 
@@ -740,7 +741,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'filters' => $filters
         ]);
 
-        $response = $this->httpClient->get(self::BASE_PATH . '/statistics', $filters);
+        $response = $this->makeHttpRequest('GET', self::BASE_PATH . '/statistics', $filters);
 
         return $response;
     }
@@ -754,7 +755,7 @@ class ApiCartRepository implements CartRepositoryInterface
             'limit' => $limit
         ]);
 
-        $response = $this->httpClient->get(self::BASE_PATH . '/analytics/products/most-added', [
+        $response = $this->makeHttpRequest('GET', self::BASE_PATH . '/analytics/products/most-added', [
             'limit' => $limit
         ]);
 
@@ -768,7 +769,7 @@ class ApiCartRepository implements CartRepositoryInterface
     {
         $this->logger->debug('Fetching average cart value');
 
-        $response = $this->httpClient->get(self::BASE_PATH . '/analytics/average-value');
+        $response = $this->makeHttpRequest('GET', self::BASE_PATH . '/analytics/average-value');
 
         return (float) ($response['average_value'] ?? 0.0);
     }
@@ -780,8 +781,59 @@ class ApiCartRepository implements CartRepositoryInterface
     {
         $this->logger->debug('Fetching cart conversion rate');
 
-        $response = $this->httpClient->get(self::BASE_PATH . '/analytics/conversion-rate');
+        $response = $this->makeHttpRequest('GET', self::BASE_PATH . '/analytics/conversion-rate');
 
         return (float) ($response['conversion_rate'] ?? 0.0);
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

@@ -7,6 +7,7 @@ namespace Clubify\Checkout\Core\Repository;
 use Clubify\Checkout\Contracts\RepositoryInterface;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Exceptions\HttpException;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Classe base para Repository Pattern
@@ -42,7 +43,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
         return $this->getCachedOrExecute(
             $this->getCacheKey("{$this->getResourceName()}:{$id}"),
             function () use ($id) {
-                $response = $this->httpClient->get("{$this->getEndpoint()}/{$id}");
+                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/{$id}");
                 return $this->isSuccessfulResponse($response) ? $this->extractResponseData($response) : null;
             },
             300 // 5 minutes cache
@@ -62,7 +63,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
                 $queryParams = ['ids' => implode(',', $ids)];
                 $endpoint = $this->getEndpoint() . '?' . http_build_query($queryParams);
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
                 return $this->isSuccessfulResponse($response) ? $this->extractResponseData($response) ?? [] : [];
             },
             180 // 3 minutes cache
@@ -82,7 +83,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
                 $queryParams = ['limit' => $limit, 'offset' => $offset];
                 $endpoint = $this->getEndpoint() . '?' . http_build_query($queryParams);
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
                 return $this->isSuccessfulResponse($response) ? $this->extractResponseData($response) ?? [] : [];
             },
             180 // 3 minutes cache
@@ -102,7 +103,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
                 $queryParams = array_merge($criteria, ['limit' => $limit, 'offset' => $offset]);
                 $endpoint = $this->getEndpoint() . '?' . http_build_query($queryParams);
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
                 return $this->isSuccessfulResponse($response) ? $this->extractResponseData($response) ?? [] : [];
             },
             180 // 3 minutes cache
@@ -124,7 +125,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
     public function create(array $data): array
     {
         return $this->executeWithMetrics("create_{$this->getResourceName()}", function () use ($data) {
-            $response = $this->httpClient->post($this->getEndpoint(), $data);
+            $response = $this->makeHttpRequest('POST', $this->getEndpoint(), $data);
 
             if (!$this->isSuccessfulResponse($response)) {
                 throw new HttpException(
@@ -151,7 +152,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
     public function update(string $id, array $data): array
     {
         return $this->executeWithMetrics("update_{$this->getResourceName()}", function () use ($id, $data) {
-            $response = $this->httpClient->put("{$this->getEndpoint()}/{$id}", $data);
+            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/{$id}", $data);
 
             if (!$this->isSuccessfulResponse($response)) {
                 throw new HttpException(
@@ -181,7 +182,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
     public function delete(string $id): bool
     {
         return $this->executeWithMetrics("delete_{$this->getResourceName()}", function () use ($id) {
-            $response = $this->httpClient->delete("{$this->getEndpoint()}/{$id}");
+            $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$id}");
 
             if ($this->isSuccessfulResponse($response)) {
                 // Invalidate cache
@@ -220,7 +221,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
                 $queryParams = array_merge($criteria, ['count_only' => true]);
                 $endpoint = $this->getEndpoint() . '?' . http_build_query($queryParams);
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
 
                 if ($this->isSuccessfulResponse($response)) {
                     $data = $this->extractResponseData($response);
@@ -249,7 +250,7 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
                 );
                 $endpoint = $this->getEndpoint() . '/search?' . http_build_query($queryParams);
 
-                $response = $this->httpClient->get($endpoint);
+                $response = $this->makeHttpRequest('GET', $endpoint);
                 return $this->isSuccessfulResponse($response) ? $this->extractResponseData($response) ?? [] : [];
             },
             180 // 3 minutes cache
@@ -319,4 +320,41 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
 
         return $data;
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+
+
 }

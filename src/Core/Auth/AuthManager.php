@@ -9,6 +9,7 @@ use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Security\SecurityValidator;
 use Clubify\Checkout\Exceptions\AuthenticationException;
 use Clubify\Checkout\Exceptions\HttpException;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Gerenciador de autenticação do Clubify SDK
@@ -146,7 +147,7 @@ class AuthManager implements AuthManagerInterface
         }
 
         try {
-            $response = $this->httpClient->post('auth/refresh', [
+            $response = $this->makeHttpRequest('POST', 'auth/refresh', [
                 'json' => [
                     'refreshToken' => $refreshToken
                 ]
@@ -274,7 +275,7 @@ class AuthManager implements AuthManagerInterface
             }
 
             // Fallback: fazer requisição à API
-            $response = $this->httpClient->get('/auth/me');
+            $response = $this->makeHttpRequest('GET', '/auth/me');
             $this->userInfo = json_decode((string) $response->getBody(), true);
 
         } catch (\Exception) {
@@ -336,7 +337,7 @@ class AuthManager implements AuthManagerInterface
     {
         try {
             // Fazer requisição com payload (X-Tenant-ID já incluído nos headers padrão)
-            $response = $this->httpClient->post('api-keys/public/validate', [
+            $response = $this->makeHttpRequest('POST', 'api-keys/public/validate', [
                 'json' => [
                     'apiKey' => $apiKey,
                     'endpoint' => '/users',
@@ -420,7 +421,7 @@ class AuthManager implements AuthManagerInterface
             }
 
             // Fazer login via endpoint correto (X-Tenant-ID já incluído nos headers padrão)
-            $response = $this->httpClient->post('auth/login', [
+            $response = $this->makeHttpRequest('POST', 'auth/login', [
                 'json' => $loginData
             ]);
 
@@ -475,7 +476,7 @@ class AuthManager implements AuthManagerInterface
             // Simplified authentication flow - single endpoint strategy
             $endpoint = $this->getAuthEndpointForContext($tenantId);
 
-            $response = $this->httpClient->post($endpoint, [
+            $response = $this->makeHttpRequest('POST', $endpoint, [
                 'json' => [
                     'api_key' => $apiKey,
                     'tenant_id' => $tenantId,
@@ -528,8 +529,9 @@ class AuthManager implements AuthManagerInterface
     {
         if ($this->credentialManager === null) {
             // Criar storage temporário se não foi fornecido
-            $storageDir = sys_get_temp_dir() . '/clubify_auth_storage';
-            $encryptionKey = hash('sha256', 'clubify_auth_encryption_key_' . time());
+            $storageDir = sys_get_temp_dir() . '/clubify_sdk_storage';
+            // Usar chave consistente baseada na configuração, não timestamp
+            $encryptionKey = hash('sha256', 'clubify_sdk_encryption_key_' . ($this->config->getApiKey() ?? 'default_key'));
             $storage = new EncryptedFileStorage($storageDir, $encryptionKey);
             $this->credentialManager = new CredentialManager($storage);
         }
@@ -579,7 +581,7 @@ class AuthManager implements AuthManagerInterface
 
         // Security: Remove sensitive data logging in production
 
-        $response = $this->httpClient->post('tenants', [
+        $response = $this->makeHttpRequest('POST', 'tenants', [
             'json' => $requestData
         ]);
 
@@ -714,8 +716,8 @@ class AuthManager implements AuthManagerInterface
     private function validateTenantExists(string $tenantId): bool
     {
         try {
-            $response = $this->httpClient->get("tenants/{$tenantId}");
-            return $response->getStatusCode() >= 200 && $response->getStatusCode() < 300;
+            $this->makeHttpRequest('GET', "tenants/{$tenantId}");
+            return true; // Se makeHttpRequest não lançou exceção, tenant existe
         } catch (\Exception $e) {
             return false;
         }
@@ -733,12 +735,9 @@ class AuthManager implements AuthManagerInterface
 
         // Estratégia 2: Tentar obter da API
         try {
-            $response = $this->httpClient->get("tenants/{$tenantId}");
-            if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
-                $data = json_decode($response->getBody()->getContents(), true);
-                $tenantInfo = $data['data'] ?? $data;
-                return $tenantInfo['api_key'] ?? null;
-            }
+            $data = $this->makeHttpRequest('GET', "tenants/{$tenantId}");
+            $tenantInfo = $data['data'] ?? $data;
+            return $tenantInfo['api_key'] ?? null;
         } catch (\Exception $e) {
             // Falhou silenciosamente, tentará próxima estratégia
         }
@@ -838,51 +837,44 @@ class AuthManager implements AuthManagerInterface
     {
         try {
             // First try to get API keys for this tenant
-            $response = $this->httpClient->get("api-keys");
+            $data = $this->makeHttpRequest('GET', "api-keys");
+            $apiKeys = $data['data'] ?? $data['api_keys'] ?? $data;
 
-            if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
-                $data = json_decode($response->getBody()->getContents(), true);
-                $apiKeys = $data['data'] ?? $data['api_keys'] ?? $data;
-
-                if (is_array($apiKeys) && count($apiKeys) > 0) {
-                    $apiKey = $apiKeys[0] ?? null;
-                    if ($apiKey && isset($apiKey['key'])) {
-                        // Update the credential manager with the found API key
-                        $this->credentialManager->addTenantContext($tenantId, [
-                            'tenant_id' => $tenantId,
-                            'api_key' => $apiKey['key'],
-                            'api_key_id' => $apiKey['id'] ?? $apiKey['_id'] ?? null,
-                            'name' => $apiKey['name'] ?? "Tenant {$tenantId}"
-                        ]);
-
-                        return [
-                            'success' => true,
-                            'message' => 'API key found and credentials updated'
-                        ];
-                    }
-                }
-            }
-
-            // Fallback: try to get tenant info to see if it has embedded api_key
-            $tenantResponse = $this->httpClient->get("tenants/{$tenantId}");
-            if ($tenantResponse->getStatusCode() >= 200 && $tenantResponse->getStatusCode() < 300) {
-                $tenantData = json_decode($tenantResponse->getBody()->getContents(), true);
-                $tenant = $tenantData['data'] ?? $tenantData;
-
-                if (isset($tenant['api_key']) && !empty($tenant['api_key'])) {
+            if (is_array($apiKeys) && count($apiKeys) > 0) {
+                $apiKey = $apiKeys[0] ?? null;
+                if ($apiKey && isset($apiKey['key'])) {
+                    // Update the credential manager with the found API key
                     $this->credentialManager->addTenantContext($tenantId, [
                         'tenant_id' => $tenantId,
-                        'api_key' => $tenant['api_key'],
-                        'name' => $tenant['name'] ?? "Tenant {$tenantId}",
-                        'domain' => $tenant['domain'] ?? null,
-                        'subdomain' => $tenant['subdomain'] ?? null
+                        'api_key' => $apiKey['key'],
+                        'api_key_id' => $apiKey['id'] ?? $apiKey['_id'] ?? null,
+                        'name' => $apiKey['name'] ?? "Tenant {$tenantId}"
                     ]);
 
                     return [
                         'success' => true,
-                        'message' => 'Credentials retrieved from tenant data'
+                        'message' => 'API key found and credentials updated'
                     ];
                 }
+            }
+
+            // Fallback: try to get tenant info to see if it has embedded api_key
+            $tenantData = $this->makeHttpRequest('GET', "tenants/{$tenantId}");
+            $tenant = $tenantData['data'] ?? $tenantData;
+
+            if (isset($tenant['api_key']) && !empty($tenant['api_key'])) {
+                $this->credentialManager->addTenantContext($tenantId, [
+                    'tenant_id' => $tenantId,
+                    'api_key' => $tenant['api_key'],
+                    'name' => $tenant['name'] ?? "Tenant {$tenantId}",
+                    'domain' => $tenant['domain'] ?? null,
+                    'subdomain' => $tenant['subdomain'] ?? null
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'Credentials retrieved from tenant data'
+                ];
             }
 
             return [
@@ -976,7 +968,38 @@ class AuthManager implements AuthManagerInterface
      */
     private function authenticateWithSuperAdminCredentials(array $credentials): bool
     {
-        // Tentar primeiro com API key se disponível
+        // Para super admin, priorizar email/senha sobre API key
+        if (isset($credentials['email']) && isset($credentials['password'])) {
+            try {
+                $loginData = [
+                    'email' => $credentials['email'],
+                    'password' => $credentials['password'],
+                    'rememberMe' => true
+                ];
+
+                // Tentar autenticar via endpoint de login
+                $data = $this->makeHttpRequest('POST', 'auth/login', [
+                    'json' => $loginData,
+                    'timeout' => 30,
+                    'connect_timeout' => 10,
+                    'headers' => [
+                        'X-Tenant-ID' => $credentials['tenant_id'] ?? $this->config->getTenantId()
+                    ]
+                ]);
+
+                // makeHttpRequest já retorna os dados da resposta se bem-sucedida
+                return $this->storeAuthTokens($data, $credentials, 'login');
+
+            } catch (\Exception $e) {
+                // Security: Avoid exposing sensitive authentication details in logs
+                $this->logSecurityEvent('auth_failure', [
+                    'method' => 'login',
+                    'error_type' => get_class($e)
+                ]);
+            }
+        }
+
+        // Fallback: tentar com API key se email/senha falhou
         if (isset($credentials['api_key'])) {
             try {
                 $requestData = [
@@ -985,10 +1008,11 @@ class AuthManager implements AuthManagerInterface
                     'grant_type' => 'api_key'
                 ];
 
-                // Security: Remove sensitive debug logging
-                // Tentar autenticar via endpoint de API key do user-management-service
-                $response = $this->httpClient->post('auth/api-key/token', [
-                    'json' => $requestData
+                // CORREÇÃO: Usar endpoint correto encontrado no auth.controller.ts
+                $response = $this->makeHttpRequest('POST', 'auth/api-key/token', [
+                    'json' => $requestData,
+                    'timeout' => 30,
+                    'connect_timeout' => 10
                 ]);
 
                 $statusCode = $response->getStatusCode();
@@ -1007,39 +1031,6 @@ class AuthManager implements AuthManagerInterface
             }
         }
 
-        // Fallback: tentar com credenciais de usuário/senha
-        if (isset($credentials['email']) && isset($credentials['password'])) {
-            try {
-                $loginData = [
-                    'email' => $credentials['email'],
-                    'password' => $credentials['password'],
-                    'rememberMe' => true
-                ];
-
-                // Security: Remove sensitive debug logging
-                // Tentar autenticar via endpoint de login
-                $response = $this->httpClient->post('auth/login', [
-                    'json' => $loginData,
-                    'headers' => [
-                        'X-Tenant-ID' => $credentials['tenant_id'] ?? $this->config->getTenantId()
-                    ]
-                ]);
-
-                $statusCode = $response->getStatusCode();
-
-                if ($statusCode >= 200 && $statusCode < 300) {
-                    $data = json_decode($response->getBody()->getContents(), true);
-                    return $this->storeAuthTokens($data, $credentials, 'login');
-                }
-
-            } catch (\Exception $e) {
-                // Security: Avoid exposing sensitive authentication details in logs
-                $this->logSecurityEvent('auth_failure', [
-                    'method' => 'login',
-                    'error_type' => get_class($e)
-                ]);
-            }
-        }
 
         // Security: Log authentication failure securely
         $this->logSecurityEvent('auth_failure', [
@@ -1228,4 +1219,55 @@ class AuthManager implements AuthManagerInterface
         // The endpoint /api/v1/auth/api-key/token is the only one implemented
         return 'auth/api-key/token';
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

@@ -82,7 +82,7 @@ class ProductService extends BaseService implements ServiceInterface
             ]);
 
             // Criar produto via API
-            $response = $this->httpClient->post('/products', $data);
+            $response = $this->makeHttpRequest('POST', '/products', $data);
             $product = ResponseHelper::getData($response);
 
             // Cache do produto
@@ -173,7 +173,7 @@ class ProductService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $response = $this->httpClient->put("/products/{$productId}", $data);
+            $response = $this->makeHttpRequest('PUT', "/products/{$productId}", $data);
             $product = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -200,12 +200,12 @@ class ProductService extends BaseService implements ServiceInterface
                 'limit' => $limit
             ]);
 
-            $response = $this->httpClient->get('/products', [
+            $response = $this->makeHttpRequest('GET', '/products', [
                 'query' => $queryParams
             ]);
 
-            $result = json_decode($response->getBody()->getContents(), true);
-            return $result['data'] ?? $result ?? [];
+            // makeHttpRequest já retorna dados decodificados
+            return $response['data'] ?? $response ?? [];
         });
     }
 
@@ -217,12 +217,12 @@ class ProductService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('search_products', function () use ($query, $filters) {
             $queryParams = array_merge($filters, ['q' => $query]);
 
-            $response = $this->httpClient->get('/products/search', [
+            $response = $this->makeHttpRequest('GET', '/products/search', [
                 'query' => $queryParams
             ]);
 
-            $result = json_decode($response->getBody()->getContents(), true);
-            return $result['data'] ?? $result ?? [];
+            // makeHttpRequest já retorna dados decodificados
+            return $response['data'] ?? $response ?? [];
         });
     }
 
@@ -234,12 +234,12 @@ class ProductService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_products_by_category', function () use ($categoryId, $filters) {
             $queryParams = array_merge($filters, ['category_id' => $categoryId]);
 
-            $response = $this->httpClient->get('/products', [
+            $response = $this->makeHttpRequest('GET', '/products', [
                 'query' => $queryParams
             ]);
 
-            $result = json_decode($response->getBody()->getContents(), true);
-            return $result['data'] ?? $result ?? [];
+            // makeHttpRequest já retorna dados decodificados
+            return $response['data'] ?? $response ?? [];
         });
     }
 
@@ -249,12 +249,12 @@ class ProductService extends BaseService implements ServiceInterface
     public function getFeatured(int $limit = 10): array
     {
         return $this->executeWithMetrics('get_featured_products', function () use ($limit) {
-            $response = $this->httpClient->get('/products/featured', [
+            $response = $this->makeHttpRequest('GET', '/products/featured', [
                 'query' => ['limit' => $limit]
             ]);
 
-            $result = json_decode($response->getBody()->getContents(), true);
-            return $result['data'] ?? $result ?? [];
+            // makeHttpRequest já retorna dados decodificados
+            return $response['data'] ?? $response ?? [];
         });
     }
 
@@ -264,12 +264,12 @@ class ProductService extends BaseService implements ServiceInterface
     public function getBestSellers(int $limit = 10): array
     {
         return $this->executeWithMetrics('get_best_seller_products', function () use ($limit) {
-            $response = $this->httpClient->get('/products/best-sellers', [
+            $response = $this->makeHttpRequest('GET', '/products/best-sellers', [
                 'query' => ['limit' => $limit]
             ]);
 
-            $result = json_decode($response->getBody()->getContents(), true);
-            return $result['data'] ?? $result ?? [];
+            // makeHttpRequest já retorna dados decodificados
+            return $response['data'] ?? $response ?? [];
         });
     }
 
@@ -279,12 +279,12 @@ class ProductService extends BaseService implements ServiceInterface
     public function getRelated(string $productId, int $limit = 5): array
     {
         return $this->executeWithMetrics('get_related_products', function () use ($productId, $limit) {
-            $response = $this->httpClient->get("/products/{$productId}/related", [
+            $response = $this->makeHttpRequest('GET', "/products/{$productId}/related", [
                 'query' => ['limit' => $limit]
             ]);
 
-            $result = json_decode($response->getBody()->getContents(), true);
-            return $result['data'] ?? $result ?? [];
+            // makeHttpRequest já retorna dados decodificados
+            return $response['data'] ?? $response ?? [];
         });
     }
 
@@ -299,7 +299,7 @@ class ProductService extends BaseService implements ServiceInterface
                 throw new ValidationException("Invalid stock operation: {$operation}");
             }
 
-            $response = $this->httpClient->put("/products/{$productId}/stock", [
+            $response = $this->makeHttpRequest('PUT', "/products/{$productId}/stock", [
                 'quantity' => $quantity,
                 'operation' => $operation
             ]);
@@ -324,7 +324,7 @@ class ProductService extends BaseService implements ServiceInterface
     public function checkStock(string $productId, int $quantity = 1): bool
     {
         return $this->executeWithMetrics('check_product_stock', function () use ($productId, $quantity) {
-            $response = $this->httpClient->get("/products/{$productId}/stock", [
+            $response = $this->makeHttpRequest('GET', "/products/{$productId}/stock", [
                 'query' => ['quantity' => $quantity]
             ]);
 
@@ -363,7 +363,7 @@ class ProductService extends BaseService implements ServiceInterface
     public function duplicate(string $productId, array $overrideData = []): array
     {
         return $this->executeWithMetrics('duplicate_product', function () use ($productId, $overrideData) {
-            $response = $this->httpClient->post("/products/{$productId}/duplicate", $overrideData);
+            $response = $this->makeHttpRequest('POST', "/products/{$productId}/duplicate", $overrideData);
             $product = ResponseHelper::getData($response);
 
             // Dispatch evento
@@ -382,9 +382,9 @@ class ProductService extends BaseService implements ServiceInterface
     public function getSalesStats(string $productId): array
     {
         return $this->executeWithMetrics('get_product_sales_stats', function () use ($productId) {
-            $response = $this->httpClient->get("/products/{$productId}/sales-stats");
-            $result = json_decode($response->getBody()->getContents(), true);
-            return $result['data'] ?? $result ?? [];
+            $response = $this->makeHttpRequest('GET', "/products/{$productId}/sales-stats");
+            // makeHttpRequest já retorna dados decodificados
+            return $response['data'] ?? $response ?? [];
         });
     }
 
@@ -394,9 +394,9 @@ class ProductService extends BaseService implements ServiceInterface
     public function getPriceHistory(string $productId): array
     {
         return $this->executeWithMetrics('get_product_price_history', function () use ($productId) {
-            $response = $this->httpClient->get("/products/{$productId}/price-history");
-            $result = json_decode($response->getBody()->getContents(), true);
-            return $result['data'] ?? $result ?? [];
+            $response = $this->makeHttpRequest('GET', "/products/{$productId}/price-history");
+            // makeHttpRequest já retorna dados decodificados
+            return $response['data'] ?? $response ?? [];
         });
     }
 
@@ -406,9 +406,9 @@ class ProductService extends BaseService implements ServiceInterface
     public function getVariations(string $productId): array
     {
         return $this->executeWithMetrics('get_product_variations', function () use ($productId) {
-            $response = $this->httpClient->get("/products/{$productId}/variations");
-            $result = json_decode($response->getBody()->getContents(), true);
-            return $result['data'] ?? $result ?? [];
+            $response = $this->makeHttpRequest('GET', "/products/{$productId}/variations");
+            // makeHttpRequest já retorna dados decodificados
+            return $response['data'] ?? $response ?? [];
         });
     }
 
@@ -419,7 +419,7 @@ class ProductService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('delete_product', function () use ($productId) {
             try {
-                $response = $this->httpClient->delete("/products/{$productId}");
+                $response = $this->makeHttpRequest('DELETE', "/products/{$productId}");
 
                 // Invalidar cache
                 $this->invalidateProductCache($productId);
@@ -446,7 +446,7 @@ class ProductService extends BaseService implements ServiceInterface
     public function count(array $filters = []): int
     {
         try {
-            $response = $this->httpClient->get('/products/count', [
+            $response = $this->makeHttpRequest('GET', '/products/count', [
                 'query' => $filters
             ]);
             $data = ResponseHelper::getData($response);
@@ -466,7 +466,7 @@ class ProductService extends BaseService implements ServiceInterface
     private function fetchProductById(string $productId): ?array
     {
         try {
-            $response = $this->httpClient->get("/products/{$productId}");
+            $response = $this->makeHttpRequest('GET', "/products/{$productId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -482,7 +482,7 @@ class ProductService extends BaseService implements ServiceInterface
     private function fetchProductBySlug(string $slug): ?array
     {
         try {
-            $response = $this->httpClient->get("/products/slug/{$slug}");
+            $response = $this->makeHttpRequest('GET', "/products/slug/{$slug}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -498,7 +498,7 @@ class ProductService extends BaseService implements ServiceInterface
     private function fetchProductBySku(string $sku): ?array
     {
         try {
-            $response = $this->httpClient->get("/products/sku/{$sku}");
+            $response = $this->makeHttpRequest('GET', "/products/sku/{$sku}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -515,7 +515,7 @@ class ProductService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics("update_product_status_{$status}", function () use ($productId, $status) {
             try {
-                $response = $this->httpClient->put("/products/{$productId}/status", [
+                $response = $this->makeHttpRequest('PUT', "/products/{$productId}/status", [
                     'status' => $status
                 ]);
 
@@ -708,4 +708,55 @@ class ProductService extends BaseService implements ServiceInterface
 
         return strtolower(implode(' ', array_filter($searchableFields)));
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

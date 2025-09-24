@@ -37,7 +37,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl('/slug/' . urlencode($slug));
-            $response = $this->httpClient->get($url);
+            $response = $this->makeHttpRequest('GET', $url);
 
             if ($response->getStatusCode() === 404) {
                 return null;
@@ -59,7 +59,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl('/domain/' . urlencode($domain));
-            $response = $this->httpClient->get($url);
+            $response = $this->makeHttpRequest('GET', $url);
 
             if ($response->getStatusCode() === 404) {
                 return null;
@@ -80,7 +80,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     public function findByStatus(string $status): array
     {
         $url = $this->buildUrl('', ['status' => $status]);
-        $response = $this->httpClient->get($url);
+        $response = $this->makeHttpRequest('GET', $url);
 
         return ResponseHelper::getData($response) ?? [];
     }
@@ -96,7 +96,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
         ];
 
         $url = $this->buildUrl('/date-range', $params);
-        $response = $this->httpClient->get($url);
+        $response = $this->makeHttpRequest('GET', $url);
 
         return ResponseHelper::getData($response) ?? [];
     }
@@ -108,7 +108,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl('/slug/' . urlencode($slug) . '/availability');
-            $response = $this->httpClient->get($url);
+            $response = $this->makeHttpRequest('GET', $url);
 
             $data = ResponseHelper::getData($response);
             return $data['available'] ?? false;
@@ -127,7 +127,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl('/domain/' . urlencode($domain) . '/availability');
-            $response = $this->httpClient->get($url);
+            $response = $this->makeHttpRequest('GET', $url);
 
             $data = ResponseHelper::getData($response);
             return $data['available'] ?? false;
@@ -146,7 +146,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl("/{$id}/activate");
-            $response = $this->httpClient->post($url, []);
+            $response = $this->makeHttpRequest('POST', $url, []);
 
             return $response->getStatusCode() === 200;
         } catch (HttpException $e) {
@@ -165,7 +165,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl("/{$id}/deactivate");
-            $response = $this->httpClient->post($url, []);
+            $response = $this->makeHttpRequest('POST', $url, []);
 
             return $response->getStatusCode() === 200;
         } catch (HttpException $e) {
@@ -184,7 +184,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl("/{$id}/suspend");
-            $response = $this->httpClient->post($url, []);
+            $response = $this->makeHttpRequest('POST', $url, []);
 
             return $response->getStatusCode() === 200;
         } catch (HttpException $e) {
@@ -203,7 +203,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl("/{$id}/stats");
-            $response = $this->httpClient->get($url);
+            $response = $this->makeHttpRequest('GET', $url);
 
             return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
@@ -235,7 +235,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
 
         try {
             $url = $this->buildUrl('/search');
-            $response = $this->httpClient->post($url, $params);
+            $response = $this->makeHttpRequest('POST', $url, $params);
 
             return ResponseHelper::getData($response) ?? [
                 'data' => [],
@@ -307,4 +307,55 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
 
         return parent::update($id, $data);
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

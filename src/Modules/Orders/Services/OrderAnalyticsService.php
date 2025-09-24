@@ -149,7 +149,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
     public function getStatistics(array $filters = []): array
     {
         return $this->executeWithMetrics('get_order_statistics', function () use ($filters) {
-            $response = $this->httpClient->get('/orders/statistics', [
+            $response = $this->makeHttpRequest('GET', '/orders/statistics', [
                 'query' => $filters
             ]);
 
@@ -172,7 +172,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_revenue_statistics', function () use ($dateRange) {
             $this->validateDateRange($dateRange);
 
-            $response = $this->httpClient->get('/orders/revenue-stats', [
+            $response = $this->makeHttpRequest('GET', '/orders/revenue-stats', [
                 'query' => $dateRange
             ]);
 
@@ -197,7 +197,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 throw new ValidationException('Limit must be between 1 and 100');
             }
 
-            $response = $this->httpClient->get('/orders/top-customers', [
+            $response = $this->makeHttpRequest('GET', '/orders/top-customers', [
                 'query' => ['limit' => $limit]
             ]);
 
@@ -215,7 +215,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 throw new ValidationException('Limit must be between 1 and 100');
             }
 
-            $response = $this->httpClient->get('/orders/top-products', [
+            $response = $this->makeHttpRequest('GET', '/orders/top-products', [
                 'query' => ['limit' => $limit]
             ]);
 
@@ -229,7 +229,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
     public function getConversionMetrics(): array
     {
         return $this->executeWithMetrics('get_conversion_metrics', function () {
-            $response = $this->httpClient->get('/orders/conversion-metrics');
+            $response = $this->makeHttpRequest('GET', '/orders/conversion-metrics');
             $metrics = ResponseHelper::getData($response) ?? [];
 
             // Calcular métricas adicionais de conversão
@@ -252,7 +252,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 throw new ValidationException("Invalid period. Allowed: " . implode(', ', $allowedPeriods));
             }
 
-            $response = $this->httpClient->get('/orders/cohort-analysis', [
+            $response = $this->makeHttpRequest('GET', '/orders/cohort-analysis', [
                 'query' => ['period' => $period]
             ]);
 
@@ -266,7 +266,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
     public function getLifetimeValueAnalysis(): array
     {
         return $this->executeWithMetrics('get_ltv_analysis', function () {
-            $response = $this->httpClient->get('/orders/lifetime-value-analysis');
+            $response = $this->makeHttpRequest('GET', '/orders/lifetime-value-analysis');
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -279,7 +279,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('get_seasonality_analysis', function () use ($dateRange) {
             $this->validateDateRange($dateRange);
 
-            $response = $this->httpClient->get('/orders/seasonality-analysis', [
+            $response = $this->makeHttpRequest('GET', '/orders/seasonality-analysis', [
                 'query' => $dateRange
             ]);
 
@@ -293,7 +293,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
     public function getChannelPerformance(array $filters = []): array
     {
         return $this->executeWithMetrics('get_channel_performance', function () use ($filters) {
-            $response = $this->httpClient->get('/orders/channel-performance', [
+            $response = $this->makeHttpRequest('GET', '/orders/channel-performance', [
                 'query' => $filters
             ]);
 
@@ -307,7 +307,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
     public function getAbandonmentReport(array $filters = []): array
     {
         return $this->executeWithMetrics('get_abandonment_report', function () use ($filters) {
-            $response = $this->httpClient->get('/orders/abandonment-report', [
+            $response = $this->makeHttpRequest('GET', '/orders/abandonment-report', [
                 'query' => $filters
             ]);
 
@@ -321,7 +321,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
     public function getPricingAnalysis(array $filters = []): array
     {
         return $this->executeWithMetrics('get_pricing_analysis', function () use ($filters) {
-            $response = $this->httpClient->get('/orders/pricing-analysis', [
+            $response = $this->makeHttpRequest('GET', '/orders/pricing-analysis', [
                 'query' => $filters
             ]);
 
@@ -335,7 +335,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
     public function getFulfillmentMetrics(array $filters = []): array
     {
         return $this->executeWithMetrics('get_fulfillment_metrics', function () use ($filters) {
-            $response = $this->httpClient->get('/orders/fulfillment-metrics', [
+            $response = $this->makeHttpRequest('GET', '/orders/fulfillment-metrics', [
                 'query' => $filters
             ]);
 
@@ -349,7 +349,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
     public function getGeographicAnalysis(array $filters = []): array
     {
         return $this->executeWithMetrics('get_geographic_analysis', function () use ($filters) {
-            $response = $this->httpClient->get('/orders/geographic-analysis', [
+            $response = $this->makeHttpRequest('GET', '/orders/geographic-analysis', [
                 'query' => $filters
             ]);
 
@@ -367,7 +367,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 throw new ValidationException('Forecast days must be between 1 and 365');
             }
 
-            $response = $this->httpClient->get('/orders/sales-forecast', [
+            $response = $this->makeHttpRequest('GET', '/orders/sales-forecast', [
                 'query' => ['days' => $days]
             ]);
 
@@ -389,7 +389,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'comparison_period' => $comparisonPeriod
             ];
 
-            $response = $this->httpClient->post('/orders/period-comparison', $data);
+            $response = $this->makeHttpRequest('POST', '/orders/period-comparison', $data);
             $comparison = ResponseHelper::getData($response) ?? [];
 
             // Calcular variações percentuais
@@ -470,7 +470,7 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
                 'format' => $format
             ]);
 
-            $response = $this->httpClient->post('/orders/export-report', $data);
+            $response = $this->makeHttpRequest('POST', '/orders/export-report', $data);
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -587,4 +587,55 @@ class OrderAnalyticsService extends BaseService implements ServiceInterface
 
         return $comparison;
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

@@ -74,7 +74,7 @@ class FlowService extends BaseService implements ServiceInterface
             ]);
 
             // Criar flow via API
-            $response = $this->httpClient->post('/sales-flows', $data);
+            $response = $this->makeHttpRequest('POST', '/sales-flows', $data);
             $flow = ResponseHelper::getData($response);
 
             // Cache do flow
@@ -151,7 +151,7 @@ class FlowService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}", $data);
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}", $data);
             $flow = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -180,7 +180,7 @@ class FlowService extends BaseService implements ServiceInterface
                 $stepData['order'] = $this->getNextStepOrder($flowId);
             }
 
-            $response = $this->httpClient->post("/sales-flows/{$flowId}/steps", $stepData);
+            $response = $this->makeHttpRequest('POST', "/sales-flows/{$flowId}/steps", $stepData);
             $flow = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -205,7 +205,7 @@ class FlowService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('update_flow_step', function () use ($flowId, $stepId, $stepData) {
             $this->validateStepUpdateData($stepData);
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/steps/{$stepId}", $stepData);
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/steps/{$stepId}", $stepData);
             $flow = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -228,7 +228,7 @@ class FlowService extends BaseService implements ServiceInterface
     public function removeStep(string $flowId, string $stepId): array
     {
         return $this->executeWithMetrics('remove_flow_step', function () use ($flowId, $stepId) {
-            $response = $this->httpClient->delete("/sales-flows/{$flowId}/steps/{$stepId}");
+            $response = $this->makeHttpRequest('DELETE', "/sales-flows/{$flowId}/steps/{$stepId}");
             $flow = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -250,7 +250,7 @@ class FlowService extends BaseService implements ServiceInterface
     public function reorderSteps(string $flowId, array $stepOrder): array
     {
         return $this->executeWithMetrics('reorder_flow_steps', function () use ($flowId, $stepOrder) {
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/steps/reorder", [
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/steps/reorder", [
                 'step_order' => $stepOrder
             ]);
 
@@ -277,7 +277,7 @@ class FlowService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_flow_navigation', function () use ($flowId, $navigationRules) {
             $this->validateNavigationRules($navigationRules);
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/navigation", [
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/navigation", [
                 'navigation_rules' => $navigationRules
             ]);
 
@@ -304,7 +304,7 @@ class FlowService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_flow_ab_testing', function () use ($flowId, $testConfig) {
             $this->validateAbTestConfig($testConfig);
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/ab-testing", $testConfig);
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/ab-testing", $testConfig);
             $flow = ResponseHelper::getData($response);
 
             // Invalidar cache
@@ -327,7 +327,7 @@ class FlowService extends BaseService implements ServiceInterface
     public function getAbTestResults(string $flowId): array
     {
         return $this->executeWithMetrics('get_flow_ab_test_results', function () use ($flowId) {
-            $response = $this->httpClient->get("/sales-flows/{$flowId}/ab-testing/results");
+            $response = $this->makeHttpRequest('GET', "/sales-flows/{$flowId}/ab-testing/results");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -338,7 +338,7 @@ class FlowService extends BaseService implements ServiceInterface
     public function optimizeFlow(string $flowId, array $optimizationCriteria = []): array
     {
         return $this->executeWithMetrics('optimize_sales_flow', function () use ($flowId, $optimizationCriteria) {
-            $response = $this->httpClient->post("/sales-flows/{$flowId}/optimize", [
+            $response = $this->makeHttpRequest('POST', "/sales-flows/{$flowId}/optimize", [
                 'criteria' => $optimizationCriteria
             ]);
 
@@ -385,7 +385,7 @@ class FlowService extends BaseService implements ServiceInterface
     public function duplicate(string $flowId, array $overrideData = []): array
     {
         return $this->executeWithMetrics('duplicate_sales_flow', function () use ($flowId, $overrideData) {
-            $response = $this->httpClient->post("/sales-flows/{$flowId}/duplicate", $overrideData);
+            $response = $this->makeHttpRequest('POST', "/sales-flows/{$flowId}/duplicate", $overrideData);
             $flow = ResponseHelper::getData($response);
 
             // Dispatch evento
@@ -404,7 +404,7 @@ class FlowService extends BaseService implements ServiceInterface
     public function getAnalytics(string $flowId, array $filters = []): array
     {
         return $this->executeWithMetrics('get_flow_analytics', function () use ($flowId, $filters) {
-            $response = $this->httpClient->get("/sales-flows/{$flowId}/analytics", [
+            $response = $this->makeHttpRequest('GET', "/sales-flows/{$flowId}/analytics", [
                 'query' => $filters
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -417,7 +417,7 @@ class FlowService extends BaseService implements ServiceInterface
     public function getStepAnalytics(string $flowId, string $stepId): array
     {
         return $this->executeWithMetrics('get_step_analytics', function () use ($flowId, $stepId) {
-            $response = $this->httpClient->get("/sales-flows/{$flowId}/steps/{$stepId}/analytics");
+            $response = $this->makeHttpRequest('GET', "/sales-flows/{$flowId}/steps/{$stepId}/analytics");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -428,7 +428,7 @@ class FlowService extends BaseService implements ServiceInterface
     public function getConversionReport(string $flowId, array $dateRange = []): array
     {
         return $this->executeWithMetrics('get_flow_conversion_report', function () use ($flowId, $dateRange) {
-            $response = $this->httpClient->get("/sales-flows/{$flowId}/conversion-report", [
+            $response = $this->makeHttpRequest('GET', "/sales-flows/{$flowId}/conversion-report", [
                 'query' => $dateRange
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -441,7 +441,7 @@ class FlowService extends BaseService implements ServiceInterface
     public function getTopPerforming(int $limit = 10): array
     {
         return $this->executeWithMetrics('get_top_performing_flows', function () use ($limit) {
-            $response = $this->httpClient->get('/sales-flows/top-performing', [
+            $response = $this->makeHttpRequest('GET', '/sales-flows/top-performing', [
                 'query' => ['limit' => $limit]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -459,7 +459,7 @@ class FlowService extends BaseService implements ServiceInterface
                 'limit' => $limit
             ]);
 
-            $response = $this->httpClient->get('/sales-flows', [
+            $response = $this->makeHttpRequest('GET', '/sales-flows', [
                 'query' => $queryParams
             ]);
 
@@ -474,7 +474,7 @@ class FlowService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('delete_sales_flow', function () use ($flowId) {
             try {
-                $response = $this->httpClient->delete("/sales-flows/{$flowId}");
+                $response = $this->makeHttpRequest('DELETE', "/sales-flows/{$flowId}");
 
                 // Invalidar cache
                 $this->invalidateFlowCache($flowId);
@@ -501,7 +501,7 @@ class FlowService extends BaseService implements ServiceInterface
     public function count(array $filters = []): int
     {
         try {
-            $response = $this->httpClient->get('/sales-flows/count', [
+            $response = $this->makeHttpRequest('GET', '/sales-flows/count', [
                 'query' => $filters
             ]);
             $data = ResponseHelper::getData($response);
@@ -521,7 +521,7 @@ class FlowService extends BaseService implements ServiceInterface
     private function fetchFlowById(string $flowId): ?array
     {
         try {
-            $response = $this->httpClient->get("/sales-flows/{$flowId}");
+            $response = $this->makeHttpRequest('GET', "/sales-flows/{$flowId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -537,7 +537,7 @@ class FlowService extends BaseService implements ServiceInterface
     private function fetchFlowBySlug(string $slug): ?array
     {
         try {
-            $response = $this->httpClient->get("/sales-flows/slug/{$slug}");
+            $response = $this->makeHttpRequest('GET', "/sales-flows/slug/{$slug}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -578,7 +578,7 @@ class FlowService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics("update_flow_status_{$status}", function () use ($flowId, $status) {
             try {
-                $response = $this->httpClient->put("/sales-flows/{$flowId}/status", [
+                $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/status", [
                     'status' => $status
                 ]);
 
@@ -822,4 +822,55 @@ class FlowService extends BaseService implements ServiceInterface
             'exit_rate' => 0
         ];
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

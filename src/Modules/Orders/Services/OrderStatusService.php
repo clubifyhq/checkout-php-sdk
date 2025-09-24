@@ -197,7 +197,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
             ]);
 
             // Atualizar status via API
-            $response = $this->httpClient->put("/orders/{$orderId}/status", $statusData);
+            $response = $this->makeHttpRequest('PUT', "/orders/{$orderId}/status", $statusData);
 
             // Invalidar cache do pedido
             $this->invalidateOrderCache($orderId);
@@ -229,7 +229,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
     public function getStatusHistory(string $orderId): array
     {
         return $this->executeWithMetrics('get_order_status_history', function () use ($orderId) {
-            $response = $this->httpClient->get("/orders/{$orderId}/status-history");
+            $response = $this->makeHttpRequest('GET', "/orders/{$orderId}/status-history");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -244,7 +244,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
 
             $queryParams = array_merge($filters, ['status' => $status]);
 
-            $response = $this->httpClient->get('/orders', [
+            $response = $this->makeHttpRequest('GET', '/orders', [
                 'query' => $queryParams
             ]);
 
@@ -273,7 +273,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
                 'notify_customer' => $this->shouldNotifyCustomer($status)
             ]);
 
-            $response = $this->httpClient->post('/orders/bulk-status-update', $data);
+            $response = $this->makeHttpRequest('POST', '/orders/bulk-status-update', $data);
             $result = ResponseHelper::getData($response);
 
             // Invalidar cache de todos os pedidos
@@ -316,7 +316,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
                 'created_at' => date('Y-m-d H:i:s')
             ];
 
-            $response = $this->httpClient->post("/orders/{$orderId}/status/{$statusId}/notes", $data);
+            $response = $this->makeHttpRequest('POST', "/orders/{$orderId}/status/{$statusId}/notes", $data);
 
             $this->dispatch('order.status_note_added', [
                 'order_id' => $orderId,
@@ -337,7 +337,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('update_order_tracking', function () use ($orderId, $trackingData) {
             $this->validateTrackingData($trackingData);
 
-            $response = $this->httpClient->put("/orders/{$orderId}/tracking", $trackingData);
+            $response = $this->makeHttpRequest('PUT', "/orders/{$orderId}/tracking", $trackingData);
 
             // Se tem código de rastreamento, atualizar status para 'shipped' se ainda estiver em 'processing'
             if (!empty($trackingData['tracking_code'])) {
@@ -366,7 +366,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
     public function getStatusStatistics(array $filters = []): array
     {
         return $this->executeWithMetrics('get_status_statistics', function () use ($filters) {
-            $response = $this->httpClient->get('/orders/status-statistics', [
+            $response = $this->makeHttpRequest('GET', '/orders/status-statistics', [
                 'query' => $filters
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -413,7 +413,7 @@ class OrderStatusService extends BaseService implements ServiceInterface
 
         if ($order === null) {
             try {
-                $response = $this->httpClient->get("/orders/{$orderId}");
+                $response = $this->makeHttpRequest('GET', "/orders/{$orderId}");
                 $order = ResponseHelper::getData($response);
 
                 // Cache por 5 minutos para status
@@ -528,4 +528,55 @@ class OrderStatusService extends BaseService implements ServiceInterface
             'source' => $metadata['source'] ?? 'api'
         ];
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Modules\Analytics;
 
 use Clubify\Checkout\Core\BaseModule;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Módulo Analytics
@@ -21,7 +22,7 @@ class AnalyticsModule extends BaseModule
     public function getSalesMetrics(array $filters = []): array
     {
         $endpoint = '/analytics/sales/metrics';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -30,7 +31,7 @@ class AnalyticsModule extends BaseModule
     public function getFunnelAnalysis(array $filters = []): array
     {
         $endpoint = '/analytics/funnel';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -39,7 +40,7 @@ class AnalyticsModule extends BaseModule
     public function getTopProducts(array $filters = []): array
     {
         $endpoint = '/analytics/products/top';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -48,7 +49,7 @@ class AnalyticsModule extends BaseModule
     public function getCustomerSegmentAnalysis(array $filters = []): array
     {
         $endpoint = '/analytics/customers/segments';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -57,7 +58,7 @@ class AnalyticsModule extends BaseModule
     public function getLTVAnalysis(array $filters = []): array
     {
         $endpoint = '/analytics/customers/ltv';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -66,7 +67,7 @@ class AnalyticsModule extends BaseModule
     public function getRetentionReport(array $filters = []): array
     {
         $endpoint = '/analytics/customers/retention';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -75,7 +76,7 @@ class AnalyticsModule extends BaseModule
     public function getCohortAnalysis(array $filters = []): array
     {
         $endpoint = '/analytics/cohort';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -84,7 +85,7 @@ class AnalyticsModule extends BaseModule
     public function getPerformanceMetrics(array $filters = []): array
     {
         $endpoint = '/analytics/performance';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -93,7 +94,7 @@ class AnalyticsModule extends BaseModule
     public function getMarketingCampaignReport(array $filters = []): array
     {
         $endpoint = '/analytics/marketing/campaigns';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -102,7 +103,7 @@ class AnalyticsModule extends BaseModule
     public function getAttributionAnalysis(array $filters = []): array
     {
         $endpoint = '/analytics/attribution';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -111,7 +112,7 @@ class AnalyticsModule extends BaseModule
     public function getCartAbandonmentReport(array $filters = []): array
     {
         $endpoint = '/analytics/cart/abandonment';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -120,7 +121,7 @@ class AnalyticsModule extends BaseModule
     public function getABTestingResults(string $testId): array
     {
         $endpoint = "/analytics/ab-testing/{$testId}";
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -138,7 +139,7 @@ class AnalyticsModule extends BaseModule
             'timestamp' => $eventData['timestamp'] ?? time()
         ];
 
-        $response = $this->httpClient->post($endpoint, $data);
+        $response = $this->makeHttpRequest('POST', $endpoint, $data);
         return $response['success'] ?? false;
     }
 
@@ -156,7 +157,7 @@ class AnalyticsModule extends BaseModule
             'timestamp' => $usageData['timestamp'] ?? time()
         ];
 
-        $response = $this->httpClient->post($endpoint, $data);
+        $response = $this->makeHttpRequest('POST', $endpoint, $data);
         return $response['success'] ?? false;
     }
 
@@ -166,7 +167,7 @@ class AnalyticsModule extends BaseModule
     public function getSubscriptionHealthScore(string $subscriptionId): array
     {
         $endpoint = "/analytics/subscriptions/{$subscriptionId}/health";
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -175,7 +176,7 @@ class AnalyticsModule extends BaseModule
     public function getChurnAnalysis(array $filters = []): array
     {
         $endpoint = '/analytics/churn';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -184,7 +185,7 @@ class AnalyticsModule extends BaseModule
     public function getPredictions(string $type, array $parameters = []): array
     {
         $endpoint = "/analytics/predictions/{$type}";
-        return $this->httpClient->get($endpoint, $parameters);
+        return $this->makeHttpRequest('GET', $endpoint, $parameters);
     }
 
     /**
@@ -193,7 +194,7 @@ class AnalyticsModule extends BaseModule
     public function getExecutiveDashboard(array $filters = []): array
     {
         $endpoint = '/analytics/dashboard/executive';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -202,7 +203,7 @@ class AnalyticsModule extends BaseModule
     public function getPeriodicComparison(array $filters = []): array
     {
         $endpoint = '/analytics/comparison';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -211,7 +212,7 @@ class AnalyticsModule extends BaseModule
     public function getProductAnalysis(array $filters = []): array
     {
         $endpoint = '/analytics/products/analysis';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -220,7 +221,7 @@ class AnalyticsModule extends BaseModule
     public function getRevenueReport(array $filters = []): array
     {
         $endpoint = '/analytics/revenue';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -229,7 +230,7 @@ class AnalyticsModule extends BaseModule
     public function getPaymentMetrics(array $filters = []): array
     {
         $endpoint = '/analytics/payments/metrics';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -238,7 +239,7 @@ class AnalyticsModule extends BaseModule
     public function getGeographicAnalysis(array $filters = []): array
     {
         $endpoint = '/analytics/geographic';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -247,7 +248,7 @@ class AnalyticsModule extends BaseModule
     public function getTemporalAnalysis(array $filters = []): array
     {
         $endpoint = '/analytics/temporal';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -256,7 +257,7 @@ class AnalyticsModule extends BaseModule
     public function createCustomReport(array $reportConfig): array
     {
         $endpoint = '/analytics/reports/custom';
-        return $this->httpClient->post($endpoint, $reportConfig);
+        return $this->makeHttpRequest('POST', $endpoint, $reportConfig);
     }
 
     /**
@@ -265,7 +266,7 @@ class AnalyticsModule extends BaseModule
     public function getCustomReport(string $reportId): array
     {
         $endpoint = "/analytics/reports/custom/{$reportId}";
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -274,7 +275,7 @@ class AnalyticsModule extends BaseModule
     public function exportData(array $exportConfig): array
     {
         $endpoint = '/analytics/export';
-        return $this->httpClient->post($endpoint, $exportConfig);
+        return $this->makeHttpRequest('POST', $endpoint, $exportConfig);
     }
 
     /**
@@ -283,7 +284,7 @@ class AnalyticsModule extends BaseModule
     public function getExportStatus(string $exportId): array
     {
         $endpoint = "/analytics/export/{$exportId}/status";
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -293,4 +294,55 @@ class AnalyticsModule extends BaseModule
     {
         return $this->httpClient !== null && $this->config !== null;
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

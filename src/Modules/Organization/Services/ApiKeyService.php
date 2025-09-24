@@ -8,6 +8,7 @@ use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Exceptions\ValidationException;
 use Clubify\Checkout\Exceptions\HttpException;
 use Clubify\Checkout\Exceptions\AuthenticationException;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Serviço de gestão de API Keys
@@ -116,7 +117,7 @@ class ApiKeyService extends BaseService
             ]);
 
             // Criar API key via API
-            $response = $this->httpClient->post('api-keys', ['json' => $data]);
+            $response = $this->makeHttpRequest('POST', 'api-keys', ['json' => $data]);
             $apiKey = $this->processHttpResponse($response);
 
             if (!$apiKey) {
@@ -175,7 +176,7 @@ class ApiKeyService extends BaseService
     public function getApiKeysByOrganization(string $organizationId): array
     {
         return $this->executeWithMetrics('get_api_keys_by_organization', function () use ($organizationId) {
-            $response = $this->httpClient->get("/organizations/{$organizationId}api-keys");
+            $response = $this->makeHttpRequest('GET', "/api-keys");
             return $this->processHttpResponse($response) ?? [];
         });
     }
@@ -188,7 +189,7 @@ class ApiKeyService extends BaseService
         return $this->executeWithMetrics('update_api_key_permissions', function () use ($apiKeyId, $permissions) {
             $this->validatePermissions($permissions);
 
-            $response = $this->httpClient->put("api-keys/{$apiKeyId}/permissions", [
+            $response = $this->makeHttpRequest('PUT', "api-keys/{$apiKeyId}/permissions", [
                 'json' => [
                     'permissions' => $permissions
                 ]
@@ -223,7 +224,7 @@ class ApiKeyService extends BaseService
                 throw new ValidationException('Rate limit must be between 1 and 100000');
             }
 
-            $response = $this->httpClient->put("api-keys/{$apiKeyId}/rate-limit", [
+            $response = $this->makeHttpRequest('PUT', "api-keys/{$apiKeyId}/rate-limit", [
                 'json' => [
                     'rate_limit' => $rateLimit
                 ]
@@ -295,7 +296,7 @@ class ApiKeyService extends BaseService
             $newKey = $this->generateSecureKey($currentKey['type']);
             $newSecret = $this->generateSecureSecret();
 
-            $response = $this->httpClient->put("api-keys/{$apiKeyId}/regenerate", [
+            $response = $this->makeHttpRequest('PUT', "api-keys/{$apiKeyId}/regenerate", [
                 'json' => [
                     'key' => $newKey,
                     'secret' => $newSecret
@@ -359,7 +360,7 @@ class ApiKeyService extends BaseService
     public function getApiKeyStats(string $apiKeyId): array
     {
         return $this->executeWithMetrics('get_api_key_stats', function () use ($apiKeyId) {
-            $response = $this->httpClient->get("api-keys/{$apiKeyId}/stats");
+            $response = $this->makeHttpRequest('GET', "api-keys/{$apiKeyId}/stats");
             return $this->processHttpResponse($response) ?? [];
         });
     }
@@ -370,7 +371,7 @@ class ApiKeyService extends BaseService
     public function getApiKeyLogs(string $apiKeyId, int $limit = 100): array
     {
         return $this->executeWithMetrics('get_api_key_logs', function () use ($apiKeyId, $limit) {
-            $response = $this->httpClient->get("api-keys/{$apiKeyId}/logs", [
+            $response = $this->makeHttpRequest('GET', "api-keys/{$apiKeyId}/logs", [
                 'query' => [
                     'limit' => $limit
                 ]
@@ -400,7 +401,7 @@ class ApiKeyService extends BaseService
     public function recordUsage(string $apiKey, array $metadata = []): void
     {
         $this->executeWithMetrics('record_api_key_usage', function () use ($apiKey, $metadata) {
-            $this->httpClient->post("api-keys/usage", [
+            $this->makeHttpRequest('POST', "api-keys/usage", [
                 'json' => [
                     'api_key' => $apiKey,
                     'timestamp' => time(),
@@ -416,7 +417,7 @@ class ApiKeyService extends BaseService
     private function fetchApiKeyByKey(string $apiKey): ?array
     {
         try {
-            $response = $this->httpClient->get("api-keys/validate/{$apiKey}");
+            $response = $this->makeHttpRequest('GET', "api-keys/validate/{$apiKey}");
             return $this->processHttpResponse($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404 || $e->getStatusCode() === 401) {
@@ -432,7 +433,7 @@ class ApiKeyService extends BaseService
     private function fetchApiKeyById(string $apiKeyId): ?array
     {
         try {
-            $response = $this->httpClient->get("api-keys/{$apiKeyId}");
+            $response = $this->makeHttpRequest('GET', "api-keys/{$apiKeyId}");
             return $this->processHttpResponse($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -449,7 +450,7 @@ class ApiKeyService extends BaseService
     {
         return $this->executeWithMetrics("update_api_key_status_{$status}", function () use ($apiKeyId, $status) {
             try {
-                $response = $this->httpClient->put("api-keys/{$apiKeyId}/status", [
+                $response = $this->makeHttpRequest('PUT', "api-keys/{$apiKeyId}/status", [
                     'json' => [
                         'status' => $status
                     ]
@@ -648,4 +649,55 @@ class ApiKeyService extends BaseService
 
         return $data;
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

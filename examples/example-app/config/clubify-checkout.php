@@ -13,9 +13,25 @@ return [
     |
     */
 
-    'api_key' => env('CLUBIFY_CHECKOUT_API_KEY'),
-    'api_secret' => env('CLUBIFY_CHECKOUT_API_SECRET'),
-    'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID'),
+    'credentials' => [
+        'api_key' => env('CLUBIFY_CHECKOUT_API_KEY'),
+        'api_secret' => env('CLUBIFY_CHECKOUT_API_SECRET'),
+        'tenant_id' => env('CLUBIFY_CHECKOUT_TENANT_ID'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | API Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Base API configuration for SDK
+    |
+    */
+
+    'api' => [
+        'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'https://checkout.svelve.com/api/v1'),
+        'version' => env('CLUBIFY_CHECKOUT_API_VERSION', 'v1'),
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -28,7 +44,6 @@ return [
     */
 
     'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'development'),
-    'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'https://checkout.svelve.com/api/v1'),
     'debug' => env('CLUBIFY_CHECKOUT_DEBUG', false),
 
     /*
@@ -41,16 +56,17 @@ return [
     */
 
     'http' => [
-        'timeout' => env('CLUBIFY_CHECKOUT_TIMEOUT', 30),
-        'connect_timeout' => env('CLUBIFY_CHECKOUT_CONNECT_TIMEOUT', 10),
+        'timeout' => (int) env('CLUBIFY_CHECKOUT_TIMEOUT', 30),
+        'connect_timeout' => (int) env('CLUBIFY_CHECKOUT_CONNECT_TIMEOUT', 10),
+        'verify_ssl' => (bool) env('CLUBIFY_CHECKOUT_VERIFY_SSL', true),
         'user_agent' => 'Clubify-Checkout-SDK-PHP/' . (env('CLUBIFY_CHECKOUT_VERSION') ?? '1.0.0'),
 
         'retry' => [
-            'enabled' => env('CLUBIFY_CHECKOUT_RETRY_ENABLED', true),
-            'attempts' => env('CLUBIFY_CHECKOUT_RETRY_ATTEMPTS', 3),
-            'delay' => env('CLUBIFY_CHECKOUT_RETRY_DELAY', 1000), // milliseconds
-            'multiplier' => env('CLUBIFY_CHECKOUT_RETRY_MULTIPLIER', 2.0),
-            'max_delay' => env('CLUBIFY_CHECKOUT_RETRY_MAX_DELAY', 10000), // milliseconds
+            'enabled' => (bool) env('CLUBIFY_CHECKOUT_RETRY_ENABLED', true),
+            'attempts' => (int) env('CLUBIFY_CHECKOUT_RETRY_ATTEMPTS', 3),
+            'delay' => (int) env('CLUBIFY_CHECKOUT_RETRY_DELAY', 1000), // milliseconds
+            'multiplier' => (float) env('CLUBIFY_CHECKOUT_RETRY_MULTIPLIER', 2.0),
+            'max_delay' => (int) env('CLUBIFY_CHECKOUT_RETRY_MAX_DELAY', 10000), // milliseconds
         ],
 
         'headers' => [
@@ -69,8 +85,8 @@ return [
     */
 
     'cache' => [
-        'enabled' => env('CLUBIFY_CHECKOUT_CACHE_ENABLED', true),
-        'default_ttl' => env('CLUBIFY_CHECKOUT_CACHE_TTL', 3600), // seconds
+        'enabled' => (bool) env('CLUBIFY_CHECKOUT_CACHE_ENABLED', true),
+        'default_ttl' => (int) env('CLUBIFY_CHECKOUT_CACHE_TTL', 3600), // seconds
         'prefix' => env('CLUBIFY_CHECKOUT_CACHE_PREFIX', 'clubify_checkout'),
 
         // Adapter específico para Laravel
@@ -97,7 +113,7 @@ return [
     */
 
     'logger' => [
-        'enabled' => env('CLUBIFY_CHECKOUT_LOGGER_ENABLED', true),
+        'enabled' => (bool) env('CLUBIFY_CHECKOUT_LOGGER_ENABLED', true),
         'level' => env('CLUBIFY_CHECKOUT_LOGGER_LEVEL', 'info'),
         'channel' => env('CLUBIFY_CHECKOUT_LOGGER_CHANNEL', 'single'),
         'filename' => env('CLUBIFY_CHECKOUT_LOGGER_FILENAME', 'clubify-checkout.log'),
@@ -124,9 +140,9 @@ return [
     */
 
     'events' => [
-        'enabled' => env('CLUBIFY_CHECKOUT_EVENTS_ENABLED', true),
-        'async' => env('CLUBIFY_CHECKOUT_EVENTS_ASYNC', true),
-        'timeout' => env('CLUBIFY_CHECKOUT_EVENTS_TIMEOUT', 5), // seconds
+        'enabled' => (bool) env('CLUBIFY_CHECKOUT_EVENTS_ENABLED', true),
+        'async' => (bool) env('CLUBIFY_CHECKOUT_EVENTS_ASYNC', true),
+        'timeout' => (int) env('CLUBIFY_CHECKOUT_EVENTS_TIMEOUT', 5), // seconds
 
         'listeners' => [
             // Listeners automáticos podem ser definidos aqui
@@ -143,10 +159,10 @@ return [
     */
 
     'webhooks' => [
-        'enabled' => env('CLUBIFY_CHECKOUT_WEBHOOKS_ENABLED', true),
+        'enabled' => (bool) env('CLUBIFY_CHECKOUT_WEBHOOKS_ENABLED', true),
         'secret' => env('CLUBIFY_CHECKOUT_WEBHOOK_SECRET'),
-        'tolerance' => env('CLUBIFY_CHECKOUT_WEBHOOK_TOLERANCE', 300), // seconds
-        'verify_ssl' => env('CLUBIFY_CHECKOUT_WEBHOOK_VERIFY_SSL', true),
+        'tolerance' => (int) env('CLUBIFY_CHECKOUT_WEBHOOK_TOLERANCE', 300), // seconds
+        'verify_ssl' => (bool) env('CLUBIFY_CHECKOUT_WEBHOOK_VERIFY_SSL', true),
 
         'routes' => [
             'prefix' => 'clubify/webhooks',
@@ -249,14 +265,14 @@ return [
     */
 
     'features' => [
-        'auto_initialize' => env('CLUBIFY_CHECKOUT_AUTO_INITIALIZE', true),
-        'metrics' => env('CLUBIFY_CHECKOUT_METRICS_ENABLED', true),
-        'health_check' => env('CLUBIFY_CHECKOUT_HEALTH_CHECK_ENABLED', true),
-        'auto_refresh_token' => env('CLUBIFY_CHECKOUT_AUTO_REFRESH_TOKEN', true),
-        'circuit_breaker' => env('CLUBIFY_CHECKOUT_CIRCUIT_BREAKER_ENABLED', true),
-        'request_id_tracking' => env('CLUBIFY_CHECKOUT_REQUEST_ID_TRACKING', true),
-        'performance_monitoring' => env('CLUBIFY_CHECKOUT_PERFORMANCE_MONITORING', false),
-        'fake_mode' => env('CLUBIFY_CHECKOUT_FAKE_MODE', false),
+        'auto_initialize' => (bool) env('CLUBIFY_CHECKOUT_AUTO_INITIALIZE', true),
+        'metrics' => (bool) env('CLUBIFY_CHECKOUT_METRICS_ENABLED', true),
+        'health_check' => (bool) env('CLUBIFY_CHECKOUT_HEALTH_CHECK_ENABLED', true),
+        'auto_refresh_token' => (bool) env('CLUBIFY_CHECKOUT_AUTO_REFRESH_TOKEN', true),
+        'circuit_breaker' => (bool) env('CLUBIFY_CHECKOUT_CIRCUIT_BREAKER_ENABLED', true),
+        'request_id_tracking' => (bool) env('CLUBIFY_CHECKOUT_REQUEST_ID_TRACKING', true),
+        'performance_monitoring' => (bool) env('CLUBIFY_CHECKOUT_PERFORMANCE_MONITORING', false),
+        'fake_mode' => (bool) env('CLUBIFY_CHECKOUT_FAKE_MODE', false),
     ],
 
     /*
@@ -334,15 +350,17 @@ return [
     */
 
     'super_admin' => [
-        'enabled' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_ENABLED', false),
-        'api_key' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_API_KEY'),
-        'api_hash' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_HASH_KEY'),
-        'api_url' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_API_URL', 'https://checkout.svelve.com/api/v1/super-admin'),
+        'enabled' => env('SUPER_ADMIN_ENABLED', false),
+        'api_key' => env('CLUBIFY_SUPER_ADMIN_API_KEY'),
+        'api_secret' => env('CLUBIFY_SUPER_ADMIN_API_SECRET'),
+        'username' => env('CLUBIFY_SUPER_ADMIN_USERNAME'),
+        'password' => env('CLUBIFY_SUPER_ADMIN_PASSWORD'),
+        'api_hash' => env('CLUBIFY_SUPER_ADMIN_HASH_KEY'),
         'session_ttl' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_SESSION_TTL', 3600), // 1 hour
         'tenant_switch_ttl' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_TENANT_SWITCH_TTL', 1800), // 30 minutes
 
         'authentication' => [
-            'require_2fa' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_REQUIRE_2FA', true),
+            'require_2fa' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_REQUIRE_2FA', false),
             'token_refresh_threshold' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_TOKEN_REFRESH_THRESHOLD', 300), // 5 minutes
             'max_concurrent_sessions' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_MAX_SESSIONS', 1),
             'ip_whitelist' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_IP_WHITELIST', ''), // comma-separated IPs

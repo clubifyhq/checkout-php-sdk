@@ -14,7 +14,11 @@ use Clubify\Checkout\Modules\Organization\Services\TenantService;
 use Clubify\Checkout\Modules\Organization\Services\AdminService;
 use Clubify\Checkout\Modules\Organization\Services\ApiKeyService;
 use Clubify\Checkout\Modules\Organization\Services\DomainService;
+use Clubify\Checkout\Modules\Organization\Services\OrganizationSetupRollbackService;
+use Clubify\Checkout\Modules\Organization\Services\OrganizationSetupRetryService;
 use Clubify\Checkout\Modules\Organization\Repositories\OrganizationRepository;
+use Clubify\Checkout\Modules\Organization\Exceptions\OrganizationSetupException;
+use Clubify\Checkout\Exceptions\ConflictException;
 
 /**
  * Módulo de Organização
@@ -44,6 +48,8 @@ class OrganizationModule implements ModuleInterface
     private ?AdminService $adminService = null;
     private ?ApiKeyService $apiKeyService = null;
     private ?DomainService $domainService = null;
+    private ?OrganizationSetupRollbackService $rollbackService = null;
+    private ?OrganizationSetupRetryService $retryService = null;
 
     private ?Client $httpClient = null;
     private ?CacheManagerInterface $cache = null;
@@ -162,6 +168,8 @@ class OrganizationModule implements ModuleInterface
         $this->adminService = null;
         $this->apiKeyService = null;
         $this->domainService = null;
+        $this->rollbackService = null;
+        $this->retryService = null;
         $this->initialized = false;
 
         $this->logger->info('Organization module cleaned up');
@@ -261,6 +269,44 @@ class OrganizationModule implements ModuleInterface
     }
 
     /**
+     * Obtém o serviço de rollback (lazy loading)
+     */
+    public function rollback(): OrganizationSetupRollbackService
+    {
+        if ($this->rollbackService === null) {
+            $this->ensureDependenciesInitialized();
+            $this->rollbackService = new OrganizationSetupRollbackService(
+                $this->config,
+                $this->logger,
+                $this->httpClient,
+                $this->cache,
+                $this->eventDispatcher
+            );
+        }
+
+        return $this->rollbackService;
+    }
+
+    /**
+     * Obtém o serviço de retry (lazy loading)
+     */
+    public function retry(): OrganizationSetupRetryService
+    {
+        if ($this->retryService === null) {
+            $this->ensureDependenciesInitialized();
+            $this->retryService = new OrganizationSetupRetryService(
+                $this->config,
+                $this->logger,
+                $this->httpClient,
+                $this->cache,
+                $this->eventDispatcher
+            );
+        }
+
+        return $this->retryService;
+    }
+
+    /**
      * Garante que as dependências estão inicializadas usando classes reais
      */
     private function ensureDependenciesInitialized(): void
@@ -279,65 +325,266 @@ class OrganizationModule implements ModuleInterface
     }
 
     /**
-     * Setup completo de uma nova organização (versão simplificada para demo)
+     * Setup completo de uma nova organização com rollback e retry automático
+     *
+     * @param array $organizationData Dados da organização
+     * @param string|null $idempotencyKey Chave de idempotência para operação segura
+     * @param bool $enableRollback Se deve executar rollback automático em caso de falha
+     * @param bool $enableRetry Se deve tentar novamente em caso de falha recuperável
+     * @return array Resultado do setup completo
      */
-    public function setupOrganization(array $organizationData): array
-    {
-        $this->logger->info('Starting organization setup', $organizationData);
+    public function setupOrganization(
+        array $organizationData,
+        ?string $idempotencyKey = null,
+        bool $enableRollback = true,
+        bool $enableRetry = true
+    ): array {
+        // Gerar chave de idempotência se não fornecida
+        if (!$idempotencyKey) {
+            $idempotencyKey = 'org_setup_' . uniqid() . '_' . hash('sha256', json_encode($organizationData));
+        }
+
+        $this->logger->info('Starting organization setup with rollback support', [
+            'idempotency_key' => $idempotencyKey,
+            'enable_rollback' => $enableRollback,
+            'enable_retry' => $enableRetry,
+            'organization_name' => $organizationData['name'] ?? 'Unknown'
+        ]);
+
+        $setupOperation = function (array $data, array $retryContext) {
+            return $this->executeOrganizationSetup($data, $retryContext);
+        };
 
         try {
-            // Versão simplificada para demonstração
-            $organizationId = uniqid('org_');
-
-            $result = [
-                'success' => true,
-                'organization' => [
-                    'id' => $organizationId,
-                    'name' => $organizationData['name'] ?? 'Demo Organization',
-                    'slug' => strtolower(str_replace(' ', '-', $organizationData['name'] ?? 'demo')),
-                    'created_at' => time(),
-                    'status' => 'active'
-                ],
-                'tenant' => [
-                    'id' => uniqid('tenant_'),
-                    'organization_id' => $organizationId,
-                    'subdomain' => $organizationData['subdomain'] ?? null,
-                    'created_at' => time()
-                ],
-                'admin' => [
-                    'id' => uniqid('admin_'),
-                    'organization_id' => $organizationId,
-                    'name' => $organizationData['admin_name'] ?? 'Demo Admin',
-                    'email' => $organizationData['admin_email'] ?? 'admin@demo.com',
-                    'role' => 'organization_admin',
-                    'created_at' => time()
-                ],
-                'api_keys' => [
-                    'public_key' => 'clb_live_' . uniqid(),
-                    'test_key' => 'clb_test_' . uniqid(),
-                    'created_at' => time()
-                ],
-                'domain' => !empty($organizationData['domain']) ? [
-                    'domain' => $organizationData['domain'],
-                    'status' => 'pending_verification',
-                    'created_at' => time()
-                ] : null
-            ];
-
-            $this->logger->info('Organization setup completed', [
-                'organization_id' => $organizationId
-            ]);
-
-            return $result;
-
-        } catch (\Exception $e) {
+            if ($enableRetry) {
+                return $this->retry()->executeWithRetry($setupOperation, $idempotencyKey, $organizationData);
+            } else {
+                return $setupOperation($organizationData, ['idempotency_key' => $idempotencyKey]);
+            }
+        } catch (OrganizationSetupException $e) {
             $this->logger->error('Organization setup failed', [
+                'idempotency_key' => $idempotencyKey,
+                'setup_step' => $e->getSetupStep(),
                 'error' => $e->getMessage(),
-                'data' => $organizationData
+                'rollback_required' => $e->isRollbackRequired()
             ]);
+
+            // Execute automatic rollback if enabled and required
+            if ($enableRollback && $e->isRollbackRequired()) {
+                try {
+                    $rollbackResult = $this->rollback()->executeRollback($e);
+                    $this->logger->info('Automatic rollback completed', [
+                        'idempotency_key' => $idempotencyKey,
+                        'rollback_success' => $rollbackResult['success'] ?? false
+                    ]);
+                } catch (\Exception $rollbackException) {
+                    $this->logger->error('Automatic rollback failed', [
+                        'idempotency_key' => $idempotencyKey,
+                        'rollback_error' => $rollbackException->getMessage()
+                    ]);
+                }
+            }
 
             throw $e;
         }
+    }
+
+    /**
+     * Executa o setup da organização passo a passo com controle de rollback
+     */
+    private function executeOrganizationSetup(array $organizationData, array $retryContext): array
+    {
+        $completedSteps = [];
+        $createdResources = [];
+        $rollbackData = [];
+
+        try {
+            // Step 1: Create Organization
+            $this->logger->info('Step 1: Creating organization');
+            $organization = $this->createOrganizationStep($organizationData);
+            $completedSteps[] = 'organization_created';
+            $createdResources['organization'] = $organization['id'];
+            $rollbackData = [
+                'organization_id' => $organization['id'],
+                'created_resources' => $createdResources
+            ];
+
+            // Step 2: Create Tenant
+            $this->logger->info('Step 2: Creating tenant');
+            try {
+                $tenant = $this->createTenantStep($organization['id'], $organizationData);
+                $completedSteps[] = 'tenant_created';
+                $createdResources['tenant'] = $tenant['id'];
+                $rollbackData['tenant_id'] = $tenant['id'];
+                $rollbackData['created_resources'] = $createdResources;
+            } catch (\Exception $e) {
+                throw OrganizationSetupException::tenantCreationFailed(
+                    $organization['id'],
+                    $e->getMessage(),
+                    $e
+                );
+            }
+
+            // Step 3: Create Admin User
+            $this->logger->info('Step 3: Creating admin user');
+            try {
+                $admin = $this->createAdminStep($organization['id'], $organizationData);
+                $completedSteps[] = 'admin_created';
+                $createdResources['admin'] = $admin['id'];
+                $rollbackData['admin_id'] = $admin['id'];
+                $rollbackData['created_resources'] = $createdResources;
+            } catch (\Exception $e) {
+                throw OrganizationSetupException::adminCreationFailed(
+                    $organization['id'],
+                    $tenant['id'],
+                    $e->getMessage(),
+                    $e
+                );
+            }
+
+            // Step 4: Generate API Keys
+            $this->logger->info('Step 4: Generating API keys');
+            try {
+                $apiKeys = $this->generateApiKeysStep($organization['id']);
+                $completedSteps[] = 'api_keys_generated';
+                $createdResources['api_keys'] = $apiKeys;
+                $rollbackData['created_resources'] = $createdResources;
+            } catch (\Exception $e) {
+                throw OrganizationSetupException::apiKeyGenerationFailed(
+                    $organization['id'],
+                    $tenant['id'],
+                    $admin['id'],
+                    $e->getMessage(),
+                    $e
+                );
+            }
+
+            // Step 5: Configure Domain (optional)
+            $domain = null;
+            if (!empty($organizationData['domain'])) {
+                $this->logger->info('Step 5: Configuring custom domain');
+                try {
+                    $domain = $this->configureDomainStep($organization['id'], $organizationData['domain']);
+                    $completedSteps[] = 'domain_configured';
+                } catch (\Exception $e) {
+                    // Domain configuration is optional, so we can complete without it
+                    throw OrganizationSetupException::domainConfigurationFailed(
+                        $organization['id'],
+                        $tenant['id'],
+                        $admin['id'],
+                        $apiKeys,
+                        $e->getMessage(),
+                        $e
+                    );
+                }
+            }
+
+            // Build successful result
+            $result = [
+                'success' => true,
+                'organization' => $organization,
+                'tenant' => $tenant,
+                'admin' => $admin,
+                'api_keys' => $apiKeys,
+                'domain' => $domain,
+                'setup_metadata' => [
+                    'completed_steps' => $completedSteps,
+                    'created_resources' => $createdResources,
+                    'idempotency_key' => $retryContext['idempotency_key'] ?? null,
+                    'completed_at' => time()
+                ]
+            ];
+
+            $this->logger->info('Organization setup completed successfully', [
+                'organization_id' => $organization['id'],
+                'completed_steps' => $completedSteps
+            ]);
+
+            // Dispatch success event
+            $this->eventDispatcher->dispatch('organization_setup.completed', $result);
+
+            return $result;
+
+        } catch (OrganizationSetupException $e) {
+            // Re-throw setup exceptions as-is
+            throw $e;
+        } catch (\Exception $e) {
+            // Wrap other exceptions in setup exception
+            throw new OrganizationSetupException(
+                'Unexpected error during organization setup: ' . $e->getMessage(),
+                'unexpected_error',
+                $rollbackData,
+                $completedSteps,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Step 1: Create Organization
+     */
+    private function createOrganizationStep(array $organizationData): array
+    {
+        $orgData = [
+            'name' => $organizationData['name'],
+            'slug' => $organizationData['slug'] ?? strtolower(str_replace(' ', '-', $organizationData['name'])),
+            'description' => $organizationData['description'] ?? null,
+            'settings' => $organizationData['settings'] ?? []
+        ];
+
+        try {
+            return $this->getRepository()->create($orgData);
+        } catch (ConflictException $e) {
+            // If organization with same name/slug exists, this might be recoverable
+            throw $e;
+        }
+    }
+
+    /**
+     * Step 2: Create Tenant
+     */
+    private function createTenantStep(string $organizationId, array $organizationData): array
+    {
+        $tenantData = [
+            'name' => $organizationData['tenant_name'] ?? $organizationData['name'],
+            'subdomain' => $organizationData['subdomain'] ?? null
+        ];
+
+        return $this->tenant()->createTenant($organizationId, $tenantData);
+    }
+
+    /**
+     * Step 3: Create Admin User
+     */
+    private function createAdminStep(string $organizationId, array $organizationData): array
+    {
+        $adminData = [
+            'name' => $organizationData['admin_name'],
+            'email' => $organizationData['admin_email'],
+            'password' => $organizationData['admin_password'] ?? null,
+            'role' => $organizationData['admin_role'] ?? 'organization_admin'
+        ];
+
+        return $this->admin()->createAdmin($organizationId, $adminData);
+    }
+
+    /**
+     * Step 4: Generate API Keys
+     */
+    private function generateApiKeysStep(string $organizationId): array
+    {
+        return $this->apiKey()->generateApiKey($organizationId, [
+            'name' => 'Organization Default Key',
+            'permissions' => ['read', 'write', 'admin']
+        ]);
+    }
+
+    /**
+     * Step 5: Configure Domain (optional)
+     */
+    private function configureDomainStep(string $organizationId, string $domain): array
+    {
+        return $this->domain()->configureDomain($organizationId, $domain);
     }
 
     /**

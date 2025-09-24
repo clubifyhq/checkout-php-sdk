@@ -54,7 +54,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('apply_flow_template', function () use ($flowId, $templateName, $overrides) {
             $this->validateTemplateName($templateName);
 
-            $response = $this->httpClient->post("/sales-flows/{$flowId}/apply-template", [
+            $response = $this->makeHttpRequest('POST', "/sales-flows/{$flowId}/apply-template", [
                 'template_name' => $templateName,
                 'overrides' => $overrides
             ]);
@@ -88,7 +88,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_conditional_navigation', function () use ($flowId, $rules) {
             $this->validateConditionalRules($rules);
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/conditional-navigation", [
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/conditional-navigation", [
                 'rules' => $rules
             ]);
 
@@ -115,7 +115,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_external_integrations', function () use ($flowId, $integrations) {
             $this->validateIntegrations($integrations);
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/integrations", [
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/integrations", [
                 'integrations' => $integrations
             ]);
 
@@ -142,7 +142,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_advanced_tracking', function () use ($flowId, $trackingConfig) {
             $this->validateTrackingConfig($trackingConfig);
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/tracking", [
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/tracking", [
                 'tracking_config' => $trackingConfig
             ]);
 
@@ -169,7 +169,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_flow_automations', function () use ($flowId, $automations) {
             $this->validateAutomations($automations);
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/automations", [
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/automations", [
                 'automations' => $automations
             ]);
 
@@ -196,7 +196,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_performance_optimizations', function () use ($flowId, $optimizations) {
             $this->validatePerformanceConfig($optimizations);
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/performance", [
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/performance", [
                 'optimizations' => $optimizations
             ]);
 
@@ -223,7 +223,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_split_testing', function () use ($flowId, $testConfig) {
             $this->validateSplitTestConfig($testConfig);
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/split-testing", [
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/split-testing", [
                 'test_config' => $testConfig
             ]);
 
@@ -251,7 +251,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_dynamic_personalization', function () use ($flowId, $personalizationRules) {
             $this->validatePersonalizationRules($personalizationRules);
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/personalization", [
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/personalization", [
                 'personalization_rules' => $personalizationRules
             ]);
 
@@ -278,7 +278,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('configure_fallback_strategies', function () use ($flowId, $fallbackStrategies) {
             $this->validateFallbackStrategies($fallbackStrategies);
 
-            $response = $this->httpClient->put("/sales-flows/{$flowId}/fallback-strategies", [
+            $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}/fallback-strategies", [
                 'fallback_strategies' => $fallbackStrategies
             ]);
 
@@ -303,7 +303,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
     public function listAvailableTemplates(): array
     {
         return $this->executeWithMetrics('list_flow_templates', function () {
-            $response = $this->httpClient->get('/sales-flows/templates');
+            $response = $this->makeHttpRequest('GET', '/sales-flows/templates');
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -314,7 +314,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
     public function getCompleteConfiguration(string $flowId): array
     {
         return $this->executeWithMetrics('get_complete_flow_configuration', function () use ($flowId) {
-            $response = $this->httpClient->get("/sales-flows/{$flowId}/complete-configuration");
+            $response = $this->makeHttpRequest('GET', "/sales-flows/{$flowId}/complete-configuration");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -325,7 +325,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
     public function exportConfiguration(string $flowId): array
     {
         return $this->executeWithMetrics('export_flow_configuration', function () use ($flowId) {
-            $response = $this->httpClient->get("/sales-flows/{$flowId}/export-configuration");
+            $response = $this->makeHttpRequest('GET', "/sales-flows/{$flowId}/export-configuration");
             return ResponseHelper::getData($response) ?? [];
         });
     }
@@ -338,7 +338,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('import_flow_configuration', function () use ($flowId, $configuration) {
             $this->validateImportConfiguration($configuration);
 
-            $response = $this->httpClient->post("/sales-flows/{$flowId}/import-configuration", [
+            $response = $this->makeHttpRequest('POST', "/sales-flows/{$flowId}/import-configuration", [
                 'configuration' => $configuration
             ]);
 
@@ -363,7 +363,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
     public function cloneConfiguration(string $sourceFlowId, string $targetFlowId, array $overrides = []): array
     {
         return $this->executeWithMetrics('clone_flow_configuration', function () use ($sourceFlowId, $targetFlowId, $overrides) {
-            $response = $this->httpClient->post("/sales-flows/{$targetFlowId}/clone-configuration", [
+            $response = $this->makeHttpRequest('POST', "/sales-flows/{$targetFlowId}/clone-configuration", [
                 'source_flow_id' => $sourceFlowId,
                 'overrides' => $overrides
             ]);
@@ -391,7 +391,7 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
     public function resetToDefaults(string $flowId, array $preserveSettings = []): array
     {
         return $this->executeWithMetrics('reset_flow_to_defaults', function () use ($flowId, $preserveSettings) {
-            $response = $this->httpClient->post("/sales-flows/{$flowId}/reset-to-defaults", [
+            $response = $this->makeHttpRequest('POST', "/sales-flows/{$flowId}/reset-to-defaults", [
                 'preserve_settings' => $preserveSettings
             ]);
 
@@ -627,4 +627,55 @@ class FlowConfigurationService extends BaseService implements ServiceInterface
             }
         }
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

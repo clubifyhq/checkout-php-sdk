@@ -10,6 +10,7 @@ use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Modules\Notifications\DTOs\NotificationStatsData;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Serviço de estatísticas de notificações
@@ -65,7 +66,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
     public function isHealthy(): bool
     {
         try {
-            $response = $this->httpClient->get('/notifications/stats/health');
+            $response = $this->makeHttpRequest('GET', '/notifications/stats/health');
             return $response->getStatusCode() === 200;
         } catch (\Exception $e) {
             return false;
@@ -140,7 +141,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
         }
 
         try {
-            $response = $this->httpClient->get('/notifications/stats', [
+            $response = $this->makeHttpRequest('GET', '/notifications/stats', [
                 'query' => $filters
             ]);
 
@@ -209,7 +210,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
         }
 
         try {
-            $response = $this->httpClient->get('/notifications/stats/delivery', [
+            $response = $this->makeHttpRequest('GET', '/notifications/stats/delivery', [
                 'query' => $dateRange
             ]);
 
@@ -262,7 +263,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
         }
 
         try {
-            $response = $this->httpClient->get('/notifications/stats/webhook-performance');
+            $response = $this->makeHttpRequest('GET', '/notifications/stats/webhook-performance');
             $performance = $response->toArray();
 
             // Adiciona análise de performance
@@ -309,7 +310,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
         }
 
         try {
-            $response = $this->httpClient->get('/notifications/stats/event-types');
+            $response = $this->makeHttpRequest('GET', '/notifications/stats/event-types');
             $eventStats = $response->toArray();
 
             // Adiciona análise de popularidade
@@ -355,7 +356,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
         }
 
         try {
-            $response = $this->httpClient->get('/notifications/stats/retry-analysis');
+            $response = $this->makeHttpRequest('GET', '/notifications/stats/retry-analysis');
             $retryData = $response->toArray();
 
             // Adiciona insights de retry
@@ -812,4 +813,55 @@ class NotificationStatsService extends BaseService implements ServiceInterface
 
         return $issues;
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

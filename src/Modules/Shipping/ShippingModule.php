@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Modules\Shipping;
 
 use Clubify\Checkout\Core\BaseModule;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Módulo Shipping
@@ -20,7 +21,7 @@ class ShippingModule extends BaseModule
     public function calculateShipping(string $orderId, array $destination): array
     {
         $endpoint = "/shipping/calculate/{$orderId}";
-        return $this->httpClient->post($endpoint, $destination);
+        return $this->makeHttpRequest('POST', $endpoint, $destination);
     }
 
     /**
@@ -29,7 +30,7 @@ class ShippingModule extends BaseModule
     public function scheduleShipping(string $orderId, array $options): array
     {
         $endpoint = "/shipping/schedule/{$orderId}";
-        return $this->httpClient->post($endpoint, $options);
+        return $this->makeHttpRequest('POST', $endpoint, $options);
     }
 
     /**
@@ -38,7 +39,7 @@ class ShippingModule extends BaseModule
     public function trackShipment(string $trackingCode): array
     {
         $endpoint = "/shipping/track/{$trackingCode}";
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -47,7 +48,7 @@ class ShippingModule extends BaseModule
     public function getShipmentStatus(string $shipmentId): array
     {
         $endpoint = "/shipping/shipments/{$shipmentId}/status";
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -56,7 +57,7 @@ class ShippingModule extends BaseModule
     public function getShippingMethods(): array
     {
         $endpoint = '/shipping/methods';
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -65,7 +66,7 @@ class ShippingModule extends BaseModule
     public function getShippingMethodsForLocation(array $location): array
     {
         $endpoint = '/shipping/methods/location';
-        return $this->httpClient->post($endpoint, $location);
+        return $this->makeHttpRequest('POST', $endpoint, $location);
     }
 
     /**
@@ -74,7 +75,7 @@ class ShippingModule extends BaseModule
     public function createShippingLabel(string $orderId, array $options = []): array
     {
         $endpoint = "/shipping/labels/{$orderId}";
-        return $this->httpClient->post($endpoint, $options);
+        return $this->makeHttpRequest('POST', $endpoint, $options);
     }
 
     /**
@@ -83,7 +84,7 @@ class ShippingModule extends BaseModule
     public function getShippingLabel(string $labelId): array
     {
         $endpoint = "/shipping/labels/{$labelId}";
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -92,7 +93,7 @@ class ShippingModule extends BaseModule
     public function cancelShipment(string $shipmentId, string $reason = ''): bool
     {
         $endpoint = "/shipping/shipments/{$shipmentId}/cancel";
-        $response = $this->httpClient->post($endpoint, ['reason' => $reason]);
+        $response = $this->makeHttpRequest('POST', $endpoint, ['reason' => $reason]);
         return $response['success'] ?? false;
     }
 
@@ -102,7 +103,7 @@ class ShippingModule extends BaseModule
     public function updateTrackingInfo(string $shipmentId, array $trackingData): bool
     {
         $endpoint = "/shipping/shipments/{$shipmentId}/tracking";
-        $response = $this->httpClient->put($endpoint, $trackingData);
+        $response = $this->makeHttpRequest('PUT', $endpoint, $trackingData);
         return $response['success'] ?? false;
     }
 
@@ -112,7 +113,7 @@ class ShippingModule extends BaseModule
     public function getTrackingHistory(string $trackingCode): array
     {
         $endpoint = "/shipping/tracking/{$trackingCode}/history";
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -128,7 +129,7 @@ class ShippingModule extends BaseModule
             'service_type' => $serviceType
         ];
 
-        return $this->httpClient->post($endpoint, $data);
+        return $this->makeHttpRequest('POST', $endpoint, $data);
     }
 
     /**
@@ -137,7 +138,7 @@ class ShippingModule extends BaseModule
     public function validateAddress(array $address): array
     {
         $endpoint = '/shipping/address/validate';
-        return $this->httpClient->post($endpoint, $address);
+        return $this->makeHttpRequest('POST', $endpoint, $address);
     }
 
     /**
@@ -146,7 +147,7 @@ class ShippingModule extends BaseModule
     public function normalizeAddress(array $address): array
     {
         $endpoint = '/shipping/address/normalize';
-        return $this->httpClient->post($endpoint, $address);
+        return $this->makeHttpRequest('POST', $endpoint, $address);
     }
 
     /**
@@ -155,7 +156,7 @@ class ShippingModule extends BaseModule
     public function getPostalCodeInfo(string $postalCode): array
     {
         $endpoint = "/shipping/postal-code/{$postalCode}";
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -164,7 +165,7 @@ class ShippingModule extends BaseModule
     public function configureCarriers(array $carriers): bool
     {
         $endpoint = '/shipping/carriers/configure';
-        $response = $this->httpClient->post($endpoint, $carriers);
+        $response = $this->makeHttpRequest('POST', $endpoint, $carriers);
         return $response['success'] ?? false;
     }
 
@@ -174,7 +175,7 @@ class ShippingModule extends BaseModule
     public function getAvailableCarriers(): array
     {
         $endpoint = '/shipping/carriers';
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -183,7 +184,7 @@ class ShippingModule extends BaseModule
     public function getCarrierConfig(string $carrierId): array
     {
         $endpoint = "/shipping/carriers/{$carrierId}/config";
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -192,7 +193,7 @@ class ShippingModule extends BaseModule
     public function updateCarrierConfig(string $carrierId, array $config): bool
     {
         $endpoint = "/shipping/carriers/{$carrierId}/config";
-        $response = $this->httpClient->put($endpoint, $config);
+        $response = $this->makeHttpRequest('PUT', $endpoint, $config);
         return $response['success'] ?? false;
     }
 
@@ -202,7 +203,7 @@ class ShippingModule extends BaseModule
     public function testCarrierConnection(string $carrierId): array
     {
         $endpoint = "/shipping/carriers/{$carrierId}/test";
-        return $this->httpClient->post($endpoint);
+        return $this->makeHttpRequest('POST', $endpoint);
     }
 
     /**
@@ -211,7 +212,7 @@ class ShippingModule extends BaseModule
     public function getCarrierRates(string $carrierId, array $shipmentData): array
     {
         $endpoint = "/shipping/carriers/{$carrierId}/rates";
-        return $this->httpClient->post($endpoint, $shipmentData);
+        return $this->makeHttpRequest('POST', $endpoint, $shipmentData);
     }
 
     /**
@@ -220,7 +221,7 @@ class ShippingModule extends BaseModule
     public function createPickup(array $pickupData): array
     {
         $endpoint = '/shipping/pickup';
-        return $this->httpClient->post($endpoint, $pickupData);
+        return $this->makeHttpRequest('POST', $endpoint, $pickupData);
     }
 
     /**
@@ -229,7 +230,7 @@ class ShippingModule extends BaseModule
     public function cancelPickup(string $pickupId): bool
     {
         $endpoint = "/shipping/pickup/{$pickupId}/cancel";
-        $response = $this->httpClient->post($endpoint);
+        $response = $this->makeHttpRequest('POST', $endpoint);
         return $response['success'] ?? false;
     }
 
@@ -239,7 +240,7 @@ class ShippingModule extends BaseModule
     public function getPickupStatus(string $pickupId): array
     {
         $endpoint = "/shipping/pickup/{$pickupId}/status";
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -248,7 +249,7 @@ class ShippingModule extends BaseModule
     public function getShippingReport(array $filters = []): array
     {
         $endpoint = '/shipping/reports';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -257,7 +258,7 @@ class ShippingModule extends BaseModule
     public function getShippingMetrics(array $filters = []): array
     {
         $endpoint = '/shipping/metrics';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -266,7 +267,7 @@ class ShippingModule extends BaseModule
     public function getShippingCosts(array $filters = []): array
     {
         $endpoint = '/shipping/costs';
-        return $this->httpClient->get($endpoint, $filters);
+        return $this->makeHttpRequest('GET', $endpoint, $filters);
     }
 
     /**
@@ -275,7 +276,7 @@ class ShippingModule extends BaseModule
     public function configureFreeShippingRules(array $rules): bool
     {
         $endpoint = '/shipping/free-shipping/rules';
-        $response = $this->httpClient->post($endpoint, $rules);
+        $response = $this->makeHttpRequest('POST', $endpoint, $rules);
         return $response['success'] ?? false;
     }
 
@@ -285,7 +286,7 @@ class ShippingModule extends BaseModule
     public function getFreeShippingRules(): array
     {
         $endpoint = '/shipping/free-shipping/rules';
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -294,7 +295,7 @@ class ShippingModule extends BaseModule
     public function configureShippingZones(array $zones): bool
     {
         $endpoint = '/shipping/zones';
-        $response = $this->httpClient->post($endpoint, $zones);
+        $response = $this->makeHttpRequest('POST', $endpoint, $zones);
         return $response['success'] ?? false;
     }
 
@@ -304,7 +305,7 @@ class ShippingModule extends BaseModule
     public function getShippingZones(): array
     {
         $endpoint = '/shipping/zones';
-        return $this->httpClient->get($endpoint);
+        return $this->makeHttpRequest('GET', $endpoint);
     }
 
     /**
@@ -313,7 +314,7 @@ class ShippingModule extends BaseModule
     public function getShippingZoneForAddress(array $address): array
     {
         $endpoint = '/shipping/zones/lookup';
-        return $this->httpClient->post($endpoint, $address);
+        return $this->makeHttpRequest('POST', $endpoint, $address);
     }
 
     /**
@@ -322,7 +323,7 @@ class ShippingModule extends BaseModule
     public function configureShippingNotifications(array $templates): bool
     {
         $endpoint = '/shipping/notifications/templates';
-        $response = $this->httpClient->post($endpoint, $templates);
+        $response = $this->makeHttpRequest('POST', $endpoint, $templates);
         return $response['success'] ?? false;
     }
 
@@ -332,7 +333,7 @@ class ShippingModule extends BaseModule
     public function sendShippingNotification(string $shipmentId, string $type): bool
     {
         $endpoint = "/shipping/shipments/{$shipmentId}/notify";
-        $response = $this->httpClient->post($endpoint, ['type' => $type]);
+        $response = $this->makeHttpRequest('POST', $endpoint, ['type' => $type]);
         return $response['success'] ?? false;
     }
 
@@ -343,4 +344,55 @@ class ShippingModule extends BaseModule
     {
         return $this->httpClient !== null && $this->config !== null;
     }
+
+    /**
+     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * Garante uso consistente do ResponseHelper
+     */
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    {
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Método para verificar resposta HTTP (compatibilidade)
+     */
+    protected function isSuccessfulResponse($response): bool
+    {
+        return ResponseHelper::isSuccessful($response);
+    }
+
+    /**
+     * Método para extrair dados da resposta (compatibilidade)
+     */
+    protected function extractResponseData($response): ?array
+    {
+        return ResponseHelper::getData($response);
+    }
+
 }

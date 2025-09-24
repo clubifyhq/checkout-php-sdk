@@ -672,6 +672,7 @@ class ClubifyCheckoutSDK
         if (!$this->webhooks) {
             $this->webhooks = new WebhooksModule($this);
             $this->webhooks->initialize($this->config, $this->getLogger());
+            $this->configureModuleWithDependencies($this->webhooks);
         }
 
         return $this->webhooks;
@@ -724,6 +725,7 @@ class ClubifyCheckoutSDK
         if (!$this->offer) {
             $this->offer = new OfferModule($this);
             $this->offer->initialize($this->config, $this->getLogger());
+            $this->configureModuleWithDependencies($this->offer);
         }
 
         return $this->offer;
@@ -863,12 +865,6 @@ class ClubifyCheckoutSDK
             // Configurar AuthManager no Client para resolver dependência circular
             $this->getHttpClient()->setAuthManager($this->authManager);
 
-            // DEBUG: Log da configuração do AuthManager
-            $this->getLogger()->debug("AuthManager configured in HttpClient", [
-                'auth_manager_class' => get_class($this->authManager),
-                'http_client_class' => get_class($this->getHttpClient()),
-                'config_class' => get_class($this->config)
-            ]);
         }
         return $this->authManager;
     }
@@ -882,6 +878,22 @@ class ClubifyCheckoutSDK
             $this->eventDispatcher = new EventDispatcher();
         }
         return $this->eventDispatcher;
+    }
+
+    /**
+     * Configurar módulo com dependências necessárias (HttpClient, Cache, EventDispatcher)
+     */
+    private function configureModuleWithDependencies(object $module): void
+    {
+        // Verificar se o módulo suporta setDependencies
+        if (method_exists($module, 'setDependencies')) {
+            $module->setDependencies(
+                $this->getHttpClient(),  // ← HttpClient with AuthManager configured
+                $this->getCache(),
+                $this->getEventDispatcher()
+            );
+
+        }
     }
 
     /**

@@ -146,40 +146,13 @@ class Client
     {
         $headers = $this->config->getDefaultHeaders();
 
-        // DEBUG: Log estado do AuthManager
-        $this->logger->debug("AuthManager Status", [
-            'auth_manager_exists' => $this->authManager !== null,
-            'is_authenticated' => $this->authManager ? $this->authManager->isAuthenticated() : false,
-            'requires_login' => $this->authManager ? $this->authManager->requiresUserLogin() : false,
-            'current_role' => $this->authManager && method_exists($this->authManager, 'getCurrentRole') ? $this->authManager->getCurrentRole() : 'unknown'
-        ]);
-
-        // Adicionar Authorization header APENAS se AuthManager estiver disponível e autenticado
+        // Adicionar Authorization header se AuthManager estiver disponível e autenticado
         if ($this->authManager && $this->authManager->isAuthenticated()) {
             $accessToken = $this->authManager->getAccessToken();
             if ($accessToken) {
                 $headers['Authorization'] = 'Bearer ' . $accessToken;
-                $this->logger->debug("Authorization header added", [
-                    'token_length' => strlen($accessToken),
-                    'token_prefix' => substr($accessToken, 0, 20) . '...'
-                ]);
-            } else {
-                $this->logger->warning("AuthManager is authenticated but no access token available");
             }
-        } else {
-            $this->logger->warning("Authorization header NOT added", [
-                'auth_manager_exists' => $this->authManager !== null,
-                'is_authenticated' => $this->authManager ? $this->authManager->isAuthenticated() : false
-            ]);
         }
-
-        // DEBUG: Log headers finais
-        $this->logger->debug("Final Request Headers", [
-            'all_headers' => $headers,
-            'has_auth' => isset($headers['Authorization']),
-            'has_tenant' => isset($headers['X-Tenant-ID']),
-            'tenant_id' => $headers['X-Tenant-ID'] ?? 'not_set'
-        ]);
 
         return $headers;
     }

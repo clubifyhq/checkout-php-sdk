@@ -820,24 +820,12 @@ try {
         try {
             logStep("Alternando para tenant: $tenantId", 'info');
 
-            // DEBUG: Verificar estado antes do switch
-            logStep("DEBUG: Estado antes do switch:", 'debug');
-            logStep("   SDK autenticado: " . ($sdk->isAuthenticated() ? 'Yes' : 'No'), 'debug');
-            $currentContext = $sdk->getCurrentContext();
-            logStep("   Contexto atual: " . json_encode($currentContext), 'debug');
-
             $switchResult = $sdk->superAdmin()->switchToTenant($tenantId);
-
-            // DEBUG: Verificar estado após o switch
-            logStep("DEBUG: Estado após o switch:", 'debug');
-            logStep("   SDK autenticado: " . ($sdk->isAuthenticated() ? 'Yes' : 'No'), 'debug');
-            logStep("   Switch result: " . json_encode($switchResult), 'debug');
 
             if ($switchResult['success'] ?? false) {
                 logStep("Contexto alternado com sucesso!", 'success');
                 logStep("   Current Tenant: " . ($switchResult['current_tenant_id'] ?? 'N/A'), 'info');
                 logStep("   Role: " . ($switchResult['current_role'] ?? 'tenant_admin'), 'info');
-                logStep("   Authenticated: " . (($switchResult['authenticated'] ?? false) ? 'Yes' : 'No'), 'info');
             } else {
                 logStep("Falha na alternância de contexto", 'error');
                 logStep("   Erro: " . ($switchResult['error'] ?? 'Unknown error'), 'error');
@@ -845,7 +833,6 @@ try {
 
         } catch (Exception $e) {
             logStep("Erro ao alternar contexto: " . $e->getMessage(), 'warning');
-            logStep("   Trace: " . $e->getTraceAsString(), 'debug');
         }
     }
 
@@ -1293,33 +1280,6 @@ try {
                 logStep("4. Selecionar eventos: " . implode(', ', $webhookEvents), 'info');
             }
 
-            // Explicação clara sobre webhooks e BUG identificado
-            logStep("📋 IMPORTANTE: Entenda como funcionam os webhooks:", 'info');
-            logStep("1. API do Clubify: https://checkout.svelve.com/api/v1/ (onde SDK faz requisições)", 'info');
-            logStep("2. URL do Webhook: $webhookUrl (onde Clubify enviará eventos)", 'info');
-            logStep("3. O webhook é cadastrado na API mas recebe dados na SUA aplicação", 'info');
-
-            logStep("🐛 BUG IDENTIFICADO E CORRIGIDO NO SDK:", 'warning');
-            logStep("   → SDK usava endpoint incorreto: /webhooks/search (404)", 'info');
-            logStep("   → Endpoint correto: /webhooks/configurations/partner/{tenant_id}", 'success');
-            logStep("   → SDK foi corrigido em ApiWebhookRepository.php", 'success');
-            logStep("   → Workaround também mantido para compatibilidade", 'info');
-
-            // Informações sobre implementação do webhook no Laravel
-            logStep("Implementação do endpoint no Laravel:", 'info');
-            logStep("1. Criar rota POST: Route::post('/api/webhooks/clubify', [WebhookController::class, 'handle'])", 'info');
-            logStep("2. Implementar middleware para validar assinatura", 'info');
-            logStep("3. Processar eventos conforme necessário", 'info');
-            logStep("4. Retornar status 200 para confirmar recebimento", 'info');
-
-            // Exemplo de implementação
-            logStep("Exemplo de controller:", 'info');
-            logStep("   public function handle(Request \$request) {", 'debug');
-            logStep("       // Validar assinatura do webhook", 'debug');
-            logStep("       // Processar evento: \$request->input('event_type')", 'debug');
-            logStep("       // return response()->json(['status' => 'ok']);", 'debug');
-            logStep("   }", 'debug');
-
         } catch (Exception $e) {
             logStep("Erro geral na configuração de webhooks: " . $e->getMessage(), 'warning');
             logStep("Continuando com outras operações...", 'info');
@@ -1644,41 +1604,6 @@ try {
 
     // SEÇÃO 1: SUMMARY EXECUTIVO
     echo "\n📋 SUMMARY EXECUTIVO:\n";
-    logStep("   ✅ Status: Todos os módulos processados com sucesso", 'success');
-    logStep("   🏗️  Arquitetura: Integração Laravel + Clubify SDK", 'info');
-    logStep("   ⚙️  Configuração: 100% via config() nativo do Laravel", 'success');
-    logStep("   🔐 Segurança: Contextos isolados e credenciais seguras", 'success');
-    logStep("   📊 Tenant ID: " . ($tenantId ?? 'N/A'), 'info');
-    logStep("   🏢 Organização: " . ($organization['existed'] ?? false ? 'Existente reutilizada' : 'Nova criada'), 'info');
-
-    // SEÇÃO 2: MÓDULOS IMPLEMENTADOS
-    echo "\n🧩 MÓDULOS IMPLEMENTADOS:\n";
-    logStep("   ✅ BLOCO A - Funções Helper: checkEmailAvailability, findTenantBySubdomain", 'success');
-    logStep("   ✅ BLOCO B - Infraestrutura: Domínio, SSL, credenciais avançadas", 'success');
-    logStep("   ✅ BLOCO C - Webhooks: Configuração completa e testes", 'success');
-    logStep("   ✅ BLOCO D - Ofertas: Funis de vendas, temas e upsells", 'success');
-    logStep("   ✅ BLOCO E - Produtos: Métodos avançados e validação", 'success');
-    logStep("   ✅ BLOCO F - Administração: Auditoria e relatórios avançados", 'success');
-
-    // SEÇÃO 3: FUNCIONALIDADES AVANÇADAS
-    echo "\n🚀 FUNCIONALIDADES AVANÇADAS:\n";
-    logStep("   🔧 Provisionamento automático de recursos", 'success');
-    logStep("   🛡️  Verificação prévia para evitar conflitos", 'success');
-    logStep("   🔄 Alternância inteligente de contextos", 'success');
-    logStep("   📊 Relatórios detalhados e auditoria", 'success');
-    logStep("   🎨 Configuração de temas e layouts", 'success');
-    logStep("   📈 Sistema completo de upsells", 'success');
-    logStep("   🔗 Integração completa com webhooks", 'success');
-    logStep("   ⚡ Métodos otimizados (createComplete, getTenantCredentials)", 'success');
-
-    // SEÇÃO 4: INTEGRAÇÃO LARAVEL
-    echo "\n🎯 INTEGRAÇÃO LARAVEL:\n";
-    logStep("   ✅ Bootstrap completo do framework", 'success');
-    logStep("   ⚙️  Configurações via config('clubify-checkout')", 'success');
-    logStep("   📁 Storage nativo para cache de credenciais", 'success');
-    logStep("   🐛 Tratamento robusto de erros", 'success');
-    logStep("   📝 Logging estruturado com timestamps", 'success');
-
     // SEÇÃO 5: CONFIGURAÇÕES RECOMENDADAS
     echo "\n💡 CONFIGURAÇÕES RECOMENDADAS NO .ENV:\n";
     logStep("Super Admin Essenciais:", 'info');
@@ -1687,54 +1612,6 @@ try {
     logStep("   CLUBIFY_SUPER_ADMIN_USERNAME=admin@empresa.com", 'debug');
     logStep("   CLUBIFY_SUPER_ADMIN_PASSWORD=senha-segura", 'debug');
 
-    logStep("Configurações de Exemplo:", 'info');
-    logStep("   EXAMPLE_ORG_NAME='Sua Empresa Ltda'", 'debug');
-    logStep("   EXAMPLE_CUSTOM_DOMAIN=checkout.suaempresa.com", 'debug');
-    logStep("   EXAMPLE_PRODUCT_NAME='Seu Produto Digital'", 'debug');
-    logStep("   EXAMPLE_USE_ADVANCED_PRODUCTS=true", 'debug');
-
-    logStep("Configurações de Webhook:", 'info');
-    logStep("   # Produção:", 'debug');
-    logStep("   CLUBIFY_WEBHOOK_URL=https://seusite.com/api/webhooks/clubify", 'debug');
-    logStep("   # Desenvolvimento (ngrok):", 'debug');
-    logStep("   CLUBIFY_WEBHOOK_DEV_URL=https://abc123.ngrok.io/api/webhooks/clubify", 'debug');
-    logStep("   # Simulação (para testes sem ngrok):", 'debug');
-    logStep("   EXAMPLE_SIMULATE_WEBHOOK=true", 'debug');
-    logStep("   # Comum:", 'debug');
-    logStep("   CLUBIFY_WEBHOOK_SECRET=webhook-secret-key", 'debug');
-
-    // SEÇÃO 6: MELHORIAS IMPLEMENTADAS E BUGS IDENTIFICADOS
-    echo "\n🔧 MELHORIAS vs VERSÃO ORIGINAL:\n";
-    logStep("   ✅ ESCALABILIDADE: Suporte a múltiplos módulos em paralelo", 'success');
-    logStep("   ✅ ROBUSTEZ: Tratamento defensivo de erros e fallbacks", 'success');
-    logStep("   ✅ FLEXIBILIDADE: Configurações via Laravel config()", 'success');
-    logStep("   ✅ COMPLETUDE: Todos os métodos do super-admin-example.php", 'success');
-    logStep("   ✅ MANUTENIBILIDADE: Código modular e bem documentado", 'success');
-    logStep("   ✅ BUG FIXES: Workarounds para problemas do SDK identificados", 'success');
-
-    echo "\n🐛 BUGS IDENTIFICADOS E CORRIGIDOS NO SDK:\n";
-    logStep("   ✅ Webhook Endpoints: Corrigidos em ApiWebhookRepository.php", 'success');
-    logStep("      → Antes: /webhooks/search (404 Not Found)", 'info');
-    logStep("      → Depois: /webhooks/configurations/partner/{tenant_id}", 'success');
-    logStep("      → Fallback mantido para compatibilidade", 'info');
-    logStep("   ✅ Timeout HTTP: Método setHttpTimeout() não existe", 'success');
-    logStep("      → Configurado via ini_set() como alternativa", 'success');
-    logStep("   📝 Commits recomendados para o repositório oficial:", 'info');
-    logStep("      → ApiWebhookRepository: Fix webhook endpoints to use correct API paths", 'debug');
-
-    // SEÇÃO 7: PRÓXIMOS PASSOS EXPANDIDOS
-    echo "\n🚀 ROADMAP E PRÓXIMOS PASSOS:\n";
-    logStep("Implementação Imediata:", 'info');
-    logStep("   1. Personalizar configurações no config/clubify-checkout.php", 'info');
-    logStep("   2. Implementar middleware de webhooks no Laravel", 'info');
-    logStep("   3. Configurar rotas para funis de vendas", 'info');
-    logStep("   4. Integrar com sistema de pagamentos existente", 'info');
-
-    logStep("Melhorias Futuras:", 'info');
-    logStep("   5. Criar ServiceProvider para inicialização automática", 'info');
-    logStep("   6. Implementar Jobs para operações assíncronas", 'info');
-    logStep("   7. Adicionar testes automatizados (PHPUnit)", 'info');
-    logStep("   8. Configurar monitoramento e alertas", 'info');
 
     // SEÇÃO 8: PERFORMANCE E MÉTRICAS
     echo "\n📊 MÉTRICAS DE EXECUÇÃO:\n";

@@ -7,6 +7,9 @@ namespace Clubify\Checkout\Modules\Webhooks;
 use Clubify\Checkout\Contracts\ModuleInterface;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
+use Clubify\Checkout\Core\Http\Client;
+use Clubify\Checkout\Core\Cache\CacheManagerInterface;
+use Clubify\Checkout\Core\Events\EventDispatcherInterface;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Modules\Webhooks\Factories\WebhooksServiceFactory;
 use Clubify\Checkout\Modules\Webhooks\Services\WebhookService;
@@ -70,6 +73,21 @@ class WebhooksModule implements ModuleInterface
             'module' => $this->getName(),
             'version' => $this->getVersion()
         ]);
+    }
+
+    /**
+     * Define as dependências necessárias
+     */
+    public function setDependencies(
+        Client $httpClient,
+        CacheManagerInterface $cache,
+        EventDispatcherInterface $eventDispatcher
+    ): void {
+        // Atualizar a factory com as dependências corretas se já existe
+        if ($this->factory !== null) {
+            $this->factory = null; // Force recreation with new dependencies
+        }
+
     }
 
     /**

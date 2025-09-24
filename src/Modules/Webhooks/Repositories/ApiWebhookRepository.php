@@ -114,20 +114,9 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
      */
     protected function getTenantId(): ?string
     {
-        // DEBUG: Log todas as tentativas de obter tenant ID
-        $this->logger->debug("Attempting to get tenant ID", [
-            'method' => 'getTenantId',
-            'has_getConfig' => method_exists($this, 'getConfig'),
-            'config_exists' => method_exists($this, 'getConfig') && $this->getConfig() !== null
-        ]);
-
         // Tentar obter tenant ID da configuração via SDK
         if (method_exists($this, 'getConfig') && $this->getConfig()) {
             $tenantId = $this->getConfig()->getTenantId();
-            $this->logger->debug("Tenant ID from config", [
-                'tenant_id' => $tenantId,
-                'source' => 'config'
-            ]);
             if ($tenantId) {
                 return $tenantId;
             }
@@ -135,20 +124,8 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
 
         // Fallback: tentar obter do contexto HTTP (header X-Tenant-Id)
         if (isset($_SERVER['HTTP_X_TENANT_ID'])) {
-            $tenantId = $_SERVER['HTTP_X_TENANT_ID'];
-            $this->logger->debug("Tenant ID from HTTP header", [
-                'tenant_id' => $tenantId,
-                'source' => 'http_header'
-            ]);
-            return $tenantId;
+            return $_SERVER['HTTP_X_TENANT_ID'];
         }
-
-        // DEBUG: Log when no tenant ID found
-        $this->logger->warning("No tenant ID found", [
-            'config_tenant' => method_exists($this, 'getConfig') && $this->getConfig() ? $this->getConfig()->getTenantId() : 'no_config',
-            'http_header' => $_SERVER['HTTP_X_TENANT_ID'] ?? 'not_set',
-            'all_server_headers' => array_keys($_SERVER)
-        ]);
 
         return null;
     }

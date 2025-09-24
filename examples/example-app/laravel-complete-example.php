@@ -430,21 +430,36 @@ try {
     echo "\n=== Criando ou Encontrando Organização ===\n";
 
     $organizationData = [
+        // Campos obrigatórios para createOrganization
         'name' => $EXAMPLE_CONFIG['organization']['name'],
         'admin_email' => $EXAMPLE_CONFIG['organization']['admin_email'],
         'admin_name' => $EXAMPLE_CONFIG['organization']['admin_name'],
+
+        // Campos opcionais para configuração do tenant
         'subdomain' => $EXAMPLE_CONFIG['organization']['subdomain'],
         'custom_domain' => $EXAMPLE_CONFIG['organization']['custom_domain'],
+        'description' => 'Organização criada via SDK PHP para demonstração das funcionalidades do Clubify Checkout',
+        'plan' => 'starter',
+        'country' => 'BR',
+        'industry' => 'technology',
+
+        // Configurações da organização
         'settings' => [
             'timezone' => 'America/Sao_Paulo',
             'currency' => 'BRL',
             'language' => 'pt-BR'
         ],
+
+        // Features habilitadas
         'features' => [
+            'analytics' => true,
             'payments' => true,
             'subscriptions' => true,
             'webhooks' => true
-        ]
+        ],
+
+        // Dados de contato de suporte (opcional)
+        'support_email' => $EXAMPLE_CONFIG['organization']['admin_email']
     ];
 
     $tenantId = null;

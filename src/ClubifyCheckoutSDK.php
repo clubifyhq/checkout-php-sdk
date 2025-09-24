@@ -862,6 +862,13 @@ class ClubifyCheckoutSDK
             $this->authManager = new AuthManager($this->getHttpClient(), $this->config);
             // Configurar AuthManager no Client para resolver dependência circular
             $this->getHttpClient()->setAuthManager($this->authManager);
+
+            // DEBUG: Log da configuração do AuthManager
+            $this->getLogger()->debug("AuthManager configured in HttpClient", [
+                'auth_manager_class' => get_class($this->authManager),
+                'http_client_class' => get_class($this->getHttpClient()),
+                'config_class' => get_class($this->config)
+            ]);
         }
         return $this->authManager;
     }

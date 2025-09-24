@@ -801,17 +801,26 @@ class AuthManager implements AuthManagerInterface
             $this->config->set('credentials.tenant_id', $credentials['tenant_id']);
             $this->config->set('credentials.api_key', $credentials['api_key']);
 
+            // CORREÇÃO: Reautenticar com as novas credenciais para obter token válido
+            $authResult = $this->authenticate($credentials['tenant_id'], $credentials['api_key']);
+            if (!$authResult) {
+                throw new AuthenticationException("Failed to authenticate with tenant {$tenantId} credentials after context switch");
+            }
+
             // Log da mudança para auditoria
             $this->logRoleTransition('super_admin', 'tenant_admin', [
                 'tenant_id' => $tenantId,
-                'switch_method' => 'manual'
+                'switch_method' => 'manual',
+                'authenticated' => $this->isAuthenticated()
             ]);
 
             return [
                 'success' => true,
                 'previous_context' => $previousContext,
                 'current_context' => $tenantId,
+                'current_tenant_id' => $tenantId,
                 'current_role' => $this->currentRole,
+                'authenticated' => $this->isAuthenticated(),
                 'message' => "Successfully switched to tenant {$tenantId}"
             ];
 
@@ -906,8 +915,33 @@ class AuthManager implements AuthManagerInterface
             throw new AuthenticationException('Super admin context not found');
         }
 
+        // CORREÇÃO: Limpar contexto atual antes de alternar
+        $this->resetForNewContext();
+
         $this->credentialManager->switchContext('super_admin');
         $this->currentRole = 'super_admin';
+
+        // CORREÇÃO: Obter e aplicar credenciais de super admin
+        $credentials = $this->credentialManager->getCurrentCredentials();
+        if (!empty($credentials)) {
+            // Atualizar configuração com credenciais de super admin
+            if (isset($credentials['tenant_id'])) {
+                $this->config->set('credentials.tenant_id', $credentials['tenant_id']);
+            }
+            if (isset($credentials['api_key'])) {
+                $this->config->set('credentials.api_key', $credentials['api_key']);
+            }
+
+            // Reautenticar se necessário (para super admin isso pode usar diferente fluxo)
+            if (isset($credentials['email']) && isset($credentials['password'])) {
+                // Super admin usa email/senha, não API key
+                $this->authenticateAsSuperAdmin([
+                    'email' => $credentials['email'],
+                    'password' => $credentials['password'],
+                    'tenant_id' => $credentials['tenant_id'] ?? null
+                ]);
+            }
+        }
     }
 
     /**

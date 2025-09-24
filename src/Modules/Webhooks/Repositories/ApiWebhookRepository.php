@@ -24,8 +24,7 @@ namespace Clubify\Checkout\Modules\Webhooks\Repositories;
 use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Repository\BaseRepository;
 use Clubify\Checkout\Modules\Webhooks\Contracts\WebhookRepositoryInterface;
-use Clubify\Checkout\Modules\Webhooks\Exceptions\WebhookNotFoundException;
-use Clubify\Checkout\Modules\Webhooks\Exceptions\WebhookValidationException;
+use Clubify\Checkout\Modules\Webhooks\Exceptions\WebhookException;
 use Clubify\Checkout\Exceptions\HttpException;
 
 /**
@@ -45,8 +44,7 @@ use Clubify\Checkout\Exceptions\HttpException;
  * - GET    webhooks/{id}           - Get webhook by ID
  * - PUT    webhooks/{id}           - Update webhook
  * - DELETE webhooks/{id}           - Delete webhook
- * - GET    webhooks/configurations/partner/{tenant_id} - Get webhooks by tenant (CORRECTED)
- * - POST   webhooks/search         - Search webhooks (fallback)
+ * - GET    webhooks/configurations/partner/{tenant_id} - Get webhooks by tenant
  * - PATCH  webhooks/{id}/status    - Update status
  *
  * @package Clubify\Checkout\Modules\Webhooks\Repositories
@@ -116,15 +114,41 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
      */
     protected function getTenantId(): ?string
     {
+        // DEBUG: Log todas as tentativas de obter tenant ID
+        $this->logger->debug("Attempting to get tenant ID", [
+            'method' => 'getTenantId',
+            'has_getConfig' => method_exists($this, 'getConfig'),
+            'config_exists' => method_exists($this, 'getConfig') && $this->getConfig() !== null
+        ]);
+
         // Tentar obter tenant ID da configuração via SDK
         if (method_exists($this, 'getConfig') && $this->getConfig()) {
-            return $this->getConfig()->getTenantId();
+            $tenantId = $this->getConfig()->getTenantId();
+            $this->logger->debug("Tenant ID from config", [
+                'tenant_id' => $tenantId,
+                'source' => 'config'
+            ]);
+            if ($tenantId) {
+                return $tenantId;
+            }
         }
 
         // Fallback: tentar obter do contexto HTTP (header X-Tenant-Id)
         if (isset($_SERVER['HTTP_X_TENANT_ID'])) {
-            return $_SERVER['HTTP_X_TENANT_ID'];
+            $tenantId = $_SERVER['HTTP_X_TENANT_ID'];
+            $this->logger->debug("Tenant ID from HTTP header", [
+                'tenant_id' => $tenantId,
+                'source' => 'http_header'
+            ]);
+            return $tenantId;
         }
+
+        // DEBUG: Log when no tenant ID found
+        $this->logger->warning("No tenant ID found", [
+            'config_tenant' => method_exists($this, 'getConfig') && $this->getConfig() ? $this->getConfig()->getTenantId() : 'no_config',
+            'http_header' => $_SERVER['HTTP_X_TENANT_ID'] ?? 'not_set',
+            'all_server_headers' => array_keys($_SERVER)
+        ]);
 
         return null;
     }
@@ -139,14 +163,17 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
             function () use ($eventType) {
                 // CORREÇÃO: Usar endpoint correto baseado no tenant atual
                 $tenantId = $this->getTenantId();
-                $endpoint = $tenantId ?
-                    "{$this->getEndpoint()}/configurations/partner/{$tenantId}" :
-                    "{$this->getEndpoint()}/search"; // fallback para compatibilidade
 
-                $response = $this->makeHttpRequest('GET', $endpoint, [
+                if (!$tenantId) {
+                    throw WebhookException::invalidConfig("tenant_id", "Tenant ID is required for webhook operations");
+                }
+
+                $endpoint = "{$this->getEndpoint()}/configurations/partner/{$tenantId}";
+
+                $response = $this->makeHttpRequest('GET', $endpoint . '?' . http_build_query([
                     'event_type' => $eventType,
                     'active' => true
-                ]);
+                ]));
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -270,7 +297,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
-                        throw new WebhookNotFoundException("Webhook not found: {$webhookId}");
+                        throw WebhookException::notFound($webhookId);
                     }
                     throw new HttpException(
                         "Failed to get webhook stats: " . "HTTP request failed",
@@ -356,13 +383,16 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
             function () use ($fieldValue) {
                 // CORREÇÃO: Usar endpoint correto baseado no tenant atual
                 $tenantId = $this->getTenantId();
-                $endpoint = $tenantId ?
-                    "{$this->getEndpoint()}/configurations/partner/{$tenantId}" :
-                    "{$this->getEndpoint()}/search"; // fallback para compatibilidade
 
-                $response = $this->makeHttpRequest('GET', $endpoint, [
+                if (!$tenantId) {
+                    throw WebhookException::invalidConfig("tenant_id", "Tenant ID is required for webhook operations");
+                }
+
+                $endpoint = "{$this->getEndpoint()}/configurations/partner/{$tenantId}";
+
+                $response = $this->makeHttpRequest('GET', $endpoint . '?' . http_build_query([
                     'email' => $fieldValue
-                ]);
+                ]));
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
@@ -391,13 +421,16 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
             function () use ($url) {
                 // CORREÇÃO: Usar endpoint correto baseado no tenant atual
                 $tenantId = $this->getTenantId();
-                $endpoint = $tenantId ?
-                    "{$this->getEndpoint()}/configurations/partner/{$tenantId}" :
-                    "{$this->getEndpoint()}/search"; // fallback para compatibilidade
 
-                $response = $this->makeHttpRequest('GET', $endpoint, [
+                if (!$tenantId) {
+                    throw WebhookException::invalidConfig("tenant_id", "Tenant ID is required for webhook operations");
+                }
+
+                $endpoint = "{$this->getEndpoint()}/configurations/partner/{$tenantId}";
+
+                $response = $this->makeHttpRequest('GET', $endpoint . '?' . http_build_query([
                     'url' => $url
-                ]);
+                ]));
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
@@ -562,13 +595,35 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     'limit' => $limit,
                     'offset' => $offset
                 ];
-                // CORREÇÃO: Para busca avançada, manter /search por enquanto mas adicionar header com tenant
+                // CORREÇÃO: Usar endpoint correto baseado no tenant atual
                 $tenantId = $this->getTenantId();
-                $endpoint = "{$this->getEndpoint()}/search";
+                $endpoint = $tenantId ?
+                    "{$this->getEndpoint()}/configurations/partner/{$tenantId}" :
+                    "{$this->getEndpoint()}/search"; // fallback para compatibilidade
 
-                // Se temos tenant ID, adicionar ao payload
+                // Se temos tenant ID, usar endpoint correto e não adicionar ao payload
                 if ($tenantId) {
-                    $payload['tenant_id'] = $tenantId;
+                    // Usar GET em vez de POST para o endpoint configurations
+                    $queryParams = array_merge($filters, $sort, [
+                        'limit' => $limit,
+                        'offset' => $offset
+                    ]);
+                    return $this->getCachedOrExecute(
+                        $cacheKey,
+                        function () use ($endpoint, $queryParams) {
+                            $response = $this->makeHttpRequest('GET', $endpoint . '?' . http_build_query($queryParams));
+
+                            if (!ResponseHelper::isSuccessful($response)) {
+                                throw new HttpException(
+                                    "Failed to search webhooks: " . "HTTP request failed",
+                                    $response->getStatusCode()
+                                );
+                            }
+
+                            return ResponseHelper::getData($response);
+                        },
+                        180
+                    );
                 }
 
                 $response = $this->makeHttpRequest('POST', $endpoint, $payload);
@@ -655,7 +710,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
-                        throw new WebhookNotFoundException("No history found for webhook ID: {$webhookId}");
+                        throw WebhookException::notFound($webhookId);
                     }
                     throw new HttpException(
                         "Failed to get webhook history: " . "HTTP request failed",

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Webhooks\Exceptions;
 
-use Clubify\Checkout\Core\Exceptions\BaseException;
+use Clubify\Checkout\Exceptions\SDKException;
 
 /**
  * Exception base para webhooks
@@ -12,7 +12,7 @@ use Clubify\Checkout\Core\Exceptions\BaseException;
  * Classe base para todas as exceções relacionadas
  * ao sistema de webhooks.
  */
-class WebhookException extends BaseException
+class WebhookException extends SDKException
 {
     protected string $module = 'webhooks';
 
@@ -24,6 +24,7 @@ class WebhookException extends BaseException
         return new self(
             "Webhook não encontrado: {$webhookId}",
             404,
+            null,
             [
                 'webhook_id' => $webhookId,
                 'error_type' => 'webhook_not_found',
@@ -44,6 +45,7 @@ class WebhookException extends BaseException
         return new self(
             $message,
             400,
+            null,
             [
                 'url' => $url,
                 'reason' => $reason,
@@ -60,6 +62,7 @@ class WebhookException extends BaseException
         return new self(
             "Configuração inválida para '{$field}': {$reason}",
             400,
+            null,
             [
                 'field' => $field,
                 'reason' => $reason,
@@ -76,6 +79,7 @@ class WebhookException extends BaseException
         return new self(
             "Webhook está desativado: {$webhookId}",
             403,
+            null,
             [
                 'webhook_id' => $webhookId,
                 'error_type' => 'webhook_disabled',
@@ -91,6 +95,7 @@ class WebhookException extends BaseException
         return new self(
             "Limite de webhooks excedido: {$current}/{$limit}",
             429,
+            null,
             [
                 'current_count' => $current,
                 'limit' => $limit,
@@ -107,6 +112,7 @@ class WebhookException extends BaseException
         return new self(
             "Tipo de evento não suportado: {$eventType}",
             400,
+            null,
             [
                 'event_type' => $eventType,
                 'error_type' => 'unsupported_event',
@@ -122,6 +128,7 @@ class WebhookException extends BaseException
         return new self(
             "Acesso negado para {$action} do webhook: {$webhookId}",
             403,
+            null,
             [
                 'webhook_id' => $webhookId,
                 'action' => $action,

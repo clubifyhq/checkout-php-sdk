@@ -78,10 +78,15 @@
     "repositories": [
         {
             "type": "path",
-            "url": "../../../../",
+            "url": "../../",
             "options": {
-                "symlink": false
+                "symlink": true
             }
+        },
+        {
+            "type": "composer",
+            "url": "https://packagist.org/",
+            "only": ["*"]
         }
     ],
     "config": {

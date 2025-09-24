@@ -819,16 +819,33 @@ try {
 
         try {
             logStep("Alternando para tenant: $tenantId", 'info');
+
+            // DEBUG: Verificar estado antes do switch
+            logStep("DEBUG: Estado antes do switch:", 'debug');
+            logStep("   SDK autenticado: " . ($sdk->isAuthenticated() ? 'Yes' : 'No'), 'debug');
+            $currentContext = $sdk->getCurrentContext();
+            logStep("   Contexto atual: " . json_encode($currentContext), 'debug');
+
             $switchResult = $sdk->superAdmin()->switchToTenant($tenantId);
+
+            // DEBUG: Verificar estado após o switch
+            logStep("DEBUG: Estado após o switch:", 'debug');
+            logStep("   SDK autenticado: " . ($sdk->isAuthenticated() ? 'Yes' : 'No'), 'debug');
+            logStep("   Switch result: " . json_encode($switchResult), 'debug');
 
             if ($switchResult['success'] ?? false) {
                 logStep("Contexto alternado com sucesso!", 'success');
                 logStep("   Current Tenant: " . ($switchResult['current_tenant_id'] ?? 'N/A'), 'info');
                 logStep("   Role: " . ($switchResult['current_role'] ?? 'tenant_admin'), 'info');
+                logStep("   Authenticated: " . (($switchResult['authenticated'] ?? false) ? 'Yes' : 'No'), 'info');
+            } else {
+                logStep("Falha na alternância de contexto", 'error');
+                logStep("   Erro: " . ($switchResult['error'] ?? 'Unknown error'), 'error');
             }
 
         } catch (Exception $e) {
             logStep("Erro ao alternar contexto: " . $e->getMessage(), 'warning');
+            logStep("   Trace: " . $e->getTraceAsString(), 'debug');
         }
     }
 
@@ -1037,6 +1054,7 @@ try {
     if ($tenantId && $tenantId !== 'unknown') {
         try {
             logStep("Iniciando configuração de webhooks para o tenant...", 'info');
+
 
             // Configurações de webhooks via config Laravel com detecção inteligente de ambiente
             $baseUrl = config('app.url');

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8a6c6c3e11fb971d20957683a8e08635",
+    "content-hash": "316cddb776f55c9b3cfa6708943f023b",
     "packages": [
         {
             "name": "brick/math",
@@ -137,17 +137,11 @@
         },
         {
             "name": "clubify/checkout-sdk-php",
-            "version": "1.03",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/clubifyhq/checkout-php-sdk.git",
-                "reference": "838cff8b5948c1e00692bba5a42cfa8813e65af0"
-            },
+            "version": "dev-main",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/clubifyhq/checkout-php-sdk/zipball/838cff8b5948c1e00692bba5a42cfa8813e65af0",
-                "reference": "838cff8b5948c1e00692bba5a42cfa8813e65af0",
-                "shasum": ""
+                "type": "path",
+                "url": "../..",
+                "reference": "9007b05469967f1905d54a2217927c50a0c7c88a"
             },
             "require": {
                 "ext-curl": "*",
@@ -198,12 +192,12 @@
             "type": "library",
             "extra": {
                 "laravel": {
-                    "aliases": {
-                        "ClubifyCheckout": "Clubify\\Checkout\\Laravel\\Facades\\ClubifyCheckout"
-                    },
                     "providers": [
                         "Clubify\\Checkout\\Laravel\\ClubifyCheckoutServiceProvider"
-                    ]
+                    ],
+                    "aliases": {
+                        "ClubifyCheckout": "Clubify\\Checkout\\Laravel\\Facades\\ClubifyCheckout"
+                    }
                 }
             },
             "autoload": {
@@ -211,7 +205,65 @@
                     "Clubify\\Checkout\\": "src/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "Clubify\\Checkout\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit"
+                ],
+                "test-coverage": [
+                    "phpunit --coverage-html coverage --coverage-text"
+                ],
+                "test-unit": [
+                    "phpunit tests/Unit"
+                ],
+                "test-integration": [
+                    "phpunit tests/Integration"
+                ],
+                "test-feature": [
+                    "phpunit tests/Feature"
+                ],
+                "phpstan": [
+                    "phpstan analyse src tests --level=8"
+                ],
+                "psalm": [
+                    "psalm"
+                ],
+                "insights": [
+                    "phpinsights"
+                ],
+                "cs-fix": [
+                    "php-cs-fixer fix"
+                ],
+                "cs-check": [
+                    "php-cs-fixer fix --dry-run --diff"
+                ],
+                "cs-baseline": [
+                    "php-cs-fixer fix --dry-run --diff --format=json > .php-cs-fixer.baseline.json"
+                ],
+                "quality": [
+                    "@cs-check",
+                    "@phpstan",
+                    "@psalm",
+                    "@test"
+                ],
+                "fix": [
+                    "@cs-fix"
+                ],
+                "check": [
+                    "@quality"
+                ],
+                "setup": [
+                    "composer install",
+                    "composer dump-autoload"
+                ],
+                "post-autoload-dump": [
+                    "echo 'Autoload generated successfully'"
+                ]
+            },
             "license": [
                 "MIT"
             ],
@@ -233,11 +285,14 @@
                 "sdk"
             ],
             "support": {
-                "docs": "https://docs.clubify.com/sdk/php",
                 "issues": "https://github.com/clubify/checkout-sdk-php/issues",
-                "source": "https://github.com/clubify/checkout-sdk-php"
+                "source": "https://github.com/clubify/checkout-sdk-php",
+                "docs": "https://docs.clubify.com/sdk/php"
             },
-            "time": "2025-09-22T18:59:15+00:00"
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "dflydev/dot-access-data",

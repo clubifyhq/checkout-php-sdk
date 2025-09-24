@@ -146,24 +146,39 @@ class Client
     {
         $headers = $this->config->getDefaultHeaders();
 
+        // DEBUG: Log estado do AuthManager
+        $this->logger->debug("AuthManager Status", [
+            'auth_manager_exists' => $this->authManager !== null,
+            'is_authenticated' => $this->authManager ? $this->authManager->isAuthenticated() : false,
+            'requires_login' => $this->authManager ? $this->authManager->requiresUserLogin() : false,
+            'current_role' => $this->authManager && method_exists($this->authManager, 'getCurrentRole') ? $this->authManager->getCurrentRole() : 'unknown'
+        ]);
+
         // Adicionar Authorization header APENAS se AuthManager estiver disponível e autenticado
         if ($this->authManager && $this->authManager->isAuthenticated()) {
             $accessToken = $this->authManager->getAccessToken();
             if ($accessToken) {
                 $headers['Authorization'] = 'Bearer ' . $accessToken;
+                $this->logger->debug("Authorization header added", [
+                    'token_length' => strlen($accessToken),
+                    'token_prefix' => substr($accessToken, 0, 20) . '...'
+                ]);
+            } else {
+                $this->logger->warning("AuthManager is authenticated but no access token available");
             }
+        } else {
+            $this->logger->warning("Authorization header NOT added", [
+                'auth_manager_exists' => $this->authManager !== null,
+                'is_authenticated' => $this->authManager ? $this->authManager->isAuthenticated() : false
+            ]);
         }
-        // Note: Não logamos "not authenticated" durante inicialização pois é comportamento esperado
-        // IMPORTANTE: NÃO usar API key como fallback no Authorization header
-        // API key é apenas para validação, não para autenticação de requests
 
-        // X-Tenant-ID já incluído nos headers padrão da configuração
-
-        $this->logger->log("debug", "Request Headers", [
-            'headers' => array_keys($headers),
+        // DEBUG: Log headers finais
+        $this->logger->debug("Final Request Headers", [
+            'all_headers' => $headers,
             'has_auth' => isset($headers['Authorization']),
             'has_tenant' => isset($headers['X-Tenant-ID']),
-            'auth_required' => $this->authManager ? $this->authManager->requiresUserLogin() : false
+            'tenant_id' => $headers['X-Tenant-ID'] ?? 'not_set'
         ]);
 
         return $headers;

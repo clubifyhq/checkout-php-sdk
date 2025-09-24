@@ -295,7 +295,8 @@ try {
             'name' => config('app.example_product_name', 'Produto Demo Laravel'),
             'description' => config('app.example_product_desc', 'Produto criado via SDK integrado com Laravel'),
             'price_amount' => (int) config('app.example_product_price', 9999), // R$ 99,99 em centavos
-            'currency' => config('app.example_product_currency', 'BRL')
+            'currency' => config('app.example_product_currency', 'BRL'),
+            'type' => 'digital'
         ],
         'sdk' => [
             'environment' => config('clubify-checkout.environment', 'sandbox')

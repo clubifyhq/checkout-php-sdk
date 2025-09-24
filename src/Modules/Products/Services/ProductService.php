@@ -74,34 +74,51 @@ class ProductService extends BaseService implements ServiceInterface
                 throw new ValidationException("SKU '{$productData['sku']}' already exists");
             }
 
-            // Preparar dados do produto
-            $data = array_merge($productData, [
+            // Preparar dados essenciais do produto (apenas campos que a API aceita)
+            $data = [
+                'name' => (string) $productData['name'],
+                'type' => (string) $productData['type'],
+                'price' => (float) $productData['price'],
                 'status' => $productData['status'] ?? 'active',
-                'created_at' => date('Y-m-d H:i:s'),
-                'metadata' => $this->generateProductMetadata($productData)
-            ]);
+                'slug' => $productData['slug'],
+                'sku' => $productData['sku']
+            ];
+
+            // Adicionar campos opcionais se fornecidos
+            if (isset($productData['description'])) {
+                $data['description'] = (string) $productData['description'];
+            }
+
+            if (isset($productData['stock'])) {
+                $data['stock'] = (int) $productData['stock'];
+            }
+
+            if (isset($productData['category'])) {
+                $data['category'] = (string) $productData['category'];
+            }
 
             // Criar produto via API
-            $response = $this->makeHttpRequest('POST', '/products', $data);
-            $product = ResponseHelper::getData($response);
+            $product = $this->makeHttpRequest('POST', '/products', ['json' => $data]);
 
             // Cache do produto
-            $this->cache->set($this->getCacheKey("product:{$product['id']}"), $product, 3600);
-            $this->cache->set($this->getCacheKey("product_slug:{$product['slug']}"), $product, 3600);
+            if (isset($product['id'])) {
+                $this->cache->set($this->getCacheKey("product:{$product['id']}"), $product, 3600);
+                $this->cache->set($this->getCacheKey("product_slug:{$product['slug']}"), $product, 3600);
 
-            // Dispatch evento
-            $this->dispatch('product.created', [
-                'product_id' => $product['id'],
-                'name' => $product['name'],
-                'type' => $product['type'],
-                'price' => $product['price']
-            ]);
+                // Dispatch evento
+                $this->dispatch('product.created', [
+                    'product_id' => $product['id'],
+                    'name' => $product['name'],
+                    'type' => $product['type'],
+                    'price' => $product['price']
+                ]);
 
-            $this->logger->info('Product created successfully', [
-                'product_id' => $product['id'],
-                'name' => $product['name'],
-                'sku' => $product['sku']
-            ]);
+                $this->logger->info('Product created successfully', [
+                    'product_id' => $product['id'],
+                    'name' => $product['name'],
+                    'sku' => $product['sku']
+                ]);
+            }
 
             return $product;
         });
@@ -173,8 +190,7 @@ class ProductService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $response = $this->makeHttpRequest('PUT', "/products/{$productId}", $data);
-            $product = ResponseHelper::getData($response);
+            $product = $this->makeHttpRequest('PUT', "/products/{$productId}", ['json' => $data]);
 
             // Invalidar cache
             $this->invalidateProductCache($productId);
@@ -190,12 +206,27 @@ class ProductService extends BaseService implements ServiceInterface
     }
 
     /**
-     * Lista produtos com filtros
+     * Lista produtos com filtros (filtragem no lado cliente para parâmetros não aceitos)
      */
     public function list(array $filters = [], int $page = 1, int $limit = 20): array
     {
         return $this->executeWithMetrics('list_products', function () use ($filters, $page, $limit) {
-            $queryParams = array_merge($filters, [
+            // Separar filtros aceitos pela API dos que precisam ser filtrados no cliente
+            $apiFilters = [];
+            $clientFilters = [];
+
+            // Lista de filtros que sabemos que a API NÃO aceita
+            $unsupportedFilters = ['search', 'q', 'slug', 'sku'];
+
+            foreach ($filters as $key => $value) {
+                if (in_array($key, $unsupportedFilters)) {
+                    $clientFilters[$key] = $value;
+                } else {
+                    $apiFilters[$key] = $value;
+                }
+            }
+
+            $queryParams = array_merge($apiFilters, [
                 'page' => $page,
                 'limit' => $limit
             ]);
@@ -204,25 +235,52 @@ class ProductService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            // makeHttpRequest já retorna dados decodificados
-            return $response['data'] ?? $response ?? [];
+            $data = $response['data'] ?? $response ?? [];
+            $products = is_array($data) ? $data : [];
+
+            // Aplicar filtros do lado cliente se necessário
+            if (!empty($clientFilters)) {
+                $products = $this->filterProductsClientSide($products, $clientFilters);
+            }
+
+            return ['data' => $products];
         });
     }
 
     /**
-     * Busca produtos por texto
+     * Busca produtos por texto (filtrando no lado cliente)
      */
     public function search(string $query, array $filters = []): array
     {
         return $this->executeWithMetrics('search_products', function () use ($query, $filters) {
-            $queryParams = array_merge($filters, ['q' => $query]);
+            // Buscar todos os produtos com filtros básicos
+            $queryParams = array_merge($filters, ['limit' => 100]);
 
-            $response = $this->makeHttpRequest('GET', '/products/search', [
+            $response = $this->makeHttpRequest('GET', '/products', [
                 'query' => $queryParams
             ]);
 
-            // makeHttpRequest já retorna dados decodificados
-            return $response['data'] ?? $response ?? [];
+            $data = $response['data'] ?? $response ?? [];
+            $products = is_array($data) ? $data : [];
+
+            // Filtrar produtos que contêm a query no nome, descrição ou SKU
+            $filteredProducts = [];
+            $queryLower = strtolower($query);
+
+            foreach ($products as $product) {
+                $searchableText = strtolower(implode(' ', [
+                    $product['name'] ?? '',
+                    $product['description'] ?? '',
+                    $product['sku'] ?? '',
+                    $product['slug'] ?? ''
+                ]));
+
+                if (strpos($searchableText, $queryLower) !== false) {
+                    $filteredProducts[] = $product;
+                }
+            }
+
+            return $filteredProducts;
         });
     }
 
@@ -299,10 +357,10 @@ class ProductService extends BaseService implements ServiceInterface
                 throw new ValidationException("Invalid stock operation: {$operation}");
             }
 
-            $response = $this->makeHttpRequest('PUT', "/products/{$productId}/stock", [
+            $data = $this->makeHttpRequest('PUT', "/products/{$productId}/stock", ['json' => [
                 'quantity' => $quantity,
                 'operation' => $operation
-            ]);
+            ]]);
 
             // Invalidar cache do produto
             $this->invalidateProductCache($productId);
@@ -314,7 +372,7 @@ class ProductService extends BaseService implements ServiceInterface
                 'operation' => $operation
             ]);
 
-            return $response->getStatusCode() === 200;
+            return $data['success'] ?? true; // Assumir sucesso se não há indicação contrária
         });
     }
 
@@ -324,11 +382,10 @@ class ProductService extends BaseService implements ServiceInterface
     public function checkStock(string $productId, int $quantity = 1): bool
     {
         return $this->executeWithMetrics('check_product_stock', function () use ($productId, $quantity) {
-            $response = $this->makeHttpRequest('GET', "/products/{$productId}/stock", [
+            $data = $this->makeHttpRequest('GET', "/products/{$productId}/stock", [
                 'query' => ['quantity' => $quantity]
             ]);
 
-            $data = ResponseHelper::getData($response);
             return $data['available'] ?? false;
         });
     }
@@ -363,8 +420,7 @@ class ProductService extends BaseService implements ServiceInterface
     public function duplicate(string $productId, array $overrideData = []): array
     {
         return $this->executeWithMetrics('duplicate_product', function () use ($productId, $overrideData) {
-            $response = $this->makeHttpRequest('POST', "/products/{$productId}/duplicate", $overrideData);
-            $product = ResponseHelper::getData($response);
+            $product = $this->makeHttpRequest('POST', "/products/{$productId}/duplicate", ['json' => $overrideData]);
 
             // Dispatch evento
             $this->dispatch('product.duplicated', [
@@ -382,9 +438,9 @@ class ProductService extends BaseService implements ServiceInterface
     public function getSalesStats(string $productId): array
     {
         return $this->executeWithMetrics('get_product_sales_stats', function () use ($productId) {
-            $response = $this->makeHttpRequest('GET', "/products/{$productId}/sales-stats");
+            $data = $this->makeHttpRequest('GET', "/products/{$productId}/sales-stats");
             // makeHttpRequest já retorna dados decodificados
-            return $response['data'] ?? $response ?? [];
+            return $data['data'] ?? $data ?? [];
         });
     }
 
@@ -394,9 +450,9 @@ class ProductService extends BaseService implements ServiceInterface
     public function getPriceHistory(string $productId): array
     {
         return $this->executeWithMetrics('get_product_price_history', function () use ($productId) {
-            $response = $this->makeHttpRequest('GET', "/products/{$productId}/price-history");
+            $data = $this->makeHttpRequest('GET', "/products/{$productId}/price-history");
             // makeHttpRequest já retorna dados decodificados
-            return $response['data'] ?? $response ?? [];
+            return $data['data'] ?? $data ?? [];
         });
     }
 
@@ -419,7 +475,7 @@ class ProductService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics('delete_product', function () use ($productId) {
             try {
-                $response = $this->makeHttpRequest('DELETE', "/products/{$productId}");
+                $data = $this->makeHttpRequest('DELETE', "/products/{$productId}");
 
                 // Invalidar cache
                 $this->invalidateProductCache($productId);
@@ -429,7 +485,7 @@ class ProductService extends BaseService implements ServiceInterface
                     'product_id' => $productId
                 ]);
 
-                return $response->getStatusCode() === 204;
+                return $data['success'] ?? true; // Assumir sucesso se não há erro
             } catch (HttpException $e) {
                 $this->logger->error('Failed to delete product', [
                     'product_id' => $productId,
@@ -446,10 +502,9 @@ class ProductService extends BaseService implements ServiceInterface
     public function count(array $filters = []): int
     {
         try {
-            $response = $this->makeHttpRequest('GET', '/products/count', [
+            $data = $this->makeHttpRequest('GET', '/products/count', [
                 'query' => $filters
             ]);
-            $data = ResponseHelper::getData($response);
             return $data['count'] ?? 0;
         } catch (HttpException $e) {
             $this->logger->error('Failed to count products', [
@@ -466,8 +521,7 @@ class ProductService extends BaseService implements ServiceInterface
     private function fetchProductById(string $productId): ?array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/products/{$productId}");
-            return ResponseHelper::getData($response);
+            return $this->makeHttpRequest('GET', "/products/{$productId}");
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -477,20 +531,19 @@ class ProductService extends BaseService implements ServiceInterface
     }
 
     /**
-     * Busca produto por slug via API (usando search)
+     * Busca produto por slug via API (listando todos e filtrando)
      */
     private function fetchProductBySlug(string $slug): ?array
     {
         try {
-            // Usar o endpoint de search com busca de texto
-            $response = $this->makeHttpRequest('GET', '/products', [
-                'query' => ['q' => $slug, 'limit' => 50] // Busca por texto, limite maior para filtrar depois
+            // Usar busca genérica e filtrar pelo slug no lado cliente
+            $data = $this->makeHttpRequest('GET', '/products', [
+                'query' => ['limit' => 100] // Buscar mais produtos para encontrar o slug
             ]);
 
-            $data = ResponseHelper::getData($response);
             $products = $data['data'] ?? $data ?? [];
 
-            // Retorna o primeiro produto que corresponde exatamente ao slug
+            // Filtrar pelo slug no lado cliente
             if (is_array($products) && !empty($products)) {
                 foreach ($products as $product) {
                     if (isset($product['slug']) && $product['slug'] === $slug) {
@@ -509,20 +562,19 @@ class ProductService extends BaseService implements ServiceInterface
     }
 
     /**
-     * Busca produto por SKU via API (usando search)
+     * Busca produto por SKU via API (listando todos e filtrando)
      */
     private function fetchProductBySku(string $sku): ?array
     {
         try {
-            // Usar o endpoint de search com busca de texto
-            $response = $this->makeHttpRequest('GET', '/products', [
-                'query' => ['q' => $sku, 'limit' => 50] // Busca por texto, limite maior para filtrar depois
+            // Usar busca genérica e filtrar pelo SKU no lado cliente
+            $data = $this->makeHttpRequest('GET', '/products', [
+                'query' => ['limit' => 100] // Buscar mais produtos para encontrar o SKU
             ]);
 
-            $data = ResponseHelper::getData($response);
             $products = $data['data'] ?? $data ?? [];
 
-            // Retorna o primeiro produto que corresponde exatamente ao SKU
+            // Filtrar pelo SKU no lado cliente
             if (is_array($products) && !empty($products)) {
                 foreach ($products as $product) {
                     if (isset($product['sku']) && $product['sku'] === $sku) {
@@ -547,9 +599,9 @@ class ProductService extends BaseService implements ServiceInterface
     {
         return $this->executeWithMetrics("update_product_status_{$status}", function () use ($productId, $status) {
             try {
-                $response = $this->makeHttpRequest('PUT', "/products/{$productId}/status", [
+                $data = $this->makeHttpRequest('PUT', "/products/{$productId}/status", ['json' => [
                     'status' => $status
-                ]);
+                ]]);
 
                 // Invalidar cache
                 $this->invalidateProductCache($productId);
@@ -560,7 +612,7 @@ class ProductService extends BaseService implements ServiceInterface
                     'new_status' => $status
                 ]);
 
-                return $response->getStatusCode() === 200;
+                return $data['success'] ?? true; // Assumir sucesso se não há erro
             } catch (HttpException $e) {
                 $this->logger->error("Failed to update product status to {$status}", [
                     'product_id' => $productId,
@@ -596,18 +648,24 @@ class ProductService extends BaseService implements ServiceInterface
     {
         $required = ['name', 'price', 'type'];
         foreach ($required as $field) {
-            if (empty($data[$field])) {
+            if (!isset($data[$field]) || $data[$field] === '' || $data[$field] === null) {
                 throw new ValidationException("Field '{$field}' is required for product creation");
             }
+        }
+
+        // Validar que name é string
+        if (!is_string($data['name'])) {
+            throw new ValidationException('Field "name" must be a string');
         }
 
         if (!is_numeric($data['price']) || $data['price'] < 0) {
             throw new ValidationException('Price must be a positive number');
         }
 
-        $allowedTypes = ['physical', 'digital', 'service', 'subscription'];
+        // Verificar tipos válidos (pode ser que a API tenha tipos específicos)
+        $allowedTypes = ['product', 'service', 'digital', 'physical', 'subscription'];
         if (!in_array($data['type'], $allowedTypes)) {
-            throw new ValidationException("Invalid product type: {$data['type']}");
+            throw new ValidationException("Invalid product type: {$data['type']}. Allowed types: " . implode(', ', $allowedTypes));
         }
 
         if (isset($data['stock']) && (!is_numeric($data['stock']) || $data['stock'] < 0)) {
@@ -748,6 +806,25 @@ class ProductService extends BaseService implements ServiceInterface
     protected function makeHttpRequest(string $method, string $uri, array $options = []): array
     {
         try {
+            // Log do payload para debugging
+            if ($method === 'POST' && isset($options['json'])) {
+                $this->logger->debug("Product API Request Payload", [
+                    'method' => $method,
+                    'uri' => $uri,
+                    'payload' => $options['json']
+                ]);
+            } elseif ($method === 'POST' && !isset($options['json']) && !isset($options['query'])) {
+                // Se não tem query nem json, usar os dados como json
+                $options['json'] = $options;
+                unset($options['method'], $options['uri']);
+
+                $this->logger->debug("Product API Request Payload (converted to json)", [
+                    'method' => $method,
+                    'uri' => $uri,
+                    'payload' => $options['json']
+                ]);
+            }
+
             $response = $this->httpClient->request($method, $uri, $options);
 
             if (!ResponseHelper::isSuccessful($response)) {
@@ -769,6 +846,7 @@ class ProductService extends BaseService implements ServiceInterface
                 'method' => $method,
                 'uri' => $uri,
                 'error' => $e->getMessage(),
+                'options' => $options,
                 'service' => static::class
             ]);
             throw $e;
@@ -789,6 +867,64 @@ class ProductService extends BaseService implements ServiceInterface
     protected function extractResponseData($response): ?array
     {
         return ResponseHelper::getData($response);
+    }
+
+    /**
+     * Filtra produtos no lado cliente
+     */
+    private function filterProductsClientSide(array $products, array $filters): array
+    {
+        $filteredProducts = [];
+
+        foreach ($products as $product) {
+            $matches = true;
+
+            foreach ($filters as $key => $value) {
+                switch ($key) {
+                    case 'search':
+                        $searchableText = strtolower(implode(' ', [
+                            $product['name'] ?? '',
+                            $product['description'] ?? '',
+                            $product['sku'] ?? '',
+                            $product['slug'] ?? ''
+                        ]));
+                        if (strpos($searchableText, strtolower($value)) === false) {
+                            $matches = false;
+                        }
+                        break;
+                    case 'slug':
+                        if (($product['slug'] ?? '') !== $value) {
+                            $matches = false;
+                        }
+                        break;
+                    case 'sku':
+                        if (($product['sku'] ?? '') !== $value) {
+                            $matches = false;
+                        }
+                        break;
+                    case 'q':
+                        $searchableText = strtolower(implode(' ', [
+                            $product['name'] ?? '',
+                            $product['description'] ?? '',
+                            $product['sku'] ?? ''
+                        ]));
+                        if (strpos($searchableText, strtolower($value)) === false) {
+                            $matches = false;
+                        }
+                        break;
+                }
+
+                if (!$matches) {
+                    break;
+                }
+            }
+
+            if ($matches) {
+                $filteredProducts[] = $product;
+            }
+        }
+
+        return $filteredProducts;
     }
 
 }

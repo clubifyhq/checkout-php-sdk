@@ -118,7 +118,7 @@ class ApiKeyService extends BaseService
 
             // Criar API key via API
             $response = $this->makeHttpRequest('POST', 'api-keys', ['json' => $data]);
-            $apiKey = $this->processHttpResponse($response);
+            $apiKey = $response;
 
             if (!$apiKey) {
                 throw new HttpException('Failed to create API key: Invalid response from server');
@@ -177,7 +177,7 @@ class ApiKeyService extends BaseService
     {
         return $this->executeWithMetrics('get_api_keys_by_organization', function () use ($organizationId) {
             $response = $this->makeHttpRequest('GET', "/api-keys");
-            return $this->processHttpResponse($response) ?? [];
+            return $response ?? [];
         });
     }
 
@@ -195,7 +195,7 @@ class ApiKeyService extends BaseService
                 ]
             ]);
 
-            $apiKey = $this->processHttpResponse($response);
+            $apiKey = $response;
 
             if (!$apiKey) {
                 throw new HttpException('Failed to update API key permissions: Invalid response from server');
@@ -230,7 +230,7 @@ class ApiKeyService extends BaseService
                 ]
             ]);
 
-            $apiKey = $this->processHttpResponse($response);
+            $apiKey = $response;
 
             if (!$apiKey) {
                 throw new HttpException('Failed to update API key rate limit: Invalid response from server');
@@ -303,7 +303,7 @@ class ApiKeyService extends BaseService
                 ]
             ]);
 
-            $apiKey = $this->processHttpResponse($response);
+            $apiKey = $response;
 
             if (!$apiKey) {
                 throw new HttpException('Failed to regenerate API key: Invalid response from server');
@@ -361,7 +361,7 @@ class ApiKeyService extends BaseService
     {
         return $this->executeWithMetrics('get_api_key_stats', function () use ($apiKeyId) {
             $response = $this->makeHttpRequest('GET', "api-keys/{$apiKeyId}/stats");
-            return $this->processHttpResponse($response) ?? [];
+            return $response ?? [];
         });
     }
 
@@ -376,7 +376,7 @@ class ApiKeyService extends BaseService
                     'limit' => $limit
                 ]
             ]);
-            return $this->processHttpResponse($response) ?? [];
+            return $response ?? [];
         });
     }
 
@@ -418,7 +418,7 @@ class ApiKeyService extends BaseService
     {
         try {
             $response = $this->makeHttpRequest('GET', "api-keys/validate/{$apiKey}");
-            return $this->processHttpResponse($response);
+            return $response;
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404 || $e->getStatusCode() === 401) {
                 return null;
@@ -434,7 +434,7 @@ class ApiKeyService extends BaseService
     {
         try {
             $response = $this->makeHttpRequest('GET', "api-keys/{$apiKeyId}");
-            return $this->processHttpResponse($response);
+            return $response;
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -626,29 +626,6 @@ class ApiKeyService extends BaseService
         ];
     }
 
-    /**
-     * Processa resposta HTTP do Client (Guzzle) e retorna dados JSON
-     */
-    private function processHttpResponse(\Psr\Http\Message\ResponseInterface $response): ?array
-    {
-        $content = $response->getBody()->getContents();
-
-        if (empty($content)) {
-            return null;
-        }
-
-        $data = json_decode($content, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->logger->error('Failed to decode JSON response', [
-                'json_error' => json_last_error_msg(),
-                'content' => $content
-            ]);
-            return null;
-        }
-
-        return $data;
-    }
 
     /**
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client

@@ -501,7 +501,7 @@ class OrganizationModule implements ModuleInterface
             ]);
 
             // Dispatch success event
-            $this->eventDispatcher->dispatch('organization_setup.completed', $result);
+            $this->eventDispatcher->emit('organization_setup.completed', $result);
 
             return $result;
 

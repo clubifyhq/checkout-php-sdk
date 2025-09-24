@@ -976,7 +976,7 @@ class SuperAdminModule implements ModuleInterface
             $adminData = $this->prepareAdminUserData($options);
 
             // 1. Usar UserService centralizado para criar/verificar usuário
-            $userResult = $this->orchestrateUserCreation($adminData);
+            $userResult = $this->orchestrateUserCreation($adminData, $tenantId);
 
             // 2. Usar ApiKeyService centralizado para criar/verificar API key
             $apiKeyResult = $this->orchestrateApiKeyCreation($tenantId, $options);
@@ -1044,7 +1044,7 @@ class SuperAdminModule implements ModuleInterface
     /**
      * Orquestra a criação de usuário usando UserService centralizado
      */
-    private function orchestrateUserCreation(array $adminData): array
+    private function orchestrateUserCreation(array $adminData, string $tenantId): array
     {
         // Primeiro verificar se usuário já existe
         $existingUser = $this->userService->findUserByEmail($adminData['email']);
@@ -1061,7 +1061,7 @@ class SuperAdminModule implements ModuleInterface
             ];
         }
 
-        // Criar novo usuário usando serviço centralizado
+        // Criar novo usuário usando serviço centralizado com tenantId
         $userCreationResult = $this->userService->createUser([
             'email' => $adminData['email'],
             'firstName' => $adminData['firstName'],
@@ -1070,7 +1070,7 @@ class SuperAdminModule implements ModuleInterface
             'roles' => ['tenant_admin'],
             'status' => 'active',
             'source' => 'super_admin_provisioning'
-        ]);
+        ], $tenantId);
 
         if (!$userCreationResult['success']) {
             throw new SDKException('Failed to create user via centralized service');

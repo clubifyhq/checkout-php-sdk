@@ -136,7 +136,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                 $this->invalidateCache($trackId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Track.StatusUpdated', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Track.StatusUpdated', [
                     'track_id' => $trackId,
                     'status' => $status,
                     'timestamp' => time()
@@ -195,7 +195,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
             $result = ResponseHelper::getData($response);
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Track.BulkCreated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Track.BulkCreated', [
                 'count' => count($tracksData),
                 'result' => $result,
                 'timestamp' => time()
@@ -230,7 +230,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
             }
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Track.BulkUpdated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Track.BulkUpdated', [
                 'count' => count($updates),
                 'result' => $result,
                 'timestamp' => time()
@@ -279,7 +279,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                 $this->invalidateCache($trackId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Track.Archived', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Track.Archived', [
                     'track_id' => $trackId,
                     'timestamp' => time()
                 ]);
@@ -304,7 +304,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                 $this->invalidateCache($trackId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Track.Restored', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Track.Restored', [
                     'track_id' => $trackId,
                     'timestamp' => time()
                 ]);

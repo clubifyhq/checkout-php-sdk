@@ -85,7 +85,7 @@ class OneClickService
 
         try {
             // Dispara evento de início
-            $this->eventDispatcher->dispatch('cart.oneclick.started', [
+            $this->eventDispatcher->emit('cart.oneclick.started', [
                 'cart_id' => $cartId,
                 'payment_data' => $this->sanitizePaymentData($paymentData)
             ]);
@@ -104,7 +104,7 @@ class OneClickService
             $this->cacheTransactionResult($cartId, $result);
 
             // Dispara evento de sucesso
-            $this->eventDispatcher->dispatch('cart.oneclick.completed', [
+            $this->eventDispatcher->emit('cart.oneclick.completed', [
                 'cart_id' => $cartId,
                 'transaction_id' => $result['transaction_id'] ?? null,
                 'order_id' => $result['order_id'] ?? null,
@@ -127,7 +127,7 @@ class OneClickService
             ]);
 
             // Dispara evento de falha
-            $this->eventDispatcher->dispatch('cart.oneclick.failed', [
+            $this->eventDispatcher->emit('cart.oneclick.failed', [
                 'cart_id' => $cartId,
                 'error' => $e->getMessage(),
                 'payment_data' => $this->sanitizePaymentData($paymentData)

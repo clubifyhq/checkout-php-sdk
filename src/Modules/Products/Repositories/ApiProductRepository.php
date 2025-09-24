@@ -136,7 +136,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                 $this->invalidateCache($productId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Product.StatusUpdated', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Product.StatusUpdated', [
                     'product_id' => $productId,
                     'status' => $status,
                     'timestamp' => time()
@@ -197,7 +197,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
             $result = ResponseHelper::getData($response);
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Product.BulkCreated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Product.BulkCreated', [
                 'count' => count($productsData),
                 'result' => $result,
                 'timestamp' => time()
@@ -232,7 +232,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
             }
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Product.BulkUpdated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Product.BulkUpdated', [
                 'count' => count($updates),
                 'result' => $result,
                 'timestamp' => time()
@@ -281,7 +281,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                 $this->invalidateCache($productId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Product.Archived', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Product.Archived', [
                     'product_id' => $productId,
                     'timestamp' => time()
                 ]);
@@ -306,7 +306,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                 $this->invalidateCache($productId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Product.Restored', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Product.Restored', [
                     'product_id' => $productId,
                     'timestamp' => time()
                 ]);

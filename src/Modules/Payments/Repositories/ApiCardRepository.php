@@ -141,7 +141,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
             $result = ResponseHelper::getData($response);
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Card.Tokenized', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Card.Tokenized', [
                 'customer_id' => $customerId,
                 'token' => $result['token'] ?? null,
                 'timestamp' => time()
@@ -208,7 +208,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
                 $this->invalidateCache($cardId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Card.StatusUpdated', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Card.StatusUpdated', [
                     'card_id' => $cardId,
                     'status' => $status,
                     'timestamp' => time()
@@ -234,7 +234,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
                 $this->invalidateCache($cardId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Card.Archived', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Card.Archived', [
                     'card_id' => $cardId,
                     'timestamp' => time()
                 ]);
@@ -259,7 +259,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
                 $this->invalidateCache($cardId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Card.Expired', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Card.Expired', [
                     'card_id' => $cardId,
                     'timestamp' => time()
                 ]);

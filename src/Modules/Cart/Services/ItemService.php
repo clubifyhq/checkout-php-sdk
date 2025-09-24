@@ -81,7 +81,7 @@ class ItemService
         $cart = $this->repository->addItem($cartId, $item->toArray());
 
         // Dispara evento
-        $this->eventDispatcher->dispatch('cart.item.added', [
+        $this->eventDispatcher->emit('cart.item.added', [
             'cart_id' => $cartId,
             'item' => $item->toArray()
         ]);
@@ -115,7 +115,7 @@ class ItemService
         $cart = $this->repository->removeItem($cartId, $itemId);
 
         // Dispara evento
-        $this->eventDispatcher->dispatch('cart.item.removed', [
+        $this->eventDispatcher->emit('cart.item.removed', [
             'cart_id' => $cartId,
             'item_id' => $itemId,
             'removed_item' => $itemToRemove
@@ -154,7 +154,7 @@ class ItemService
         $cart = $this->repository->updateItem($cartId, $itemId, $updates);
 
         // Dispara evento
-        $this->eventDispatcher->dispatch('cart.item.updated', [
+        $this->eventDispatcher->emit('cart.item.updated', [
             'cart_id' => $cartId,
             'item_id' => $itemId,
             'updates' => $updates

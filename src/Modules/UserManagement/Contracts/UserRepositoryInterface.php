@@ -137,4 +137,13 @@ interface UserRepositoryInterface extends RepositoryInterface
      * @return bool True se a senha está correta
      */
     public function verifyPassword(string $email, string $password): bool;
+
+    /**
+     * Cria um novo usuário com headers customizados
+     *
+     * @param array $data Dados do usuário a criar
+     * @param array $headers Headers customizados para a requisição
+     * @return array Dados do usuário criado
+     */
+    public function createWithHeaders(array $data, array $headers = []): array;
 }

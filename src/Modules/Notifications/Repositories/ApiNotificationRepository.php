@@ -136,7 +136,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                 $this->invalidateCache($notificationId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Notification.StatusUpdated', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Notification.StatusUpdated', [
                     'notification_id' => $notificationId,
                     'status' => $status,
                     'timestamp' => time()
@@ -195,7 +195,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
             $result = ResponseHelper::getData($response);
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Notification.BulkCreated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Notification.BulkCreated', [
                 'count' => count($notificationsData),
                 'result' => $result,
                 'timestamp' => time()
@@ -230,7 +230,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
             }
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Notification.BulkUpdated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Notification.BulkUpdated', [
                 'count' => count($updates),
                 'result' => $result,
                 'timestamp' => time()
@@ -279,7 +279,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                 $this->invalidateCache($notificationId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Notification.Archived', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Notification.Archived', [
                     'notification_id' => $notificationId,
                     'timestamp' => time()
                 ]);
@@ -304,7 +304,7 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
                 $this->invalidateCache($notificationId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Notification.Restored', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Notification.Restored', [
                     'notification_id' => $notificationId,
                     'timestamp' => time()
                 ]);

@@ -136,7 +136,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                 $this->invalidateCache($orderId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Order.StatusUpdated', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Order.StatusUpdated', [
                     'order_id' => $orderId,
                     'status' => $status,
                     'timestamp' => time()
@@ -195,7 +195,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
             $result = ResponseHelper::getData($response);
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Order.BulkCreated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Order.BulkCreated', [
                 'count' => count($ordersData),
                 'result' => $result,
                 'timestamp' => time()
@@ -230,7 +230,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
             }
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Order.BulkUpdated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Order.BulkUpdated', [
                 'count' => count($updates),
                 'result' => $result,
                 'timestamp' => time()
@@ -279,7 +279,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                 $this->invalidateCache($orderId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Order.Archived', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Order.Archived', [
                     'order_id' => $orderId,
                     'timestamp' => time()
                 ]);
@@ -304,7 +304,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                 $this->invalidateCache($orderId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Order.Restored', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Order.Restored', [
                     'order_id' => $orderId,
                     'timestamp' => time()
                 ]);

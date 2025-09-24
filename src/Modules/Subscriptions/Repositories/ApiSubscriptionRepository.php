@@ -136,7 +136,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                 $this->invalidateCache($subscriptionId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Subscription.StatusUpdated', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.StatusUpdated', [
                     'subscription_id' => $subscriptionId,
                     'status' => $status,
                     'timestamp' => time()
@@ -195,7 +195,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
             $result = ResponseHelper::getData($response);
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Subscription.BulkCreated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.BulkCreated', [
                 'count' => count($subscriptionsData),
                 'result' => $result,
                 'timestamp' => time()
@@ -230,7 +230,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
             }
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Subscription.BulkUpdated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.BulkUpdated', [
                 'count' => count($updates),
                 'result' => $result,
                 'timestamp' => time()
@@ -279,7 +279,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                 $this->invalidateCache($subscriptionId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Subscription.Archived', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.Archived', [
                     'subscription_id' => $subscriptionId,
                     'timestamp' => time()
                 ]);
@@ -304,7 +304,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                 $this->invalidateCache($subscriptionId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Subscription.Restored', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.Restored', [
                     'subscription_id' => $subscriptionId,
                     'timestamp' => time()
                 ]);

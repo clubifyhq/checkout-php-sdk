@@ -170,10 +170,10 @@ class UserManagementModule implements ModuleInterface
     /**
      * Cria um novo usuário
      */
-    public function createUser(array $userData): array
+    public function createUser(array $userData, ?string $tenantId = null): array
     {
         $this->requireInitialized();
-        return $this->getUserService()->createUser($userData);
+        return $this->getUserService()->createUser($userData, $tenantId);
     }
 
     /**

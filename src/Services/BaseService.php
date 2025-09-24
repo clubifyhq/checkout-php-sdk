@@ -215,7 +215,7 @@ abstract class BaseService implements ServiceInterface
      */
     protected function dispatch(string $eventName, array $data = []): void
     {
-        $this->eventDispatcher->dispatch($eventName, array_merge($data, [
+        $this->eventDispatcher->emit($eventName, array_merge($data, [
             'service' => $this->getServiceName(),
             'timestamp' => time()
         ]));

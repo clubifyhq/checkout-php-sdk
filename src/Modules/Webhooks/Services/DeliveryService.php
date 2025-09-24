@@ -134,7 +134,7 @@ class DeliveryService extends BaseService implements ServiceInterface
         $this->updateMetrics($delivery);
 
         // Dispara evento
-        $this->eventDispatcher->dispatch('webhook.delivery.completed', [
+        $this->eventDispatcher->emit('webhook.delivery.completed', [
             'delivery' => $delivery,
             'webhook' => $webhook,
             'event_type' => $eventType,
@@ -424,7 +424,7 @@ class DeliveryService extends BaseService implements ServiceInterface
         $this->incrementCircuitBreakerFailures($webhookId);
 
         // Dispara evento de falha
-        $this->eventDispatcher->dispatch('webhook.delivery.failed', [
+        $this->eventDispatcher->emit('webhook.delivery.failed', [
             'delivery' => $delivery,
             'webhook_id' => $webhookId,
         ]);

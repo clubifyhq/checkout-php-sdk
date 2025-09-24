@@ -496,6 +496,7 @@ try {
                     logStep("ID do usuário: " . $existingUser['id'], 'info');
                 } else {
                     logStep("Usuário não existe - prosseguindo com provisionamento completo...", 'debug');
+                    logStep("✅ SDK CORRIGIDO: Quando o super admin criar usuário, o tenantId será incluído no payload e header X-Tenant-Id será enviado", 'info');
 
                     $provisioningOptions = [
                         'admin_email' => $adminEmail,
@@ -678,6 +679,7 @@ try {
     logStep("   ✅ Tenant ID: " . ($tenantId ?? 'N/A'), 'info');
     logStep("   ✅ Produtos: Verificados/criados", 'info');
     logStep("   ✅ Configuração: 100% via .env", 'success');
+    logStep("   ✅ CORREÇÃO APLICADA: Super admin agora inclui tenantId no payload e header X-Tenant-Id", 'success');
 
     // Informações sobre configurações necessárias
     echo "\n💡 CONFIGURAÇÕES IMPORTANTES NO .ENV:\n";

@@ -94,7 +94,7 @@ class PromotionService
         $cart = $this->repository->applyPromotion($cartId, $promotionCode);
 
         // Dispara evento
-        $this->eventDispatcher->dispatch('cart.promotion.applied', [
+        $this->eventDispatcher->emit('cart.promotion.applied', [
             'cart_id' => $cartId,
             'promotion_code' => $promotionCode,
             'promotion_data' => $validationResult['promotion'] ?? null,
@@ -127,7 +127,7 @@ class PromotionService
         $cart = $this->repository->removePromotion($cartId);
 
         // Dispara evento
-        $this->eventDispatcher->dispatch('cart.promotion.removed', [
+        $this->eventDispatcher->emit('cart.promotion.removed', [
             'cart_id' => $cartId,
             'promotion_code' => $promotionCode
         ]);
@@ -388,7 +388,7 @@ class PromotionService
         $cart = $this->repository->removePromotion($cartId);
 
         // Dispara evento
-        $this->eventDispatcher->dispatch('cart.promotions.cleared', [
+        $this->eventDispatcher->emit('cart.promotions.cleared', [
             'cart_id' => $cartId,
             'removed_promotions' => $activePromotions
         ]);

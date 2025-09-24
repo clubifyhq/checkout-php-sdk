@@ -408,4 +408,76 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
         return ResponseHelper::getData($response);
     }
 
+    /**
+     * Cria um novo usuário com headers customizados
+     */
+    public function createWithHeaders(array $data, array $headers = []): array
+    {
+        return $this->executeWithMetrics("create_user_with_headers", function () use ($data, $headers) {
+            $response = $this->makeHttpRequestWithHeaders('POST', $this->getEndpoint(), $data, $headers);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "Failed to create user: " . ResponseHelper::getErrorMessage($response),
+                    $response->getStatusCode()
+                );
+            }
+
+            $createdData = ResponseHelper::getData($response);
+
+            // Dispatch creation event
+            $this->dispatch("user.created", [
+                'resource_id' => $createdData['id'] ?? null,
+                'data' => $createdData,
+                'headers' => array_keys($headers)
+            ]);
+
+            return $createdData;
+        });
+    }
+
+    /**
+     * Método para fazer requisições HTTP com headers customizados
+     */
+    protected function makeHttpRequestWithHeaders(string $method, string $uri, array $data = [], array $customHeaders = []): array
+    {
+        try {
+            $options = [];
+
+            if (!empty($data)) {
+                $options['json'] = $data;
+            }
+
+            if (!empty($customHeaders)) {
+                $options['headers'] = $customHeaders;
+            }
+
+            $response = $this->httpClient->request($method, $uri, $options);
+
+            if (!ResponseHelper::isSuccessful($response)) {
+                throw new HttpException(
+                    "HTTP {$method} request failed to {$uri}",
+                    $response->getStatusCode()
+                );
+            }
+
+            $responseData = ResponseHelper::getData($response);
+            if ($responseData === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
+            }
+
+            return $responseData;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request with custom headers failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'custom_headers' => array_keys($customHeaders),
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
+    }
+
 }

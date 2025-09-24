@@ -114,7 +114,7 @@ class UserService implements ServiceInterface
     /**
      * Cria um novo usuário
      */
-    public function createUser(array $userData): array
+    public function createUser(array $userData, ?string $tenantId = null): array
     {
         $this->logger->info('Creating user', ['email' => $userData['email'] ?? 'unknown']);
 
@@ -128,12 +128,25 @@ class UserService implements ServiceInterface
                 throw new UserValidationException('User with this email already exists');
             }
 
-            // Create user
-            $createdUser = $this->repository->create($user->toArray());
+            // Prepare user data with tenantId if provided
+            $userDataToCreate = $user->toArray();
+            if ($tenantId) {
+                $userDataToCreate['tenantId'] = $tenantId;
+            }
+
+            // Prepare headers for repository call
+            $headers = [];
+            if ($tenantId) {
+                $headers['X-Tenant-Id'] = $tenantId;
+            }
+
+            // Create user with tenant context
+            $createdUser = $this->repository->createWithHeaders($userDataToCreate, $headers);
 
             $this->logger->info('User created successfully', [
                 'user_id' => $createdUser['id'],
-                'email' => $createdUser['email']
+                'email' => $createdUser['email'],
+                'tenant_id' => $tenantId
             ]);
 
             return [

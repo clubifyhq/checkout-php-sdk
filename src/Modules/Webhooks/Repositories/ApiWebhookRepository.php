@@ -401,7 +401,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                 $this->invalidateCache($webhookId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Webhook.StatusUpdated', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Webhook.StatusUpdated', [
                     'webhook_id' => $webhookId,
                     'status' => $status,
                     'timestamp' => time()
@@ -462,7 +462,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
             $result = ResponseHelper::getData($response);
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Webhook.BulkCreated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Webhook.BulkCreated', [
                 'count' => count($webhooksData),
                 'result' => $result,
                 'timestamp' => time()
@@ -497,7 +497,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
             }
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Webhook.BulkUpdated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Webhook.BulkUpdated', [
                 'count' => count($updates),
                 'result' => $result,
                 'timestamp' => time()
@@ -551,7 +551,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                 $this->invalidateCache($webhookId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Webhook.Archived', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Webhook.Archived', [
                     'webhook_id' => $webhookId,
                     'timestamp' => time()
                 ]);
@@ -576,7 +576,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                 $this->invalidateCache($webhookId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Webhook.Restored', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Webhook.Restored', [
                     'webhook_id' => $webhookId,
                     'timestamp' => time()
                 ]);

@@ -136,7 +136,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                 $this->invalidateCache($paymentId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Payment.StatusUpdated', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Payment.StatusUpdated', [
                     'payment_id' => $paymentId,
                     'status' => $status,
                     'timestamp' => time()
@@ -197,7 +197,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
             $result = ResponseHelper::getData($response);
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Payment.BulkCreated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Payment.BulkCreated', [
                 'count' => count($paymentsData),
                 'result' => $result,
                 'timestamp' => time()
@@ -232,7 +232,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
             }
 
             // Dispatch event
-            $this->eventDispatcher?->dispatch('Clubify.Checkout.Payment.BulkUpdated', [
+            $this->eventDispatcher?->emit('Clubify.Checkout.Payment.BulkUpdated', [
                 'count' => count($updates),
                 'result' => $result,
                 'timestamp' => time()
@@ -286,7 +286,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                 $this->invalidateCache($paymentId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Payment.Archived', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Payment.Archived', [
                     'payment_id' => $paymentId,
                     'timestamp' => time()
                 ]);
@@ -311,7 +311,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                 $this->invalidateCache($paymentId);
 
                 // Dispatch event
-                $this->eventDispatcher?->dispatch('Clubify.Checkout.Payment.Restored', [
+                $this->eventDispatcher?->emit('Clubify.Checkout.Payment.Restored', [
                     'payment_id' => $paymentId,
                     'timestamp' => time()
                 ]);

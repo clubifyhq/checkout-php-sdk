@@ -772,6 +772,9 @@ class AuthManager implements AuthManagerInterface
         $previousRole = $this->currentRole;
 
         try {
+            // CORREÇÃO: Limpar completamente o cache antes de alternar contexto
+            $this->resetForNewContext();
+
             // Verificar se tem API key válida
             if (!$this->credentialManager->hasValidApiKey($tenantId)) {
                 // Try to obtain credentials for this tenant if missing
@@ -1268,6 +1271,47 @@ class AuthManager implements AuthManagerInterface
     protected function extractResponseData($response): ?array
     {
         return ResponseHelper::getData($response);
+    }
+
+    /**
+     * CORREÇÃO: Limpa cache de tokens para evitar reutilização incorreta
+     */
+    public function clearTokenCache(): void
+    {
+        try {
+            // Limpar tokens do TokenStorage
+            if ($this->tokenStorage) {
+                if (method_exists($this->tokenStorage, 'clear')) {
+                    $this->tokenStorage->clear();
+                } elseif (method_exists($this->tokenStorage, 'clearAll')) {
+                    $this->tokenStorage->clearAll();
+                }
+            }
+
+            // Resetar informações de usuário
+            $this->userInfo = null;
+
+        } catch (\Exception $e) {
+            // Log mas não falhar - limpeza de cache não deve quebrar o fluxo
+        }
+    }
+
+    /**
+     * CORREÇÃO: Limpa informações de usuário em cache
+     */
+    public function clearUserInfo(): void
+    {
+        $this->userInfo = null;
+    }
+
+    /**
+     * CORREÇÃO: Reinicia completamente o AuthManager para novo contexto
+     */
+    public function resetForNewContext(): void
+    {
+        $this->clearTokenCache();
+        $this->clearUserInfo();
+        $this->currentRole = 'tenant_admin'; // Reset para papel padrão
     }
 
 }

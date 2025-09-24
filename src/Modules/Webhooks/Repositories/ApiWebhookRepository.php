@@ -45,7 +45,8 @@ use Clubify\Checkout\Exceptions\HttpException;
  * - GET    webhooks/{id}           - Get webhook by ID
  * - PUT    webhooks/{id}           - Update webhook
  * - DELETE webhooks/{id}           - Delete webhook
- * - GET    webhooks/search         - Search webhooks
+ * - GET    webhooks/configurations/partner/{tenant_id} - Get webhooks by tenant (CORRECTED)
+ * - POST   webhooks/search         - Search webhooks (fallback)
  * - PATCH  webhooks/{id}/status    - Update status
  *
  * @package Clubify\Checkout\Modules\Webhooks\Repositories
@@ -111,6 +112,24 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
     }
 
     /**
+     * Get current tenant ID from SDK configuration
+     */
+    protected function getTenantId(): ?string
+    {
+        // Tentar obter tenant ID da configuração via SDK
+        if (method_exists($this, 'getConfig') && $this->getConfig()) {
+            return $this->getConfig()->getTenantId();
+        }
+
+        // Fallback: tentar obter do contexto HTTP (header X-Tenant-Id)
+        if (isset($_SERVER['HTTP_X_TENANT_ID'])) {
+            return $_SERVER['HTTP_X_TENANT_ID'];
+        }
+
+        return null;
+    }
+
+    /**
      * Find webhooks by event type
      */
     public function findByEvent(string $eventType): array
@@ -118,7 +137,13 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->getCachedOrExecute(
             $this->getCacheKey("webhook:event:{$eventType}"),
             function () use ($eventType) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
+                // CORREÇÃO: Usar endpoint correto baseado no tenant atual
+                $tenantId = $this->getTenantId();
+                $endpoint = $tenantId ?
+                    "{$this->getEndpoint()}/configurations/partner/{$tenantId}" :
+                    "{$this->getEndpoint()}/search"; // fallback para compatibilidade
+
+                $response = $this->makeHttpRequest('GET', $endpoint, [
                     'event_type' => $eventType,
                     'active' => true
                 ]);
@@ -145,9 +170,11 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->getCachedOrExecute(
             $this->getCacheKey("webhook:org:{$organizationId}"),
             function () use ($organizationId) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
-                    'organization_id' => $organizationId,
-                    'active' => true
+                // CORREÇÃO: Usar endpoint correto para configurations do partner
+                $endpoint = "{$this->getEndpoint()}/configurations/partner/{$organizationId}";
+
+                $response = $this->makeHttpRequest('GET', $endpoint, [
+                    'active' => true  // Parâmetros de query se necessário
                 ]);
 
                 if (!ResponseHelper::isSuccessful($response)) {
@@ -327,7 +354,13 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->getCachedOrExecute(
             $this->getCacheKey("webhook:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
+                // CORREÇÃO: Usar endpoint correto baseado no tenant atual
+                $tenantId = $this->getTenantId();
+                $endpoint = $tenantId ?
+                    "{$this->getEndpoint()}/configurations/partner/{$tenantId}" :
+                    "{$this->getEndpoint()}/search"; // fallback para compatibilidade
+
+                $response = $this->makeHttpRequest('GET', $endpoint, [
                     'email' => $fieldValue
                 ]);
 
@@ -356,7 +389,13 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
         return $this->getCachedOrExecute(
             $this->getCacheKey("webhook:url:" . md5($url)),
             function () use ($url) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
+                // CORREÇÃO: Usar endpoint correto baseado no tenant atual
+                $tenantId = $this->getTenantId();
+                $endpoint = $tenantId ?
+                    "{$this->getEndpoint()}/configurations/partner/{$tenantId}" :
+                    "{$this->getEndpoint()}/search"; // fallback para compatibilidade
+
+                $response = $this->makeHttpRequest('GET', $endpoint, [
                     'url' => $url
                 ]);
 
@@ -523,7 +562,16 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                     'limit' => $limit,
                     'offset' => $offset
                 ];
-                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
+                // CORREÇÃO: Para busca avançada, manter /search por enquanto mas adicionar header com tenant
+                $tenantId = $this->getTenantId();
+                $endpoint = "{$this->getEndpoint()}/search";
+
+                // Se temos tenant ID, adicionar ao payload
+                if ($tenantId) {
+                    $payload['tenant_id'] = $tenantId;
+                }
+
+                $response = $this->makeHttpRequest('POST', $endpoint, $payload);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(

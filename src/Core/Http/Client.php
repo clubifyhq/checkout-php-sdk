@@ -354,4 +354,21 @@ class Client
 
         return $fullUri;
     }
+
+    /**
+     * CORREÇÃO: Limpa headers de autenticação para evitar reutilização de JWT do super admin
+     */
+    public function clearAuthHeaders(): void
+    {
+        try {
+            // Recriar o cliente Guzzle com configurações limpas
+            $this->client = $this->createGuzzleClient();
+
+            $this->logger->debug('HTTP Client auth headers cleared');
+        } catch (\Exception $e) {
+            $this->logger->warning('Failed to clear auth headers', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

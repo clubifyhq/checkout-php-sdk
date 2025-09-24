@@ -377,4 +377,28 @@ class CredentialManager
     {
         $this->autoSync = $enabled;
     }
+
+    /**
+     * CORREÇÃO: Limpa cache de contextos para evitar reutilização incorreta
+     */
+    public function clearCache(): void
+    {
+        try {
+            // Limpar cache de contextos em memória
+            $currentContext = $this->activeContext;
+            $this->contexts = [];
+
+            // Recarregar apenas o contexto ativo do storage
+            $this->loadContextsFromStorage();
+
+            // Manter o contexto ativo se ainda existir
+            if (isset($this->contexts[$currentContext])) {
+                $this->activeContext = $currentContext;
+            } else {
+                $this->activeContext = 'default';
+            }
+        } catch (\Exception $e) {
+            // Não falhar se limpeza de cache não funcionar
+        }
+    }
 }

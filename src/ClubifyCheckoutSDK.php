@@ -283,7 +283,19 @@ class ClubifyCheckoutSDK
     public function switchToTenant(string $tenantId): array
     {
         $this->requireSuperAdminMode();
-        return $this->getAuthManager()->switchToTenant($tenantId);
+
+        // CORREÇÃO: Limpar completamente o cache de autenticação do super admin
+        // antes de alternar para evitar reutilização do JWT incorreto
+        $this->clearAuthenticationCache();
+
+        $result = $this->getAuthManager()->switchToTenant($tenantId);
+
+        // Verificar se a alternância foi bem-sucedida
+        if (!($result['success'] ?? false)) {
+            throw new \Exception('Failed to switch to tenant: ' . ($result['error'] ?? 'Unknown error'));
+        }
+
+        return $result;
     }
 
     /**
@@ -1124,6 +1136,248 @@ class ClubifyCheckoutSDK
             $this->getCache(),
             $this->getEventDispatcher()
         );
+    }
+
+    /**
+     * Helper: Migrar dados de usuário entre tenants
+     *
+     * Método de conveniência para resolver o problema de dados órfãos
+     * quando um usuário é transferido entre tenants.
+     *
+     * @param string $userId ID do usuário
+     * @param string $sourceTenantId Tenant de origem (onde estão os dados órfãos)
+     * @param string $targetTenantId Tenant de destino
+     * @param array $options Opções de migração
+     * @return array Resultado da migração
+     */
+    public function migrateUserDataBetweenTenants(
+        string $userId,
+        string $sourceTenantId,
+        string $targetTenantId,
+        array $options = []
+    ): array {
+        try {
+            $this->getLogger()->info('Iniciando migração de dados via helper method', [
+                'user_id' => $userId,
+                'source_tenant' => $sourceTenantId,
+                'target_tenant' => $targetTenantId
+            ]);
+
+            $result = [
+                'success' => false,
+                'user_id' => $userId,
+                'source_tenant' => $sourceTenantId,
+                'target_tenant' => $targetTenantId,
+                'migrations' => [],
+                'errors' => [],
+                'started_at' => date('c')
+            ];
+
+            // 1. Migrar produtos
+            if (!isset($options['skip_products']) || !$options['skip_products']) {
+                try {
+                    $productsMigration = $this->migrateUserProducts($userId, $sourceTenantId, $targetTenantId);
+                    $result['migrations']['products'] = $productsMigration;
+                } catch (\Exception $e) {
+                    $result['errors'][] = "Erro ao migrar produtos: " . $e->getMessage();
+                }
+            }
+
+            // 2. TODO: Adicionar migração de outras entidades conforme necessário
+            // $customersMigration = $this->migrateUserCustomers($userId, $sourceTenantId, $targetTenantId);
+            // $ordersMigration = $this->migrateUserOrders($userId, $sourceTenantId, $targetTenantId);
+
+            $result['success'] = count($result['errors']) === 0;
+            $result['completed_at'] = date('c');
+
+            return $result;
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'user_id' => $userId,
+                'source_tenant' => $sourceTenantId,
+                'target_tenant' => $targetTenantId,
+                'completed_at' => date('c')
+            ];
+        }
+    }
+
+    /**
+     * Helper privado: Migrar produtos do usuário
+     */
+    private function migrateUserProducts(string $userId, string $sourceTenantId, string $targetTenantId): array
+    {
+        $result = [
+            'total_found' => 0,
+            'migrated' => 0,
+            'errors' => []
+        ];
+
+        try {
+            // Buscar produtos do usuário no tenant de origem
+            $products = $this->products()->list([
+                'tenant_id' => $sourceTenantId,
+                'created_by' => $userId
+            ]);
+
+            $result['total_found'] = count($products);
+
+            foreach ($products as $product) {
+                try {
+                    // Preparar dados do produto
+                    $productData = $product;
+                    unset($productData['id'], $productData['_id'], $productData['created_at'], $productData['updated_at']);
+
+                    // Criar produto no novo tenant
+                    $newProduct = $this->products()->create($productData);
+                    $result['migrated']++;
+
+                } catch (\Exception $e) {
+                    $result['errors'][] = [
+                        'product' => $product['name'] ?? 'Unknown',
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+
+        } catch (\Exception $e) {
+            $result['errors'][] = "Erro geral: " . $e->getMessage();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Helper: Verificar dados órfãos de um usuário
+     *
+     * @param string $userId ID do usuário
+     * @param string $tenantId ID do tenant para verificar
+     * @return array Dados órfãos encontrados
+     */
+    public function findUserOrphanedData(string $userId, string $tenantId): array
+    {
+        try {
+            $orphanedData = [
+                'user_id' => $userId,
+                'tenant_id' => $tenantId,
+                'orphaned_items' => [],
+                'total_orphaned' => 0,
+                'checked_at' => date('c')
+            ];
+
+            // Verificar produtos órfãos
+            try {
+                $products = $this->products()->list([
+                    'tenant_id' => $tenantId,
+                    'created_by' => $userId
+                ]);
+
+                if (count($products) > 0) {
+                    $orphanedData['orphaned_items']['products'] = [
+                        'count' => count($products),
+                        'items' => array_map(function($product) {
+                            return [
+                                'id' => $product['id'] ?? $product['_id'],
+                                'name' => $product['name'] ?? 'Unknown',
+                                'type' => $product['type'] ?? 'Unknown'
+                            ];
+                        }, $products)
+                    ];
+                }
+            } catch (\Exception $e) {
+                $orphanedData['errors']['products'] = $e->getMessage();
+            }
+
+            // Calcular total
+            $orphanedData['total_orphaned'] = array_sum(
+                array_column($orphanedData['orphaned_items'], 'count')
+            );
+
+            return $orphanedData;
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'user_id' => $userId,
+                'tenant_id' => $tenantId
+            ];
+        }
+    }
+
+    /**
+     * Helper: Transferir usuário completo com migração automática
+     *
+     * @param string $userId ID do usuário
+     * @param string $newTenantId Novo tenant
+     * @param array $options Opções da transferência
+     * @return array Resultado completo da operação
+     */
+    public function transferUserWithDataMigration(
+        string $userId,
+        string $newTenantId,
+        array $options = []
+    ): array {
+        // Este método seria uma integração completa que:
+        // 1. Detecta o tenant atual do usuário
+        // 2. Migra todos os dados
+        // 3. Atualiza o tenant do usuário
+        // 4. Verifica a integridade
+
+        return [
+            'success' => false,
+            'note' => 'Este método requer integração com user-management-service para detectar tenant atual do usuário',
+            'user_id' => $userId,
+            'new_tenant' => $newTenantId,
+            'recommendation' => 'Use migrateUserDataBetweenTenants() se você souber o tenant de origem'
+        ];
+    }
+
+    /**
+     * Limpa completamente o cache de autenticação
+     *
+     * CORREÇÃO: Necessário para evitar reutilização de JWT do super admin
+     * quando alternando para contexto de tenant
+     */
+    private function clearAuthenticationCache(): void
+    {
+        try {
+            // Limpar cache do AuthManager se disponível
+            if ($this->authManager) {
+                // Método para limpar tokens em cache
+                if (method_exists($this->authManager, 'clearTokenCache')) {
+                    $this->authManager->clearTokenCache();
+                }
+
+                // Limpar informações de usuário em cache
+                if (method_exists($this->authManager, 'clearUserInfo')) {
+                    $this->authManager->clearUserInfo();
+                }
+            }
+
+            // Limpar cache do CredentialManager se disponível
+            if ($this->credentialManager) {
+                if (method_exists($this->credentialManager, 'clearCache')) {
+                    $this->credentialManager->clearCache();
+                }
+            }
+
+            // Limpar cache do HTTP Client se disponível
+            if ($this->httpClient) {
+                if (method_exists($this->httpClient, 'clearAuthHeaders')) {
+                    $this->httpClient->clearAuthHeaders();
+                }
+            }
+
+            $this->getLogger()->info('Authentication cache cleared for context switch');
+
+        } catch (\Exception $e) {
+            $this->getLogger()->warning('Failed to clear authentication cache', [
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**

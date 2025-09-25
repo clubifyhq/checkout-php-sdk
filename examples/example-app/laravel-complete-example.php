@@ -361,18 +361,17 @@ try {
     echo "=================================================================\n\n";
 
     // Limpar credenciais antigas em cache que podem estar corrompidas
-    logStep("Limpando credenciais em cache antigas...", 'info');
+    logStep("Limpando cache de credenciais...", 'info');
     $credentialsPath = storage_path('app/clubify/credentials');
     if (is_dir($credentialsPath)) {
         $files = glob($credentialsPath . '/*');
         foreach ($files as $file) {
             if (is_file($file)) {
                 unlink($file);
-                logStep("Removido: " . basename($file), 'debug');
             }
         }
+        logStep("Cache de credenciais limpo", 'success');
     }
-    logStep("Cache de credenciais limpo", 'success');
 
     // ===============================================
     // CONFIGURAÇÕES DO EXEMPLO (VIA CONFIG LARAVEL)
@@ -410,12 +409,7 @@ try {
     ];
 
     logStep("Iniciando exemplo completo de Super Admin (Laravel Integration)", 'info');
-    logStep("Configurações carregadas via config() do Laravel:", 'info');
-    logStep("   Organização: {$EXAMPLE_CONFIG['organization']['name']}", 'info');
-    logStep("   Domínio: {$EXAMPLE_CONFIG['organization']['custom_domain']}", 'info');
-    logStep("   Produto: {$EXAMPLE_CONFIG['product']['name']}", 'info');
-    logStep("   Ambiente: " . config('app.env', 'unknown'), 'info');
-    logStep("   Modo resiliente: ✅ Ativo (verifica antes de criar)", 'info');
+    logStep("Organização: {$EXAMPLE_CONFIG['organization']['name']} | Ambiente: " . config('app.env', 'unknown'), 'info');
 
     // ===============================================
     // 1. INICIALIZAÇÃO COMO SUPER ADMIN
@@ -436,74 +430,30 @@ try {
     // Usar configuração diretamente do Laravel (já estruturada)
     $config = config('clubify-checkout');
 
-    logStep("Configurações carregadas via config('clubify-checkout'):", 'debug');
-    logStep("   API Key: " . substr($config['credentials']['api_key'] ?? 'NOT_SET', 0, 20) . "...", 'debug');
-    logStep("   Environment: {$config['environment']}", 'debug');
-    logStep("   Base URL: " . ($config['api']['base_url'] ?? 'NOT_SET'), 'debug');
-    logStep("   Super Admin Enabled: " . ($config['super_admin']['enabled'] ? 'Yes' : 'No'), 'debug');
-
     // Inicializar SDK com configuração completa
     $sdk = new ClubifyCheckoutSDK($config);
-    logStep("SDK initialized successfully!", 'success');
-    logStep("   Version: " . $sdk->getVersion(), 'info');
-    logStep("   Authenticated: " . ($sdk->isAuthenticated() ? 'Yes' : 'No'), 'info');
-    logStep("   Initialized: " . ($sdk->isInitialized() ? 'Yes' : 'No'), 'info');
+    logStep("SDK inicializado v" . $sdk->getVersion(), 'success');
 
     // Inicializar como super admin
     try {
-        logStep("Tentando inicializar como super admin...", 'debug');
-        logStep("Credenciais: API Key = " . substr($superAdminCredentials['api_key'] ?? 'NOT_SET', 0, 20) . "...", 'debug');
-        logStep("Credenciais: Email = " . ($superAdminCredentials['email'] ?? 'NOT_SET'), 'debug');
+        logStep("Inicializando como super admin...", 'info');
 
-        // Configurar timeouts para requisições HTTP
+        // Configurar timeouts
         ini_set('default_socket_timeout', 30);
         ini_set('max_execution_time', 60);
-
-        // Verificar se o SDK tem método para configurar timeout
         if (method_exists($sdk, 'setHttpTimeout')) {
             $sdk->setHttpTimeout(30);
-            logStep("HTTP timeout configurado para 30s", 'debug');
         }
 
-        logStep("Iniciando chamada initializeAsSuperAdmin...", 'debug');
-        $startTime = microtime(true);
-
         $initResult = $sdk->initializeAsSuperAdmin($superAdminCredentials);
-
-        $endTime = microtime(true);
-        $duration = round($endTime - $startTime, 2);
-        logStep("Chamada initializeAsSuperAdmin completada em {$duration}s", 'debug');
-        logStep("SDK inicializado como super admin:", 'success');
-        logStep("   Mode: " . ($initResult['mode'] ?? 'super_admin'), 'info');
-        logStep("   Role: " . ($initResult['role'] ?? 'super_admin'), 'info');
-        logStep("   Authenticated: " . (($initResult['authenticated'] ?? false) ? 'Yes' : 'No'), 'info');
+        logStep("SDK inicializado como super admin", 'success');
     } catch (Exception $e) {
         $errorMsg = $e->getMessage();
         logStep("Erro ao inicializar como super admin: " . $errorMsg, 'error');
 
         // Verificar se é timeout ou problema de rede
         if (str_contains($errorMsg, 'timeout') || str_contains($errorMsg, 'timed out') || str_contains($errorMsg, 'Connection')) {
-            logStep("Erro de timeout/conexão detectado", 'warning');
-            logStep("Verificando conectividade com a API...", 'info');
-
-            // Teste de conectividade simples
-            $apiUrl = $config['api']['base_url'] ?? 'https://checkout.svelve.com/api/v1';
-            logStep("Tentando ping para: " . $apiUrl, 'debug');
-
-            $context = stream_context_create([
-                'http' => [
-                    'timeout' => 10,
-                    'method' => 'GET',
-                    'header' => "User-Agent: ClubifySDK-Test\r\n"
-                ]
-            ]);
-
-            $pingResult = @file_get_contents($apiUrl . '/health', false, $context);
-            if ($pingResult !== false) {
-                logStep("API está acessível - problema pode ser nas credenciais", 'info');
-            } else {
-                logStep("API não está acessível - problema de conectividade", 'warning');
-            }
+            logStep("Erro de conectividade detectado", 'warning');
         }
 
         logStep("Tentando usar credenciais de fallback...", 'info');
@@ -595,28 +545,16 @@ try {
                     logStep("Usuário admin já existe: $adminEmail", 'success');
                     logStep("ID do usuário: " . $existingUser['id'], 'info');
                 } else {
-                    logStep("Usuário não existe - prosseguindo com provisionamento completo...", 'debug');
-                    logStep("✅ SDK CORRIGIDO: Quando o super admin criar usuário, o tenantId será incluído no payload e header X-Tenant-Id será enviado", 'info');
-
-                    // CORREÇÃO: Super Admin não deve criar API keys
-                    // API keys devem ser criadas pelo próprio tenant admin
-                    logStep("✅ CORREÇÃO APLICADA: Super Admin NÃO criará API keys", 'success');
-                    logStep("   → Tenant admin deve criar suas próprias API keys após login", 'info');
-                    logStep("   → Super Admin responsabilidade: apenas criar tenant e usuário admin", 'info');
-
-                    // Verificar se usuário admin existe para este tenant
+                    logStep("Verificando usuário admin...", 'info');
                     try {
                         $userCheck = $sdk->userManagement()->findUserByEmail($adminEmail);
                         if ($userCheck && isset($userCheck['success']) && $userCheck['success']) {
-                            logStep("✅ Usuário admin já existe: $adminEmail", 'success');
-                            logStep("   ID do usuário: " . ($userCheck['user']['id'] ?? $userCheck['id'] ?? 'N/A'), 'info');
-                            logStep("   ⚠️  IMPORTANTE: Usuário deve fazer login e criar próprias API keys", 'warning');
+                            logStep("Usuário admin já existe: $adminEmail", 'success');
                         } else {
-                            logStep("⚠️  Usuário admin não encontrado - pode precisar ser criado pelo tenant", 'warning');
+                            logStep("Usuário admin não encontrado", 'warning');
                         }
                     } catch (Exception $userError) {
-                        logStep("ℹ️  Não foi possível verificar usuário: " . $userError->getMessage(), 'info');
-                        logStep("   → Isso é normal se o usuário ainda não foi criado", 'debug');
+                        logStep("Erro ao verificar usuário: " . $userError->getMessage(), 'debug');
                     }
                 }
 
@@ -638,73 +576,42 @@ try {
 
     if ($tenantId && $tenantId !== 'unknown') {
         // Sub-seção: Provisionamento de Domínio e SSL
-        logStep("Iniciando provisionamento de infraestrutura...", 'info');
+        logStep("Verificando provisionamento de infraestrutura...", 'info');
 
         try {
             $customDomain = $EXAMPLE_CONFIG['organization']['custom_domain'];
-            logStep("Verificando domínio: $customDomain", 'info');
 
-            // Verificar se SDK tem métodos de domínio (adaptado para Laravel)
-            $domainMethods = [
-                'provisionTenantDomain',
-                'provisionSSLCertificate',
-                'checkDomainStatus',
-                'renewSSLCertificate'
-            ];
-
-            $availableDomainMethods = [];
-            foreach ($domainMethods as $method) {
-                if (method_exists($sdk->superAdmin(), $method)) {
-                    $availableDomainMethods[] = $method;
-                }
-            }
-
-            if (empty($availableDomainMethods)) {
-                logStep("Provisionamento automático de domínio não está disponível via SDK", 'warning');
-                logStep("Métodos necessários não encontrados: " . implode(', ', $domainMethods), 'info');
-                logStep("Configuração manual necessária via interface admin", 'info');
+            if (method_exists($sdk->superAdmin(), 'provisionTenantDomain')) {
+                $domainResult = $sdk->superAdmin()->provisionTenantDomain($tenantId, [
+                    'domain' => $customDomain,
+                    'auto_ssl' => true,
+                    'environment' => config('clubify-checkout.environment', 'sandbox')
+                ]);
+                logStep("Domínio provisionado: $customDomain", 'success');
             } else {
-                logStep("Métodos de domínio disponíveis: " . implode(', ', $availableDomainMethods), 'success');
-
-                // Implementar provisionamento automático se métodos existirem
-                if (in_array('provisionTenantDomain', $availableDomainMethods)) {
-                    $domainResult = $sdk->superAdmin()->provisionTenantDomain($tenantId, [
-                        'domain' => $customDomain,
-                        'auto_ssl' => true,
-                        'environment' => config('clubify-checkout.environment', 'sandbox')
-                    ]);
-                    logStep("Domínio provisionado automaticamente", 'success');
-                }
+                logStep("Provisionamento automático não disponível", 'info');
             }
 
         } catch (Exception $e) {
-            logStep("Erro no provisionamento de domínio: " . $e->getMessage(), 'warning');
+            logStep("Erro no provisionamento: " . $e->getMessage(), 'warning');
         }
 
         // Sub-seção: Gestão de Credenciais Avançada
         try {
-            logStep("Verificando credenciais do tenant...", 'info');
-
             if (method_exists($sdk->superAdmin(), 'getTenantCredentials')) {
                 $credentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
 
                 if ($credentials) {
                     logStep("Credenciais obtidas com sucesso", 'success');
-
-                    $apiKey = $credentials['api_key'] ?? 'N/A';
                     $keyAge = $credentials['key_age_days'] ?? 'N/A';
 
-                    logStep("API Key: " . substr($apiKey, 0, 20) . "...", 'info');
-                    logStep("Idade da chave: $keyAge dias", 'info');
-
-                    // Verificar se precisa rotacionar (exemplo: > 90 dias)
+                    // Verificar se precisa rotacionar
                     if (is_numeric($keyAge) && $keyAge > 90) {
-                        logStep("API Key antiga detectada - considerando rotação", 'warning');
+                        logStep("API Key antiga detectada ($keyAge dias)", 'warning');
 
                         if (method_exists($sdk->superAdmin(), 'rotateApiKey') &&
                             config('app.example_enable_key_rotation', false)) {
 
-                            logStep("Iniciando rotação de API key...", 'info');
                             $rotationResult = $sdk->superAdmin()->rotateApiKey($credentials['api_key_id'], [
                                 'gracePeriodHours' => 24,
                                 'forceRotation' => false
@@ -712,15 +619,10 @@ try {
 
                             if ($rotationResult['success']) {
                                 logStep("API Key rotacionada com sucesso!", 'success');
-                                logStep("Nova chave: " . substr($rotationResult['new_api_key'], 0, 20) . "...", 'info');
                             }
-                        } else {
-                            logStep("Rotação automática desabilitada - configure EXAMPLE_ENABLE_KEY_ROTATION=true", 'info');
                         }
                     }
                 }
-            } else {
-                logStep("Método getTenantCredentials não disponível", 'info');
             }
 
         } catch (Exception $e) {
@@ -729,36 +631,15 @@ try {
 
         // Sub-seção: Estatísticas do Sistema
         try {
-            logStep("Obtendo estatísticas do sistema...", 'info');
-
             if (method_exists($sdk->superAdmin(), 'getSystemStats')) {
-                $stats = $sdk->superAdmin()->getSystemStats(5); // Top 5
+                $stats = $sdk->superAdmin()->getSystemStats(5);
 
                 if ($stats && isset($stats['data'])) {
-                    logStep("Estatísticas obtidas com sucesso", 'success');
-
                     $totalTenants = $stats['data']['total_tenants'] ?? 'N/A';
                     $activeTenants = $stats['data']['active_tenants'] ?? 'N/A';
-                    $totalProducts = $stats['data']['total_products'] ?? 'N/A';
-
-                    logStep("Total de tenants: $totalTenants", 'info');
-                    logStep("Tenants ativos: $activeTenants", 'info');
-                    logStep("Total de produtos: $totalProducts", 'info');
-
-                    // Mostrar top tenants se disponível
-                    if (isset($stats['data']['top_tenants'])) {
-                        logStep("Top tenants por atividade:", 'info');
-                        foreach ($stats['data']['top_tenants'] as $tenant) {
-                            $name = $tenant['name'] ?? 'Sem nome';
-                            $activity = $tenant['activity_score'] ?? 0;
-                            logStep("  - $name (score: $activity)", 'info');
-                        }
-                    }
+                    logStep("Tenants: $totalTenants total, $activeTenants ativos", 'info');
                 }
-            } else {
-                logStep("Método getSystemStats não disponível", 'info');
             }
-
         } catch (Exception $e) {
             logStep("Erro ao obter estatísticas: " . $e->getMessage(), 'warning');
         }
@@ -842,46 +723,28 @@ try {
 
     echo "\n=== Gestão de Produtos ===\n";
 
-    // VERIFICAÇÃO IMPORTANTE: Produtos devem ser gerenciados como tenant admin
+    // VERIFICAÇÃO: Produtos devem ser gerenciados como tenant admin
     $currentContext = $sdk->getCurrentContext();
     $currentMode = $currentContext['mode'] ?? 'unknown';
 
-    if ($currentMode === 'super_admin') {
-        logStep("⚠️  AVISO: Ainda em contexto Super Admin", 'warning');
-        logStep("   → Produtos devem ser criados como Tenant Admin", 'info');
-        logStep("   → Tentando alternar contexto...", 'info');
-
-        if ($tenantId) {
-            try {
-                $switchResult = $sdk->superAdmin()->switchToTenant($tenantId);
-                if ($switchResult['success'] ?? false) {
-                    logStep("✅ Contexto alternado para Tenant Admin", 'success');
-                } else {
-                    logStep("❌ Falha ao alternar contexto - produtos podem ficar no tenant errado", 'error');
-                }
-            } catch (Exception $switchError) {
-                logStep("❌ Erro ao alternar contexto: " . $switchError->getMessage(), 'error');
+    if ($currentMode === 'super_admin' && $tenantId) {
+        try {
+            $switchResult = $sdk->superAdmin()->switchToTenant($tenantId);
+            if ($switchResult['success'] ?? false) {
+                logStep("Contexto alternado para Tenant Admin", 'success');
             }
+        } catch (Exception $switchError) {
+            logStep("Erro ao alternar contexto: " . $switchError->getMessage(), 'error');
         }
-    } else {
-        logStep("✅ Contexto correto: $currentMode", 'success');
     }
 
     try {
-        logStep("Listando produtos existentes no tenant atual...", 'info');
         $products = $sdk->products()->list();
         $productsData = $products['data'] ?? [];
         logStep("Produtos encontrados: " . count($productsData), 'info');
 
-        if (count($productsData) > 0) {
-            logStep("   → Produtos existem no tenant correto", 'success');
-        } else {
-            logStep("   → Nenhum produto encontrado (normal para tenant novo)", 'info');
-        }
-
     } catch (Exception $e) {
         logStep("Erro ao listar produtos: " . $e->getMessage(), 'warning');
-        logStep("   → Isso pode indicar problema de autorização/contexto", 'info');
     }
 
     // Criar produto de exemplo usando verificação prévia
@@ -893,9 +756,6 @@ try {
         'type' => 'digital'
     ];
 
-    // VERIFICAR CONTEXTO ANTES DE CRIAR PRODUTO
-    $contextBeforeProduct = $sdk->getCurrentContext();
-    logStep("Contexto antes de criar produto: " . ($contextBeforeProduct['mode'] ?? 'unknown'), 'debug');
 
     // ===============================================
     // BLOCO E - MELHORIAS AVANÇADAS DE PRODUTOS
@@ -904,10 +764,9 @@ try {
     try {
         // Usar método avançado se disponível
         $useAdvancedMethod = config('app.example_use_advanced_products', false);
-        logStep("Método avançado de produtos: " . ($useAdvancedMethod ? 'Habilitado' : 'Desabilitado'), 'info');
 
         if ($useAdvancedMethod && method_exists($sdk->products(), 'createComplete')) {
-            logStep("Usando createComplete para produto com metadados avançados", 'info');
+            logStep("Usando método avançado para produto", 'info');
 
             // Dados expandidos para createComplete
             $productDataComplete = $productData + [
@@ -949,87 +808,36 @@ try {
 
         if ($productResult['existed'] ?? false) {
             logStep("Produto existente encontrado: " . $productName, 'success');
-            logStep("   Status: Já existia no sistema", 'info');
-            logStep("   ✅ CORRETO: Produto está no tenant certo", 'success');
         } else {
             logStep("Novo produto criado: " . $productName, 'success');
-            logStep("   Status: Criado agora no tenant correto", 'info');
-            logStep("   ✅ MIGRAÇÃO: Este produto NÃO ficará órfão", 'success');
 
-            // Se criou produto novo, fazer verificações adicionais
+            // Adicionar tags se suportado
             $product = $productResult['product'];
             $productId = $product['id'] ?? $product['_id'] ?? null;
 
             if ($productId) {
-                logStep("   ID do produto: $productId", 'info');
-
-                // Verificar se produto foi criado no contexto correto
-                try {
-                    $contextVerification = $sdk->getCurrentContext();
-                    $currentTenant = $contextVerification['current_tenant_id'] ?? 'unknown';
-
-                    if ($currentTenant === $tenantId) {
-                        logStep("   ✅ VALIDADO: Produto criado no tenant correto", 'success');
-                    } else {
-                        logStep("   ⚠️  ATENÇÃO: Possível problema de contexto", 'warning');
-                        logStep("   Expected: $tenantId | Current: $currentTenant", 'debug');
-                    }
-                } catch (Exception $contextError) {
-                    logStep("   ⚠️  Não foi possível validar contexto: " . $contextError->getMessage(), 'warning');
-                }
-
-                // Adicionar tags via config se suportado
                 $productTags = config('app.example_product_tags', ['laravel', 'sdk', 'auto']);
                 if (!empty($productTags) && method_exists($sdk->products(), 'addTags')) {
                     try {
                         $sdk->products()->addTags($productId, $productTags);
-                        logStep("   Tags adicionadas: " . implode(', ', $productTags), 'info');
+                        logStep("Tags adicionadas: " . implode(', ', $productTags), 'info');
                     } catch (Exception $tagError) {
-                        logStep("   Erro ao adicionar tags: " . $tagError->getMessage(), 'debug');
+                        logStep("Erro ao adicionar tags: " . $tagError->getMessage(), 'debug');
                     }
                 }
             }
         }
 
-        // Relatório avançado do produto
-        if (isset($productResult['product'])) {
-            $product = $productResult['product'];
-            logStep("Relatório detalhado do produto:", 'info');
-            logStep("   Nome: " . ($product['name'] ?? 'N/A'), 'info');
-            logStep("   Preço: " . ($product['price'] ?? 'N/A') . " " . ($product['currency'] ?? ''), 'info');
-            logStep("   Tipo: " . ($product['type'] ?? 'N/A'), 'info');
-            logStep("   Status: " . ($product['status'] ?? 'active'), 'info');
-
-            if (isset($product['metadata'])) {
-                logStep("   Metadados disponíveis: ✅", 'success');
-            }
-        }
 
     } catch (Exception $e) {
         logStep("Erro na operação de produto: " . $e->getMessage(), 'warning');
 
-        // Diagnóstico avançado de erros
         $errorCode = $e->getCode();
-        $errorMessage = $e->getMessage();
-
-        if (str_contains($errorMessage, 'Unauthorized') || $errorCode === 401) {
-            logStep("   ❌ ERRO DE AUTORIZAÇÃO (401)", 'error');
-            logStep("   → Verifique se o contexto está correto", 'info');
-            logStep("   → Pode ser necessário fazer login como tenant admin", 'info');
-        } elseif (str_contains($errorMessage, 'tenant') || str_contains($errorMessage, 'context')) {
-            logStep("   ❌ ERRO DE CONTEXTO", 'error');
-            logStep("   → Produto pode estar sendo criado no tenant errado", 'warning');
-            logStep("   → Verifique switchToTenant($tenantId)", 'info');
-        } elseif (str_contains($errorMessage, 'Conflict') || $errorCode === 409) {
-            logStep("   ⚠️  CONFLITO DETECTADO", 'warning');
-            logStep("   → Produto pode já existir", 'info');
-            logStep("   → Verificação prévia pode ter falhado", 'info');
-        } else {
-            logStep("   ❌ ERRO GERAL: " . $errorMessage, 'error');
-            logStep("   → Código: " . $errorCode, 'debug');
+        if ($errorCode === 401) {
+            logStep("Erro de autorização - verifique contexto", 'error');
+        } elseif ($errorCode === 409) {
+            logStep("Conflito - produto pode já existir", 'warning');
         }
-
-        logStep("Continuando com outras operações...", 'info');
     }
 
     // ===============================================
@@ -1040,38 +848,30 @@ try {
 
     if ($tenantId && $tenantId !== 'unknown') {
         try {
-            logStep("Iniciando configuração de webhooks para o tenant...", 'info');
+            logStep("Configurando webhooks...", 'info');
 
-
-            // Configurações de webhooks via config Laravel com detecção inteligente de ambiente
             $baseUrl = config('app.url');
             $environment = config('app.env');
 
-            // Detecção inteligente de URL para webhook
+            // Detecção de URL para webhook
             if ($environment === 'local' || str_contains($baseUrl, 'localhost')) {
-                // Em desenvolvimento local, usar ngrok ou URL de desenvolvimento configurada
                 $webhookUrl = config('clubify-checkout.webhook.url',
                     config('clubify-checkout.webhook.dev_url',
                         'https://your-ngrok-url.ngrok.io/api/webhooks/clubify'
                     )
                 );
 
-                logStep("Ambiente local detectado - usando URL de desenvolvimento", 'info');
                 if (str_contains($webhookUrl, 'your-ngrok-url')) {
-                    logStep("⚠️  Configure CLUBIFY_WEBHOOK_DEV_URL no .env com sua URL ngrok", 'warning');
-                    logStep("   Exemplo: CLUBIFY_WEBHOOK_DEV_URL=https://abc123.ngrok.io/api/webhooks/clubify", 'info');
+                    logStep("Configure CLUBIFY_WEBHOOK_DEV_URL no .env", 'warning');
                 }
 
             } else {
-                // Em produção, usar URL base configurada garantindo HTTPS
                 $webhookUrl = config('clubify-checkout.webhook.url',
                     str_replace('http://', 'https://', $baseUrl) . '/api/webhooks/clubify'
                 );
 
-                // Força HTTPS se não estiver configurado
                 if (!str_starts_with($webhookUrl, 'https://')) {
                     $webhookUrl = str_replace('http://', 'https://', $webhookUrl);
-                    logStep("URL convertida para HTTPS automaticamente", 'info');
                 }
             }
 
@@ -1085,211 +885,57 @@ try {
                 'order.completed'
             ]);
 
-            logStep("URL do webhook: $webhookUrl", 'info');
-            logStep("Eventos monitorados: " . implode(', ', $webhookEvents), 'info');
+            logStep("Webhook URL: $webhookUrl", 'info');
 
             // Verificar se o módulo webhooks está disponível
             if (method_exists($sdk, 'webhooks')) {
-                logStep("Módulo webhooks disponível no SDK", 'success');
-
-                // Verificar se já existe webhook configurado
-                // CORREÇÃO: SDK usa endpoint incorreto, vamos contornar isso
                 try {
-                    logStep("Verificando webhooks existentes...", 'info');
-
-                    // Tentar o método do SDK primeiro
-                    $existingWebhooks = null;
+                    $existingWebhooks = $sdk->webhooks()->listWebhooks();
                     $webhookExists = false;
 
-                    try {
-                        $existingWebhooks = $sdk->webhooks()->listWebhooks();
-                        logStep("Método listWebhooks() funcionou", 'success');
-                    } catch (Exception $listError) {
-                        logStep("Método listWebhooks() falhou (endpoint incorreto no SDK)", 'warning');
-                        logStep("Erro: " . $listError->getMessage(), 'debug');
-
-                        // WORKAROUND: Tentar usar método HTTP direto com endpoint correto
-                        logStep("Tentando workaround com endpoint correto...", 'info');
-
-                        if (method_exists($sdk, 'getHttpClient') && $tenantId) {
-                            try {
-                                $httpClient = $sdk->getHttpClient();
-                                $correctEndpoint = "webhooks/configurations/partner/{$tenantId}";
-                                logStep("Usando endpoint correto: $correctEndpoint", 'debug');
-
-                                $response = $httpClient->get($correctEndpoint);
-                                $existingWebhooks = $response;
-                                logStep("Workaround funcionou - webhooks obtidos via endpoint correto", 'success');
-                            } catch (Exception $workaroundError) {
-                                logStep("Workaround também falhou: " . $workaroundError->getMessage(), 'warning');
+                    $webhooksData = $existingWebhooks['data'] ?? $existingWebhooks;
+                    if (is_array($webhooksData)) {
+                        foreach ($webhooksData as $webhook) {
+                            if (isset($webhook['url']) && $webhook['url'] === $webhookUrl) {
+                                $webhookExists = true;
+                                logStep("Webhook já existe para esta URL", 'success');
+                                break;
                             }
                         }
-                    }
-
-                    // Verificar se webhook já existe
-                    if ($existingWebhooks && is_array($existingWebhooks)) {
-                        $webhooksData = $existingWebhooks['data'] ?? $existingWebhooks;
-
-                        if (is_array($webhooksData)) {
-                            foreach ($webhooksData as $webhook) {
-                                if (isset($webhook['url']) && $webhook['url'] === $webhookUrl) {
-                                    $webhookExists = true;
-                                    logStep("Webhook já existe para esta URL", 'success');
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (!$webhookExists) {
-                            logStep("Nenhum webhook existente encontrado com esta URL", 'info');
-                        }
-                    } else {
-                        logStep("Não foi possível verificar webhooks existentes", 'warning');
                     }
 
                     // Criar webhook se não existir
                     if (!$webhookExists) {
-                        // Validar URL antes de criar webhook (mais flexível)
-                        $isValidWebhookUrl = true;
-                        $validationMessages = [];
+                        $webhookData = [
+                            'url' => $webhookUrl,
+                            'secret' => $webhookSecret,
+                            'events' => $webhookEvents,
+                            'active' => true,
+                            'name' => 'Laravel Integration Webhook'
+                        ];
 
-                        // Para desenvolvimento: aceitar URLs de exemplo se não configuradas
-                        if (str_contains($webhookUrl, 'your-ngrok-url')) {
-                            logStep("📝 URL de webhook não configurada (usando placeholder)", 'warning');
-                            logStep("   → Ambiente detectado: $environment", 'debug');
-                            logStep("   → Base URL: $baseUrl", 'debug');
+                        $webhookResult = $sdk->webhooks()->createWebhook($webhookData);
 
-                            if ($environment === 'local' || str_contains($baseUrl, 'localhost')) {
-                                logStep("   → Configure CLUBIFY_WEBHOOK_DEV_URL no .env", 'info');
-                                logStep("   → Para testes, criando webhook com URL de exemplo", 'info');
-
-                                // Para dev/testes, permitir criação mesmo com URL de exemplo
-                                $isValidWebhookUrl = true;
-                            } else {
-                                $isValidWebhookUrl = false;
-                                $validationMessages[] = "URL de webhook deve ser configurada em produção";
-                            }
-                        }
-
-                        // Validar HTTPS apenas em produção (considerar localhost também como dev)
-                        $isDevelopment = ($environment === 'local' || str_contains($baseUrl, 'localhost'));
-
-                        if (!$isDevelopment && !str_starts_with($webhookUrl, 'https://')) {
-                            $isValidWebhookUrl = false;
-                            $validationMessages[] = "URL deve usar HTTPS em produção";
-                        }
-
-                        // Verificar localhost (apenas alerta, não bloqueia)
-                        if (str_contains($webhookUrl, 'localhost')) {
-                            logStep("⚠️  Webhook com localhost - funcionará apenas localmente", 'warning');
-                        }
-
-                        if (!$isValidWebhookUrl) {
-                            logStep("❌ URL de webhook inválida: $webhookUrl", 'error');
-                            foreach ($validationMessages as $message) {
-                                logStep("   → $message", 'info');
-                            }
-
-                            if ($isDevelopment) {
-                                logStep("Para desenvolvimento:", 'info');
-                                logStep("   1. Instale ngrok: brew install ngrok", 'info');
-                                logStep("   2. Execute: ngrok http 8000", 'info');
-                                logStep("   3. Configure: CLUBIFY_WEBHOOK_DEV_URL=https://abc123.ngrok.io/api/webhooks/clubify", 'info');
-                            }
-
-                            // Modo de simulação para desenvolvimento
-                            $simulateWebhook = config('app.example_simulate_webhook', false);
-
-                            if ($isDevelopment && $simulateWebhook) {
-                                logStep("🔧 Modo simulação ativo - criando webhook mesmo com URL de exemplo", 'info');
-                                logStep("   → Configure EXAMPLE_SIMULATE_WEBHOOK=true no .env para ativar", 'info');
-
-                                $isValidWebhookUrl = true; // Forçar criação em modo simulação
-                            } else {
-                                logStep("Pulando criação de webhook - corrija a configuração", 'warning');
-                                logStep("   → Para testar: adicione EXAMPLE_SIMULATE_WEBHOOK=true no .env", 'info');
-                            }
-                        }
-
-                        // Criar webhook se validação passou
-                        if ($isValidWebhookUrl) {
-                            $webhookData = [
-                                'url' => $webhookUrl,
-                                'secret' => $webhookSecret,
-                                'events' => $webhookEvents,
-                                'active' => true,
-                                'name' => 'Laravel Integration Webhook',
-                                'description' => 'Webhook para integração com aplicação Laravel',
-                                'timeout' => 30,
-                                'retry_attempts' => 3,
-                                'headers' => [
-                                    'X-Webhook-Source' => 'Clubify-Laravel-SDK',
-                                    'Content-Type' => 'application/json'
-                                ]
-                            ];
-
-                            // Adicionar marcação se for URL de exemplo
-                            if (str_contains($webhookUrl, 'your-ngrok-url')) {
-                                $webhookData['name'] = 'Laravel Integration Webhook (DEV/SIMULATION)';
-                                $webhookData['description'] .= ' - URL de exemplo para desenvolvimento';
-                                logStep("🧪 Criando webhook em modo desenvolvimento/simulação", 'info');
-                            }
-
-                            logStep("Criando novo webhook...", 'info');
-                            $webhookResult = $sdk->webhooks()->createWebhook($webhookData);
-
-                            if ($webhookResult && isset($webhookResult['id'])) {
-                                logStep("Webhook criado com sucesso!", 'success');
-                                logStep("ID: " . $webhookResult['id'], 'info');
-
-                                // Testar webhook se método disponível
-                                if (method_exists($sdk->webhooks(), 'testWebhook')) {
-                                    logStep("Testando webhook...", 'info');
-
-                                    try {
-                                        $testResult = $sdk->webhooks()->testWebhook($webhookResult['id']);
-
-                                        if ($testResult && ($testResult['success'] ?? false)) {
-                                            logStep("Teste de webhook bem-sucedido!", 'success');
-                                            logStep("Resposta do teste: " . ($testResult['response_time'] ?? 'N/A') . 'ms', 'info');
-                                        } else {
-                                            logStep("Teste de webhook falhou - verifique a URL", 'warning');
-                                        }
-                                    } catch (Exception $testError) {
-                                        logStep("Erro no teste do webhook: " . $testError->getMessage(), 'warning');
-                                    }
-                                }
-
-                            } else {
-                                logStep("Falha na criação do webhook", 'error');
-                            }
+                        if ($webhookResult && isset($webhookResult['id'])) {
+                            logStep("Webhook criado com sucesso! ID: " . $webhookResult['id'], 'success');
                         }
                     }
 
-                } catch (Exception $webhookListError) {
-                    logStep("Erro ao verificar webhooks existentes: " . $webhookListError->getMessage(), 'warning');
-                    logStep("Continuando com tentativa de criação...", 'info');
+                } catch (Exception $webhookError) {
+                    logStep("Erro ao configurar webhook: " . $webhookError->getMessage(), 'warning');
                 }
 
             } else {
-                logStep("Módulo webhooks não disponível no SDK", 'warning');
-                logStep("Configuração manual necessária:", 'info');
-                logStep("1. Acessar interface administrativa do Clubify", 'info');
-                logStep("2. Configurar webhook URL: $webhookUrl", 'info');
-                logStep("3. Definir secret: " . substr($webhookSecret, 0, 8) . "...", 'info');
-                logStep("4. Selecionar eventos: " . implode(', ', $webhookEvents), 'info');
+                logStep("Módulo webhooks não disponível - configuração manual necessária", 'warning');
             }
 
         } catch (Exception $e) {
-            logStep("Erro geral na configuração de webhooks: " . $e->getMessage(), 'warning');
-            logStep("Continuando com outras operações...", 'info');
+            logStep("Erro na configuração de webhooks: " . $e->getMessage(), 'warning');
         }
 
     } else {
-        logStep("Nenhum tenant válido disponível para configuração de webhooks", 'warning');
+        logStep("Nenhum tenant válido para webhooks", 'warning');
     }
-
-    logStep("Configuração de webhooks concluída", 'success');
 
     // ===============================================
     // 8. OFERTAS E FUNIS DE VENDAS (BLOCO D)
@@ -1299,11 +945,10 @@ try {
 
     if ($tenantId && $tenantId !== 'unknown') {
         try {
-            logStep("Iniciando configuração de ofertas e funis...", 'info');
+            logStep("Configurando ofertas e funis...", 'info');
 
             // Verificar se SDK tem módulo de ofertas
             if (method_exists($sdk, 'offer')) {
-                logStep("Módulo offer disponível no SDK", 'success');
 
                 // Configurações de oferta via config Laravel
                 $offerConfig = [
@@ -1455,27 +1100,16 @@ try {
                 }
 
             } else {
-                logStep("Módulo offer não disponível no SDK", 'warning');
-                logStep("Funcionalidades de ofertas limitadas", 'info');
-                logStep("Configure ofertas via interface administrativa", 'info');
+                logStep("Módulo offer não disponível - configure via interface", 'warning');
             }
 
-            // Informações sobre implementação de funis no Laravel
-            logStep("Implementação de funis no Laravel:", 'info');
-            logStep("1. Usar routes específicas para cada etapa do funil", 'info');
-            logStep("2. Implementar middleware para tracking de conversão", 'info');
-            logStep("3. Configurar analytics para acompanhar performance", 'info');
-            logStep("4. Integrar com sistema de pagamentos", 'info');
-
         } catch (Exception $e) {
-            logStep("Erro geral na configuração de ofertas: " . $e->getMessage(), 'warning');
+            logStep("Erro na configuração de ofertas: " . $e->getMessage(), 'warning');
         }
 
     } else {
-        logStep("Nenhum tenant válido para configuração de ofertas", 'warning');
+        logStep("Nenhum tenant válido para ofertas", 'warning');
     }
-
-    logStep("Configuração de ofertas e funis concluída", 'success');
 
     // ===============================================
     // 9. VOLTA PARA CONTEXTO SUPER ADMIN
@@ -1485,11 +1119,7 @@ try {
 
     try {
         $sdk->superAdmin()->switchToSuperAdmin();
-        logStep("Contexto alternado de volta para Super Admin", 'success');
-
-        $currentContext = $sdk->getCurrentContext();
-        logStep("   Mode: " . ($currentContext['mode'] ?? 'unknown'), 'info');
-        logStep("   Role: " . ($currentContext['current_role'] ?? 'unknown'), 'info');
+        logStep("Retornado para contexto Super Admin", 'success');
 
     } catch (Exception $e) {
         logStep("Erro ao voltar para super admin: " . $e->getMessage(), 'warning');
@@ -1596,40 +1226,22 @@ try {
     // 11. RELATÓRIO FINAL EXPANDIDO
     // ===============================================
 
-    echo "\n" . str_repeat("=", 75) . "\n";
-    echo "📊 RELATÓRIO FINAL EXPANDIDO - LARAVEL SUPER ADMIN COMPLETE\n";
-    echo str_repeat("=", 75) . "\n";
+    echo "\n" . str_repeat("=", 60) . "\n";
+    echo "📊 RELATÓRIO FINAL - LARAVEL SUPER ADMIN COMPLETE\n";
+    echo str_repeat("=", 60) . "\n";
 
-    logStep("🎉 EXECUÇÃO COMPLETA CONCLUÍDA COM SUCESSO!", 'success');
+    logStep("Execução completa concluída com sucesso!", 'success');
 
-    // SEÇÃO 1: SUMMARY EXECUTIVO
-    echo "\n📋 SUMMARY EXECUTIVO:\n";
-    // SEÇÃO 5: CONFIGURAÇÕES RECOMENDADAS
-    echo "\n💡 CONFIGURAÇÕES RECOMENDADAS NO .ENV:\n";
-    logStep("Super Admin Essenciais:", 'info');
-    logStep("   SUPER_ADMIN_ENABLED=true", 'debug');
-    logStep("   CLUBIFY_SUPER_ADMIN_API_KEY=your-api-key", 'debug');
-    logStep("   CLUBIFY_SUPER_ADMIN_USERNAME=admin@empresa.com", 'debug');
-    logStep("   CLUBIFY_SUPER_ADMIN_PASSWORD=senha-segura", 'debug');
-
-
-    // SEÇÃO 8: PERFORMANCE E MÉTRICAS
-    echo "\n📊 MÉTRICAS DE EXECUÇÃO:\n";
     if (isset($finalMetrics['execution_start_time']) && isset($finalMetrics['execution_end_time'])) {
         $startTime = strtotime($finalMetrics['execution_start_time']);
         $endTime = strtotime($finalMetrics['execution_end_time']);
         $duration = $endTime - $startTime;
-        logStep("   ⏱️  Tempo total de execução: {$duration}s", 'info');
+        logStep("Tempo de execução: {$duration}s", 'info');
     }
-    logStep("   💻 Versão do Laravel: " . ($finalMetrics['laravel_version'] ?? 'N/A'), 'info');
-    logStep("   🐘 Versão do PHP: " . ($finalMetrics['php_version'] ?? PHP_VERSION), 'info');
-    logStep("   🛠️  Versão do SDK: " . ($finalMetrics['sdk_version'] ?? 'N/A'), 'info');
-    logStep("   🌍 Ambiente: " . ($finalMetrics['environment'] ?? config('app.env')), 'info');
+    logStep("Laravel v" . (app()->version()) . " | PHP v" . PHP_VERSION . " | Ambiente: " . config('app.env'), 'info');
 
-    echo "\n🎉 LARAVEL SUPER ADMIN COMPLETE EXAMPLE - IMPLEMENTAÇÃO FINALIZADA!\n";
-    echo "    Todos os 6 blocos implementados com sucesso\n";
-    echo "    Sistema pronto para uso em produção\n";
-    echo str_repeat("=", 75) . "\n";
+    echo "\nSistema pronto para uso!\n";
+    echo str_repeat("=", 60) . "\n";
 
 } catch (Exception $e) {
     logStep("ERRO FATAL: " . $e->getMessage(), 'error');

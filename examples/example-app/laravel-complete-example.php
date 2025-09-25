@@ -186,6 +186,269 @@ function getOrCreateOrganization($sdk, $organizationData): array
 }
 
 /**
+ * Obter ou criar usuário administrador para o tenant
+ */
+function getOrCreateUserManagement($sdk, $userData, $tenantId): array
+{
+    $userEmail = $userData['email'];
+    $firstName = $userData['firstName'] ?? '';
+    $lastName = $userData['lastName'] ?? '';
+
+    logStep("Verificando se usuário admin '$userEmail' já existe...", 'info');
+
+    try {
+        // Tentar encontrar usuário existente
+        $existingUser = $sdk->userManagement()->findUserByEmail($userEmail);
+
+        if ($existingUser && isset($existingUser['id'])) {
+            logStep("Usuário admin já existe: $userEmail", 'success');
+            logStep("ID do usuário: " . $existingUser['id'], 'info');
+
+            // Verificar se usuário tem as roles corretas para o tenant
+            $hasCorrectRoles = checkUserRoles($existingUser, $userData['roles'] ?? ['tenant_admin'], $tenantId);
+
+            if (!$hasCorrectRoles) {
+                logStep("Atualizando roles do usuário existente...", 'info');
+                try {
+                    $updatedUser = $sdk->userManagement()->updateUserRoles($existingUser['id'], [
+                        'tenantId' => $tenantId,
+                        'roles' => $userData['roles'] ?? ['tenant_admin']
+                    ]);
+                    logStep("Roles do usuário atualizadas com sucesso", 'success');
+                } catch (Exception $roleError) {
+                    logStep("Erro ao atualizar roles: " . $roleError->getMessage(), 'warning');
+                }
+            }
+
+            return [
+                'user' => $existingUser,
+                'user_id' => $existingUser['id'],
+                'existed' => true,
+                'created' => false
+            ];
+        }
+
+        // Se não encontrou, criar novo usuário
+        logStep("Usuário não encontrado. Criando novo usuário admin...", 'info');
+
+        $newUserData = [
+            'email' => $userEmail,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'password' => $userData['password'] ?? generateSecurePassword(),
+            'tenant_id' => $tenantId,
+            'roles' => $userData['roles'] ?? ['tenant_admin'],
+            'profile' => array_merge([
+                'department' => 'Administration',
+                'position' => 'Administrator',
+                'phone' => '',
+                'timezone' => 'America/Sao_Paulo'
+            ], $userData['profile'] ?? []),
+            'mustChangePassword' => isset($userData['password']) ? false : true
+        ];
+
+        try {
+            $newUser = $sdk->userManagement()->createUser($newUserData);
+        } catch (Exception $createError) {
+            // Capturar e exibir detalhes completos do erro de validação
+            $errorMessage = $createError->getMessage();
+            $errorDetails = [];
+
+            // Tentar extrair detalhes específicos se for erro de validação
+            if ($createError instanceof \Clubify\Checkout\Exceptions\ValidationException) {
+                logStep("❌ Erro de validação na criação do usuário:", 'error');
+                logStep("   Mensagem: $errorMessage", 'error');
+
+                // Obter erros de validação específicos
+                $validationErrors = $createError->getValidationErrors();
+                if (!empty($validationErrors)) {
+                    logStep("   Campos com erro de validação:", 'error');
+                    foreach ($validationErrors as $field => $errors) {
+                        if (is_array($errors)) {
+                            foreach ($errors as $error) {
+                                logStep("      - $field: $error", 'error');
+                            }
+                        } else {
+                            logStep("      - $field: $errors", 'error');
+                        }
+                    }
+                } else {
+                    logStep("   Nenhum detalhe específico de validação disponível", 'error');
+                }
+
+                // Obter contexto adicional se disponível
+                $context = $createError->getContext();
+                if (!empty($context) && isset($context['validation_errors'])) {
+                    unset($context['validation_errors']); // Já exibimos acima
+                }
+                if (!empty($context)) {
+                    logStep("   Contexto adicional:", 'error');
+                    logStep("      " . json_encode($context, JSON_PRETTY_PRINT), 'error');
+                }
+
+            } elseif ($createError instanceof \Clubify\Checkout\Exceptions\SDKException) {
+                logStep("❌ Erro do SDK na criação do usuário:", 'error');
+                logStep("   Mensagem: $errorMessage", 'error');
+
+                if ($createError->getErrorCode()) {
+                    logStep("   Código do erro: " . $createError->getErrorCode(), 'error');
+                }
+
+                $context = $createError->getContext();
+                if (!empty($context)) {
+                    logStep("   Contexto do erro:", 'error');
+                    logStep("      " . json_encode($context, JSON_PRETTY_PRINT), 'error');
+                }
+
+            } elseif (str_contains($errorMessage, 'Validation failed')) {
+                logStep("❌ Erro de validação (genérico) na criação do usuário:", 'error');
+                logStep("   Mensagem: $errorMessage", 'error');
+                logStep("   Nota: Use ValidationException para mais detalhes específicos", 'debug');
+
+                // Exibir dados que foram enviados para debug
+                logStep("   Dados enviados para a API:", 'debug');
+                $debugUserData = $newUserData;
+                if (isset($debugUserData['password'])) {
+                    $debugUserData['password'] = '[PASSWORD HIDDEN]';
+                }
+                logStep("      " . json_encode($debugUserData, JSON_PRETTY_PRINT), 'debug');
+
+            } else {
+                logStep("❌ Erro geral na criação do usuário: $errorMessage", 'error');
+            }
+
+            throw $createError;
+        }
+
+        if ($newUser && isset($newUser['id'])) {
+            logStep("Novo usuário admin criado com sucesso!", 'success');
+            logStep("ID do usuário: " . $newUser['id'], 'info');
+            logStep("Email: " . $newUser['email'], 'info');
+
+            if (!isset($userData['password'])) {
+                logStep("Senha gerada automaticamente - usuário deve alterar no primeiro login", 'warning');
+            }
+
+            return [
+                'user' => $newUser,
+                'user_id' => $newUser['id'],
+                'existed' => false,
+                'created' => true
+            ];
+        } else {
+            throw new Exception('Falha na criação do usuário - resposta inválida da API');
+        }
+
+    } catch (ConflictException $e) {
+        logStep("Conflito na criação do usuário: " . $e->getMessage(), 'warning');
+
+        // Se for conflito de email, tentar buscar novamente
+        if (str_contains($e->getMessage(), 'email') || str_contains($e->getMessage(), 'already exists')) {
+            logStep("Tentando buscar usuário existente após conflito...", 'info');
+            try {
+                $existingUser = $sdk->userManagement()->findUserByEmail($userEmail);
+                if ($existingUser && isset($existingUser['id'])) {
+                    logStep("Usuário encontrado após tratamento de conflito", 'success');
+                    return [
+                        'user' => $existingUser,
+                        'user_id' => $existingUser['id'],
+                        'existed' => true,
+                        'created' => false,
+                        'conflict_resolved' => true
+                    ];
+                }
+            } catch (Exception $retryError) {
+                logStep("Erro na segunda tentativa de busca: " . $retryError->getMessage(), 'error');
+            }
+        }
+
+        throw $e;
+    } catch (Exception $e) {
+        // Tratamento aprimorado de erros gerais
+        $errorMessage = $e->getMessage();
+        $errorClass = get_class($e);
+
+        logStep("❌ Erro na criação/verificação do usuário:", 'error');
+        logStep("   Tipo do erro: $errorClass", 'error');
+        logStep("   Mensagem: $errorMessage", 'error');
+
+        // Tentar obter informações adicionais da exceção baseado no tipo
+        if ($e instanceof \Clubify\Checkout\Exceptions\ValidationException) {
+            $validationErrors = $e->getValidationErrors();
+            if (!empty($validationErrors)) {
+                logStep("   Erros de validação:", 'error');
+                logStep("      " . json_encode($validationErrors, JSON_PRETTY_PRINT), 'error');
+            }
+        }
+
+        if ($e instanceof \Clubify\Checkout\Exceptions\SDKException) {
+            if ($e->getErrorCode()) {
+                logStep("   Código do erro: " . $e->getErrorCode(), 'error');
+            }
+
+            $context = $e->getContext();
+            if (!empty($context)) {
+                logStep("   Contexto do erro:", 'error');
+                logStep("      " . json_encode($context, JSON_PRETTY_PRINT), 'error');
+            }
+        }
+
+        if (method_exists($e, 'getCode') && $e->getCode() !== 0) {
+            logStep("   Código do erro: " . $e->getCode(), 'error');
+        }
+
+        if (method_exists($e, 'getFile') && method_exists($e, 'getLine')) {
+            logStep("   Local: " . basename($e->getFile()) . ":" . $e->getLine(), 'debug');
+        }
+
+        throw $e;
+    }
+}
+
+/**
+ * Verificar se usuário tem as roles corretas para o tenant
+ */
+function checkUserRoles($user, $requiredRoles, $tenantId): bool
+{
+    if (!isset($user['roles']) || !is_array($user['roles'])) {
+        return false;
+    }
+
+    // Verificar se usuário tem pelo menos uma das roles necessárias para o tenant
+    foreach ($user['roles'] as $userRole) {
+        if (is_array($userRole)) {
+            // Formato: ['role' => 'tenant_admin', 'tenantId' => 'xxx']
+            if (isset($userRole['tenantId']) && $userRole['tenantId'] === $tenantId) {
+                if (in_array($userRole['role'] ?? '', $requiredRoles)) {
+                    return true;
+                }
+            }
+        } elseif (in_array($userRole, $requiredRoles)) {
+            // Formato simples de roles
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Gerar senha segura automaticamente
+ */
+function generateSecurePassword($length = 12): string
+{
+    $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    $password = '';
+    $charactersLength = strlen($characters);
+
+    for ($i = 0; $i < $length; $i++) {
+        $password .= $characters[random_int(0, $charactersLength - 1)];
+    }
+
+    return $password;
+}
+
+/**
  * Verificação prévia antes de criar recursos
  */
 function checkBeforeCreate($sdk, $resourceType, $data, $tenantId = null): ?array
@@ -405,6 +668,25 @@ try {
             'show_detailed_logs' => (bool) config('app.example_show_detailed_logs', true),
             'max_tenants_to_show' => (int) config('app.example_max_tenants_show', 3),
             'skip_super_admin_init' => (bool) config('app.example_skip_super_admin_init', false)
+        ],
+        'super_admin' => [
+            'api_key' => config('clubify-checkout.super_admin.api_key'),
+            'access_token' => config('clubify-checkout.super_admin.access_token'),
+            'refresh_token' => config('clubify-checkout.super_admin.refresh_token'),
+            'email' => config('clubify-checkout.super_admin.username'),
+            'password' => config('clubify-checkout.super_admin.password'),
+            'tenant_id' => config('clubify-checkout.super_admin.default_tenant', '507f1f77bcf86cd799439011')
+        ],
+        'user' => [
+            "email" => "tenant.admin-super@nova-empresa.com",
+            "firstName" => "User Tenant",
+            "lastName" => "Admin",
+            "password" => "P@ssw0rd!",
+            "roles" => ["tenant_admin"],
+            "profile" => [ 
+                "language" => "pt-BR", 
+                "timezone" => "America/Sao_Paulo" 
+            ]
         ]
     ];
 
@@ -417,15 +699,6 @@ try {
 
     logStep("Inicializando SDK como Super Admin", 'info');
 
-    // Credenciais do super admin via config do Laravel
-    $superAdminCredentials = [
-        'api_key' => config('clubify-checkout.super_admin.api_key'),
-        'access_token' => config('clubify-checkout.super_admin.access_token'),
-        'refresh_token' => config('clubify-checkout.super_admin.refresh_token'),
-        'email' => config('clubify-checkout.super_admin.username'),
-        'password' => config('clubify-checkout.super_admin.password'),
-        'tenant_id' => config('clubify-checkout.super_admin.default_tenant', '507f1f77bcf86cd799439011')
-    ];
 
     // Usar configuração diretamente do Laravel (já estruturada)
     $config = config('clubify-checkout');
@@ -438,39 +711,15 @@ try {
     try {
         logStep("Inicializando como super admin...", 'info');
 
-        // Configurar timeouts
-        ini_set('default_socket_timeout', 30);
-        ini_set('max_execution_time', 60);
         if (method_exists($sdk, 'setHttpTimeout')) {
             $sdk->setHttpTimeout(30);
         }
 
-        $initResult = $sdk->initializeAsSuperAdmin($superAdminCredentials);
+        $initResult = $sdk->initializeAsSuperAdmin($EXAMPLE_CONFIG['super_admin']);
         logStep("SDK inicializado como super admin", 'success');
     } catch (Exception $e) {
         $errorMsg = $e->getMessage();
         logStep("Erro ao inicializar como super admin: " . $errorMsg, 'error');
-
-        // Verificar se é timeout ou problema de rede
-        if (str_contains($errorMsg, 'timeout') || str_contains($errorMsg, 'timed out') || str_contains($errorMsg, 'Connection')) {
-            logStep("Erro de conectividade detectado", 'warning');
-        }
-
-        logStep("Tentando usar credenciais de fallback...", 'info');
-
-        // Fallback: tentar com email/senha se API key falhar
-        if ($superAdminCredentials['email'] && $superAdminCredentials['password']) {
-            try {
-                $loginResult = $sdk->loginUser(
-                    $superAdminCredentials['email'],
-                    $superAdminCredentials['password']
-                );
-                logStep("Login com email/senha realizado com sucesso!", 'success');
-            } catch (Exception $e2) {
-                logStep("Erro no fallback de login: " . $e2->getMessage(), 'error');
-                logStep("Continuando sem super admin (funcionalidade limitada)", 'warning');
-            }
-        }
     }
 
     // ===============================================
@@ -512,6 +761,16 @@ try {
         'support_email' => $EXAMPLE_CONFIG['organization']['admin_email']
     ];
 
+
+    $tenantAdminUserData = [
+        "email" => $EXAMPLE_CONFIG['user']['email'],
+        "firstName" => $EXAMPLE_CONFIG['user']['firstName'],
+        "lastName" => $EXAMPLE_CONFIG['user']['lastName'],
+        "password" => $EXAMPLE_CONFIG['user']['password'],
+        "roles" => $EXAMPLE_CONFIG['user']['roles'],
+        "profile" => $EXAMPLE_CONFIG['user']['profile']
+    ];
+
     $tenantId = null;
     $organization = null;
 
@@ -533,40 +792,35 @@ try {
 
         echo "\n=== Provisionamento de Credenciais ===\n";
 
+        $userManagement = null;
+
         if ($tenantId && $tenantId !== 'unknown') {
-            $adminEmail = $organizationData['admin_email'];
-
-            logStep("Verificando se usuário admin já existe...", 'info');
-
             try {
-                $existingUser = $sdk->customers()->findByEmail($adminEmail);
+                $userManagement = getOrCreateUserManagement($sdk, $tenantAdminUserData, $tenantId);
 
-                if ($existingUser && isset($existingUser['id'])) {
-                    logStep("Usuário admin já existe: $adminEmail", 'success');
-                    logStep("ID do usuário: " . $existingUser['id'], 'info');
+                if ($userManagement['existed']) {
+                    logStep("Usuário admin existente encontrado", 'success');
                 } else {
-                    logStep("Verificando usuário admin...", 'info');
-                    try {
-                        $userCheck = $sdk->userManagement()->findUserByEmail($adminEmail);
-                        if ($userCheck && isset($userCheck['success']) && $userCheck['success']) {
-                            logStep("Usuário admin já existe: $adminEmail", 'success');
-                        } else {
-                            logStep("Usuário admin não encontrado", 'warning');
-                        }
-                    } catch (Exception $userError) {
-                        logStep("Erro ao verificar usuário: " . $userError->getMessage(), 'debug');
-                    }
+                    logStep("Novo usuário admin criado", 'success');
+                }
+
+                logStep("User ID: " . $userManagement['user_id'], 'info');
+
+                // Se houver resolução de conflito, informar
+                if (isset($userManagement['conflict_resolved'])) {
+                    logStep("Conflito de usuário resolvido automaticamente", 'info');
                 }
 
             } catch (Exception $e) {
-                logStep("Erro na verificação/provisionamento de usuário: " . $e->getMessage(), 'warning');
+                logStep("Erro na criação/verificação do usuário: " . $e->getMessage(), 'error');
+                logStep("Continuando com outras operações...", 'info');
             }
         }
 
     } catch (Exception $e) {
         logStep("Erro na operação de organização: " . $e->getMessage(), 'error');
-        $tenantId = config('clubify-checkout.credentials.tenant_id'); // Usar fallback
     }
+exit(1);
 
     // ===============================================
     // 4. INFRAESTRUTURA AVANÇADA (BLOCO B)

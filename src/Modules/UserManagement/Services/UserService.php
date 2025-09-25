@@ -123,8 +123,8 @@ class UserService implements ServiceInterface
             $user = new UserData($userData);
             $user->validate();
 
-            // Check for duplicates
-            if (isset($userData['email']) && $this->repository->isEmailTaken($userData['email'])) {
+            // Check for duplicates within the tenant scope
+            if (isset($userData['email']) && $this->repository->isEmailTaken($userData['email'], null, $tenantId)) {
                 throw new UserValidationException('User with this email already exists');
             }
 
@@ -204,7 +204,7 @@ class UserService implements ServiceInterface
     /**
      * Atualiza um usuário
      */
-    public function updateUser(string $userId, array $userData): array
+    public function updateUser(string $userId, array $userData, ?string $tenantId = null): array
     {
         try {
             // Validate user exists
@@ -212,8 +212,8 @@ class UserService implements ServiceInterface
                 throw new UserNotFoundException("User with ID {$userId} not found");
             }
 
-            // Check email uniqueness if email is being updated
-            if (isset($userData['email']) && $this->repository->isEmailTaken($userData['email'], $userId)) {
+            // Check email uniqueness if email is being updated (tenant-aware)
+            if (isset($userData['email']) && $this->repository->isEmailTaken($userData['email'], $userId, $tenantId)) {
                 throw new UserValidationException('Email is already in use by another user');
             }
 
@@ -567,7 +567,7 @@ class UserService implements ServiceInterface
                 throw new UserValidationException('Invalid email format');
             }
 
-            // Check if email is already taken
+            // Check if email is already taken (global verification, cross-tenant)
             $isAvailable = !$this->repository->isEmailTaken($email);
 
             $result = [
@@ -626,7 +626,7 @@ class UserService implements ServiceInterface
                 }
             }
 
-            // Check availability for valid emails
+            // Check availability for valid emails (global verification, cross-tenant)
             foreach ($validEmails as $email) {
                 $isAvailable = !$this->repository->isEmailTaken($email);
                 $results[$email] = [
@@ -667,7 +667,7 @@ class UserService implements ServiceInterface
                 throw new UserValidationException('Invalid email format');
             }
 
-            // Check if desired email is available
+            // Check if desired email is available (global verification, cross-tenant)
             $isAvailable = !$this->repository->isEmailTaken($desiredEmail);
 
             $suggestions = [];
@@ -701,6 +701,7 @@ class UserService implements ServiceInterface
                 }
 
                 $suggestedEmail = $pattern . '@' . $domain;
+                // Global verification for suggestions (cross-tenant)
                 if (!$this->repository->isEmailTaken($suggestedEmail)) {
                     $suggestions[] = $suggestedEmail;
                 }

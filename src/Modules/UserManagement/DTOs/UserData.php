@@ -17,7 +17,8 @@ class UserData extends BaseData
 {
     public string $id;
     public string $email;
-    public string $name;
+    public string $first_name;
+    public string $last_name;
     public ?string $avatar_url = null;
     public string $status = 'active';
     public array $roles = [];
@@ -43,7 +44,8 @@ class UserData extends BaseData
         return [
             'id' => ['string'],
             'email' => ['required', 'email', 'max:255'],
-            'name' => ['required', 'string', 'min:2', 'max:100'],
+            'first_name' => ['required', 'string', 'min:2', 'max:100'],
+            'last_name' => ['required', 'string', 'min:2', 'max:100'],
             'avatar_url' => ['nullable', 'string', 'max:500'],
             'status' => ['in:active,inactive,suspended,pending'],
             'roles' => ['array'],

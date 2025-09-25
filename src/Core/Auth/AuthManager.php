@@ -10,6 +10,8 @@ use Clubify\Checkout\Core\Security\SecurityValidator;
 use Clubify\Checkout\Exceptions\AuthenticationException;
 use Clubify\Checkout\Exceptions\HttpException;
 use Clubify\Checkout\Core\Http\ResponseHelper;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * Gerenciador de autenticação do Clubify SDK
@@ -22,6 +24,7 @@ class AuthManager implements AuthManagerInterface
     private ConfigurationInterface $config;
     private TokenStorageInterface $tokenStorage;
     private JWTHandler $jwtHandler;
+    private LoggerInterface $logger;
     private ?array $userInfo = null;
     private ?CredentialManager $credentialManager = null;
     private string $currentRole = 'tenant_admin';
@@ -31,13 +34,15 @@ class AuthManager implements AuthManagerInterface
         ConfigurationInterface $config,
         ?TokenStorageInterface $tokenStorage = null,
         ?JWTHandler $jwtHandler = null,
-        ?CredentialManager $credentialManager = null
+        ?CredentialManager $credentialManager = null,
+        ?LoggerInterface $logger = null
     ) {
         $this->httpClient = $httpClient;
         $this->config = $config;
         $this->tokenStorage = $tokenStorage ?? new TokenStorage();
         $this->jwtHandler = $jwtHandler ?? new JWTHandler();
         $this->credentialManager = $credentialManager;
+        $this->logger = $logger ?? new NullLogger();
     }
 
     public function authenticate(?string $tenantId = null, ?string $apiKey = null): bool
@@ -147,18 +152,12 @@ class AuthManager implements AuthManagerInterface
         }
 
         try {
-            $response = $this->makeHttpRequest('POST', 'auth/refresh', [
+            // makeHttpRequest já retorna os dados decodificados e verifica o status
+            $data = $this->makeHttpRequest('POST', 'auth/refresh', [
                 'json' => [
                     'refreshToken' => $refreshToken
                 ]
             ]);
-
-            $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 300) {
-                throw new AuthenticationException('Token refresh failed: Invalid refresh token');
-            }
-
-            $data = json_decode($response->getBody()->getContents(), true);
 
             if (!isset($data['accessToken'])) {
                 throw new AuthenticationException('Invalid refresh response: missing access token');
@@ -275,8 +274,8 @@ class AuthManager implements AuthManagerInterface
             }
 
             // Fallback: fazer requisição à API
-            $response = $this->makeHttpRequest('GET', '/auth/me');
-            $this->userInfo = json_decode((string) $response->getBody(), true);
+            // makeHttpRequest já retorna os dados decodificados
+            $this->userInfo = $this->makeHttpRequest('GET', '/auth/me');
 
         } catch (\Exception) {
             // Se falhar, usar dados mínimos
@@ -337,22 +336,14 @@ class AuthManager implements AuthManagerInterface
     {
         try {
             // Fazer requisição com payload (X-Tenant-ID já incluído nos headers padrão)
-            $response = $this->makeHttpRequest('POST', 'api-keys/public/validate', [
+            // makeHttpRequest já retorna os dados decodificados e verifica o status
+            $data = $this->makeHttpRequest('POST', 'api-keys/public/validate', [
                 'json' => [
                     'apiKey' => $apiKey,
                     'endpoint' => '/users',
                     'clientIp' => '127.0.0.1'
                 ]
             ]);
-
-            $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 300) {
-                // Log do erro para debug
-                // API Key validation failed
-                return false;
-            }
-
-            $data = json_decode($response->getBody()->getContents(), true);
             $isValid = ($data['isValid'] ?? false);
             $returnedTenantId = ($data['tenantId'] ?? null);
 
@@ -421,16 +412,10 @@ class AuthManager implements AuthManagerInterface
             }
 
             // Fazer login via endpoint correto (X-Tenant-ID já incluído nos headers padrão)
-            $response = $this->makeHttpRequest('POST', 'auth/login', [
+            // makeHttpRequest já retorna os dados decodificados e verifica o status
+            $data = $this->makeHttpRequest('POST', 'auth/login', [
                 'json' => $loginData
             ]);
-
-            $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 300) {
-                throw new AuthenticationException('Login failed: Invalid credentials');
-            }
-
-            $data = json_decode($response->getBody()->getContents(), true);
 
             if (!isset($data['accessToken']) || !isset($data['refreshToken'])) {
                 throw new AuthenticationException('Invalid login response: missing tokens');
@@ -476,7 +461,8 @@ class AuthManager implements AuthManagerInterface
             // Simplified authentication flow - single endpoint strategy
             $endpoint = $this->getAuthEndpointForContext($tenantId);
 
-            $response = $this->makeHttpRequest('POST', $endpoint, [
+            // makeHttpRequest já retorna os dados decodificados e verifica o status
+            $data = $this->makeHttpRequest('POST', $endpoint, [
                 'json' => [
                     'api_key' => $apiKey,
                     'tenant_id' => $tenantId,
@@ -484,9 +470,8 @@ class AuthManager implements AuthManagerInterface
                 ]
             ]);
 
-            $statusCode = $response->getStatusCode();
-            if ($statusCode >= 200 && $statusCode < 300) {
-                $data = json_decode($response->getBody()->getContents(), true);
+            // Se chegou aqui, a requisição foi bem-sucedida (makeHttpRequest lança exceção em caso de erro)
+            if (true) {
 
                 if (isset($data['access_token']) || isset($data['accessToken'])) {
                     $accessToken = $data['access_token'] ?? $data['accessToken'];
@@ -581,16 +566,10 @@ class AuthManager implements AuthManagerInterface
 
         // Security: Remove sensitive data logging in production
 
-        $response = $this->makeHttpRequest('POST', 'tenants', [
+        // makeHttpRequest já retorna os dados decodificados e verifica o status
+        $data = $this->makeHttpRequest('POST', 'tenants', [
             'json' => $requestData
         ]);
-
-        $statusCode = $response->getStatusCode();
-        if ($statusCode < 200 || $statusCode >= 300) {
-            throw new AuthenticationException('Failed to create tenant credentials');
-        }
-
-        $data = json_decode($response->getBody()->getContents(), true);
         // Security: Remove sensitive response logging in production
 
         // Verificar se a resposta tem a estrutura esperada
@@ -1046,18 +1025,15 @@ class AuthManager implements AuthManagerInterface
                 ];
 
                 // CORREÇÃO: Usar endpoint correto encontrado no auth.controller.ts
-                $response = $this->makeHttpRequest('POST', 'auth/api-key/token', [
+                // makeHttpRequest já retorna os dados decodificados e verifica o status
+                $data = $this->makeHttpRequest('POST', 'auth/api-key/token', [
                     'json' => $requestData,
                     'timeout' => 30,
                     'connect_timeout' => 10
                 ]);
 
-                $statusCode = $response->getStatusCode();
-
-                if ($statusCode >= 200 && $statusCode < 300) {
-                    $data = json_decode($response->getBody()->getContents(), true);
-                    return $this->storeAuthTokens($data, $credentials, 'api_key');
-                }
+                // Se chegou aqui, a requisição foi bem-sucedida
+                return $this->storeAuthTokens($data, $credentials, 'api_key');
 
             } catch (\Exception $e) {
                 // Security: Avoid exposing sensitive authentication details in logs

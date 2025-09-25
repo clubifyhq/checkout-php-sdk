@@ -50,17 +50,41 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     /**
      * Busca usuário por email
      */
-    public function findByEmail(string $email): ?array
+    public function findByEmail(string $email, ?string $tenantId = null): ?array
     {
+        $cacheKey = $tenantId
+            ? "user:email:{$email}:tenant:{$tenantId}"
+            : "user:email:{$email}";
+
         return $this->getCachedOrExecute(
-            $this->getCacheKey("user:email:{$email}"),
-            function () use ($email) {
-                $data = $this->makeHttpRequest('GET', "users/search/advanced", ['email' => $email]);
+            $this->getCacheKey($cacheKey),
+            function () use ($email, $tenantId) {
+                $params = ['email' => $email];
+                if ($tenantId) {
+                    $params['tenant_id'] = $tenantId;
+                }
+
+                $headers = [];
+                if ($tenantId) {
+                    $headers['X-Tenant-Id'] = $tenantId;
+                }
+
+                $endpoint = "users/search/advanced?" . http_build_query($params);
+                $data = $this->makeHttpRequestWithHeaders('GET', $endpoint, [], $headers);
                 if (!$data) {
                     return null;
                 }
-
-                return $data['users'][0] ?? $data['data'][0] ?? null;
+                else {
+                    foreach($data['users'] as $user) {
+                        if ($user['email'] === $email){
+                            return $user;
+                        }
+                    }
+                    return null;
+                }
+                //$this->logger->error("Resultado busca", [$data]);
+                
+                return null;
             },
             300 // 5 minutes cache
         );
@@ -229,9 +253,9 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     /**
      * Verifica se email já está em uso
      */
-    public function isEmailTaken(string $email, ?string $excludeUserId = null): bool
+    public function isEmailTaken(string $email, ?string $excludeUserId = null, ?string $tenantId = null): bool
     {
-        $user = $this->findByEmail($email);
+        $user = $this->findByEmail($email, $tenantId);
 
         if (!$user) {
             return false;
@@ -415,7 +439,7 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     {
         return $this->executeWithMetrics("create_user_with_headers", function () use ($data, $headers) {
             $response = $this->makeHttpRequestWithHeaders('POST', $this->getEndpoint(), $data, $headers);
-
+            $this->logger->error("Resposta da criacao: ", $response);
             if (!ResponseHelper::isSuccessful($response)) {
                 throw new HttpException(
                     "Failed to create user: " . ResponseHelper::getErrorMessage($response),

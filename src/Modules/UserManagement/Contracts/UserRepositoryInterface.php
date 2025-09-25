@@ -108,9 +108,10 @@ interface UserRepositoryInterface extends RepositoryInterface
      *
      * @param string $email Email a verificar
      * @param string|null $excludeUserId ID do usuário a excluir da verificação
+     * @param string|null $tenantId ID do tenant para filtrar a verificação
      * @return bool True se email já está em uso
      */
-    public function isEmailTaken(string $email, ?string $excludeUserId = null): bool;
+    public function isEmailTaken(string $email, ?string $excludeUserId = null, ?string $tenantId = null): bool;
 
     /**
      * Busca usuários por role específica

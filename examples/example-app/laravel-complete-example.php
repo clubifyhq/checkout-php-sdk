@@ -738,33 +738,6 @@ try {
                     }
                 }
 
-                // Tratar casos especiais
-                if (isset($userManagement['inconsistent'])) {
-                    logStep("AVISO: Estado inconsistente detectado para usuário", 'warning');
-                    logStep("Usuário existe na API mas não foi localizado corretamente", 'warning');
-                    logStep("Sistema continuará operação, mas recomenda-se verificação manual", 'warning');
-                }
-
-                if (isset($userManagement['found_via_retry'])) {
-                    logStep("Usuário encontrado na segunda tentativa", 'success');
-
-                    if (isset($userManagement['email_mismatch']) && $userManagement['email_mismatch']) {
-                        logStep("AVISO: Email encontrado difere do solicitado:", 'warning');
-                        logStep("  Solicitado: " . $tenantAdminUserData['email'], 'warning');
-                        logStep("  Encontrado: " . $userManagement['found_email'], 'warning');
-                    }
-                }
-
-                // Mostrar informações do usuário apenas se não houve erro
-                if (!isset($userManagement['error']) && isset($userManagement['user_id'])) {
-                    logStep("User ID: " . $userManagement['user_id'], 'info');
-                    logStep("Email: " . ($userManagement['user']['email'] ?? $tenantAdminUserData['email']), 'info');
-                }
-
-                // Se houver resolução de conflito, informar
-                if (isset($userManagement['conflict_resolved'])) {
-                    logStep("Conflito de usuário resolvido automaticamente", 'info');
-                }
 
             } catch (Exception $e) {
                 logStep("Erro na criação/verificação do usuário: " . $e->getMessage(), 'error');
@@ -775,7 +748,7 @@ try {
     } catch (Exception $e) {
         logStep("Erro na operação de organização: " . $e->getMessage(), 'error');
     }
-exit(1);
+
     // ===============================================
     // 4. INFRAESTRUTURA AVANÇADA (BLOCO B)
     // ===============================================

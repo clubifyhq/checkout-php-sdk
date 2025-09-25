@@ -17,13 +17,13 @@ class UserData extends BaseData
 {
     public string $id;
     public string $email;
-    public string $first_name;
-    public string $last_name;
+    public string $firstName;
+    public string $lastName;
     public ?string $avatar_url = null;
     public string $status = 'active';
     public array $roles = [];
     public array $permissions = [];
-    public ?string $tenant_id = null;
+    public ?string $tenantId = null;
     public bool $mfa_enabled = false;
     public bool $passkey_enabled = false;
     public array $passkeys = [];
@@ -33,8 +33,8 @@ class UserData extends BaseData
     public ?DateTime $updated_at = null;
     public array $metadata = [];
     public array $preferences = [];
-    public ?string $timezone = null;
-    public ?string $language = 'en';
+    public array $profile = [];
+    public array $customFields = [];
 
     /**
      * Regras de validação
@@ -44,13 +44,13 @@ class UserData extends BaseData
         return [
             'id' => ['string'],
             'email' => ['required', 'email', 'max:255'],
-            'first_name' => ['required', 'string', 'min:2', 'max:100'],
-            'last_name' => ['required', 'string', 'min:2', 'max:100'],
+            'firstName' => ['required', 'string', 'min:2', 'max:100'],
+            'lastName' => ['required', 'string', 'min:2', 'max:100'],
             'avatar_url' => ['nullable', 'string', 'max:500'],
             'status' => ['in:active,inactive,suspended,pending'],
             'roles' => ['array'],
             'permissions' => ['array'],
-            'tenant_id' => ['nullable', 'string'],
+            'tenantId' => ['nullable', 'string'],
             'mfa_enabled' => ['boolean'],
             'passkey_enabled' => ['boolean'],
             'passkeys' => ['array'],
@@ -60,8 +60,8 @@ class UserData extends BaseData
             'updated_at' => ['nullable', 'date'],
             'metadata' => ['array'],
             'preferences' => ['array'],
-            'timezone' => ['nullable', 'string', 'max:50'],
-            'language' => ['nullable', 'string', 'max:5'],
+            'profile' => ['array'],
+            'customFields' => ['array'],
         ];
     }
 

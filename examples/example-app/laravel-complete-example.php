@@ -228,38 +228,92 @@ function getOrCreateUserManagement($sdk, $userData, $tenantId): array
             ];
         }
 
-        // Se não encontrou, criar novo usuário
-        logStep("Usuário não encontrado. Criando novo usuário admin...", 'info');
+    } catch (\Clubify\Checkout\Modules\UserManagement\Exceptions\UserNotFoundException $e) {
+        // Tratamento específico para usuário não encontrado - isso é normal, prosseguir para criação
+        logStep("Usuário não encontrado (esperado). Prosseguindo para criação...", 'info');
+        logStep("Criando usuário para tenant: $tenantId", 'info');
 
+        // Criar novo usuário com formato correto da API conforme user-management-service
         $newUserData = [
             'email' => $userEmail,
-            'first_name' => $firstName,
-            'last_name' => $lastName,
+            'firstName' => $firstName,
+            'lastName' => $lastName,
             'password' => $userData['password'] ?? generateSecurePassword(),
-            'tenant_id' => $tenantId,
             'roles' => $userData['roles'] ?? ['tenant_admin'],
-            'profile' => array_merge([
-                'department' => 'Administration',
-                'position' => 'Administrator',
-                'phone' => '',
-                'timezone' => 'America/Sao_Paulo'
-            ], $userData['profile'] ?? []),
-            'mustChangePassword' => isset($userData['password']) ? false : true
+            // tenantId (camelCase) quando super admin (nova exceção implementada)
+            'tenantId' => $tenantId,
+            // profile como objeto aninhado
+            'profile' => [
+                'language' => $userData['profile']['language'] ?? 'pt-BR',
+                'timezone' => $userData['profile']['timezone'] ?? 'America/Sao_Paulo'
+            ],
+            // preferences como objeto aninhado
+            'preferences' => [
+                'emailNotifications' => true,
+                'smsNotifications' => false,
+                'marketing' => false
+            ]
         ];
 
         try {
-            $newUser = $sdk->userManagement()->createUser($newUserData);
-        } catch (Exception $createError) {
-            // Capturar e exibir detalhes completos do erro de validação
-            $errorMessage = $createError->getMessage();
-            $errorDetails = [];
+            $createResult = $sdk->userManagement()->createUser($newUserData, $tenantId);
 
-            // Tentar extrair detalhes específicos se for erro de validação
-            if ($createError instanceof \Clubify\Checkout\Exceptions\ValidationException) {
+            if ($createResult && $createResult['success'] && isset($createResult['user_id'])) {
+                $newUser = $createResult['user'];
+                $userId = $createResult['user_id'];
+
+                logStep("Novo usuário admin criado com sucesso!", 'success');
+                logStep("ID do usuário: " . $userId, 'info');
+                logStep("Email: " . ($newUser['email'] ?? $userEmail), 'info');
+
+                if (!isset($userData['password'])) {
+                    logStep("Senha gerada automaticamente - usuário deve alterar no primeiro login", 'warning');
+                }
+
+                return [
+                    'user' => $newUser,
+                    'user_id' => $userId,
+                    'existed' => false,
+                    'created' => true
+                ];
+            } else {
+                throw new Exception('Falha na criação do usuário - resposta inválida da API');
+            }
+
+        } catch (Exception $createError) {
+            // Tratamento de erro na criação do usuário
+            $errorMessage = $createError->getMessage();
+
+            // Verificar se é erro de usuário já existente
+            if (str_contains($errorMessage, 'already exists') ||
+                str_contains($errorMessage, 'User with this email already exists')) {
+
+                logStep("Usuário já existe. Tentando buscar usuário existente...", 'warning');
+
+                // Tentar buscar o usuário existente (agora com busca exata corrigida na API)
+                try {
+                    $userCheck = $sdk->superAdmin()->checkUserExists($userEmail, $tenantId);
+                    if ($userCheck['exists'] && isset($userCheck['user'])) {
+                        logStep("Usuário existente encontrado", 'success');
+                        return [
+                            'user' => $userCheck['user'],
+                            'user_id' => $userCheck['user']['id'] ?? $userCheck['user']['_id'],
+                            'existed' => true,
+                            'created' => false
+                        ];
+                    }
+                } catch (Exception $searchError) {
+                    logStep("Erro na busca do usuário existente: " . $searchError->getMessage(), 'warning');
+                }
+
+                // Se não encontrou, algo está inconsistente - a API disse que existe mas não conseguimos localizar
+                logStep("Usuário não localizado apesar da API indicar que existe. Possível inconsistência.", 'error');
+                throw new Exception("Inconsistência na API: usuário existe mas não foi localizado");
+
+            } elseif ($createError instanceof \Clubify\Checkout\Exceptions\ValidationException) {
                 logStep("❌ Erro de validação na criação do usuário:", 'error');
                 logStep("   Mensagem: $errorMessage", 'error');
 
-                // Obter erros de validação específicos
                 $validationErrors = $createError->getValidationErrors();
                 if (!empty($validationErrors)) {
                     logStep("   Campos com erro de validação:", 'error');
@@ -272,71 +326,12 @@ function getOrCreateUserManagement($sdk, $userData, $tenantId): array
                             logStep("      - $field: $errors", 'error');
                         }
                     }
-                } else {
-                    logStep("   Nenhum detalhe específico de validação disponível", 'error');
                 }
-
-                // Obter contexto adicional se disponível
-                $context = $createError->getContext();
-                if (!empty($context) && isset($context['validation_errors'])) {
-                    unset($context['validation_errors']); // Já exibimos acima
-                }
-                if (!empty($context)) {
-                    logStep("   Contexto adicional:", 'error');
-                    logStep("      " . json_encode($context, JSON_PRETTY_PRINT), 'error');
-                }
-
-            } elseif ($createError instanceof \Clubify\Checkout\Exceptions\SDKException) {
-                logStep("❌ Erro do SDK na criação do usuário:", 'error');
-                logStep("   Mensagem: $errorMessage", 'error');
-
-                if ($createError->getErrorCode()) {
-                    logStep("   Código do erro: " . $createError->getErrorCode(), 'error');
-                }
-
-                $context = $createError->getContext();
-                if (!empty($context)) {
-                    logStep("   Contexto do erro:", 'error');
-                    logStep("      " . json_encode($context, JSON_PRETTY_PRINT), 'error');
-                }
-
-            } elseif (str_contains($errorMessage, 'Validation failed')) {
-                logStep("❌ Erro de validação (genérico) na criação do usuário:", 'error');
-                logStep("   Mensagem: $errorMessage", 'error');
-                logStep("   Nota: Use ValidationException para mais detalhes específicos", 'debug');
-
-                // Exibir dados que foram enviados para debug
-                logStep("   Dados enviados para a API:", 'debug');
-                $debugUserData = $newUserData;
-                if (isset($debugUserData['password'])) {
-                    $debugUserData['password'] = '[PASSWORD HIDDEN]';
-                }
-                logStep("      " . json_encode($debugUserData, JSON_PRETTY_PRINT), 'debug');
-
             } else {
-                logStep("❌ Erro geral na criação do usuário: $errorMessage", 'error');
+                logStep("❌ Erro na criação do usuário: $errorMessage", 'error');
             }
 
             throw $createError;
-        }
-
-        if ($newUser && isset($newUser['id'])) {
-            logStep("Novo usuário admin criado com sucesso!", 'success');
-            logStep("ID do usuário: " . $newUser['id'], 'info');
-            logStep("Email: " . $newUser['email'], 'info');
-
-            if (!isset($userData['password'])) {
-                logStep("Senha gerada automaticamente - usuário deve alterar no primeiro login", 'warning');
-            }
-
-            return [
-                'user' => $newUser,
-                'user_id' => $newUser['id'],
-                'existed' => false,
-                'created' => true
-            ];
-        } else {
-            throw new Exception('Falha na criação do usuário - resposta inválida da API');
         }
 
     } catch (ConflictException $e) {
@@ -805,6 +800,7 @@ try {
                 }
 
                 logStep("User ID: " . $userManagement['user_id'], 'info');
+                logStep("Email: " . ($userManagement['user']['email'] ?? $tenantAdminUserData['email']), 'info');
 
                 // Se houver resolução de conflito, informar
                 if (isset($userManagement['conflict_resolved'])) {

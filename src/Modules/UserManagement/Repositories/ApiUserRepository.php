@@ -438,16 +438,8 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     public function createWithHeaders(array $data, array $headers = []): array
     {
         return $this->executeWithMetrics("create_user_with_headers", function () use ($data, $headers) {
-            $response = $this->makeHttpRequestWithHeaders('POST', $this->getEndpoint(), $data, $headers);
-            $this->logger->error("Resposta da criacao: ", $response);
-            if (!ResponseHelper::isSuccessful($response)) {
-                throw new HttpException(
-                    "Failed to create user: " . ResponseHelper::getErrorMessage($response),
-                    $response->getStatusCode()
-                );
-            }
-
-            $createdData = ResponseHelper::getData($response);
+            $createdData = $this->makeHttpRequestWithHeaders('POST', $this->getEndpoint(), $data, $headers);
+            $this->logger->info("Usuario criado com sucesso", $createdData);
 
             // Dispatch creation event
             $this->dispatch("user.created", [

@@ -412,7 +412,7 @@ class SuperAdminModule implements ModuleInterface
 
         try {
             // Primeiro tentar buscar usuário por email no contexto do tenant
-            $response = $this->makeHttpRequest('GET', 'users', [
+            $result = $this->makeHttpRequest('GET', 'users', [
                 'query' => [
                     'email' => $email,
                     'limit' => 1
@@ -422,21 +422,18 @@ class SuperAdminModule implements ModuleInterface
                 ]
             ]);
 
-            $statusCode = $response->getStatusCode();
-            if ($statusCode >= 200 && $statusCode < 300) {
-                $result = json_decode($response->getBody()->getContents(), true);
-                $users = $result['data'] ?? $result['users'] ?? $result;
+            // makeHttpRequest já retorna o array processado
+            $users = $result['data'] ?? $result['users'] ?? $result;
 
-                if (is_array($users) && count($users) > 0) {
-                    $user = $users[0];
-                    return [
-                        'exists' => true,
-                        'user' => $user,
-                        'user_id' => $user['id'] ?? $user['_id'] ?? null,
-                        'roles' => $user['roles'] ?? [],
-                        'message' => 'User found in tenant'
-                    ];
-                }
+            if (is_array($users) && count($users) > 0) {
+                $user = $users[0];
+                return [
+                    'exists' => true,
+                    'user' => $user,
+                    'user_id' => $user['id'] ?? $user['_id'] ?? null,
+                    'roles' => $user['roles'] ?? [],
+                    'message' => 'User found in tenant'
+                ];
             }
 
             return [

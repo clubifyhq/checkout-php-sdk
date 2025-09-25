@@ -233,10 +233,10 @@ class UserManagementModule implements ModuleInterface
     /**
      * Busca usuário por email
      */
-    public function findUserByEmail(string $email): array
+    public function findUserByEmail(string $email, ?string $tenantId = null): array
     {
         $this->requireInitialized();
-        return $this->getUserService()->findUserByEmail($email);
+        return $this->getUserService()->findUserByEmail($email, $tenantId);
     }
 
     /**

@@ -59,7 +59,10 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
         return $this->getCachedOrExecute(
             $this->getCacheKey($cacheKey),
             function () use ($email, $tenantId) {
+                // Use exact email parameter and tenant_id query param for proper filtering
                 $params = ['email' => $email];
+
+                // Add tenant_id as query parameter for SUPER_ADMIN context override
                 if ($tenantId) {
                     $params['tenant_id'] = $tenantId;
                 }
@@ -70,21 +73,15 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
                 }
 
                 $endpoint = "users/search/advanced?" . http_build_query($params);
+
                 $data = $this->makeHttpRequestWithHeaders('GET', $endpoint, [], $headers);
-                if (!$data) {
+
+                if (!$data || empty($data['users'])) {
                     return null;
                 }
-                else {
-                    foreach($data['users'] as $user) {
-                        if ($user['email'] === $email){
-                            return $user;
-                        }
-                    }
-                    return null;
-                }
-                //$this->logger->error("Resultado busca", [$data]);
-                
-                return null;
+
+                // Return the first user found (should be filtered by tenant + email)
+                return $data['users'][0] ?? null;
             },
             300 // 5 minutes cache
         );
@@ -439,7 +436,11 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
     {
         return $this->executeWithMetrics("create_user_with_headers", function () use ($data, $headers) {
             $createdData = $this->makeHttpRequestWithHeaders('POST', $this->getEndpoint(), $data, $headers);
-            $this->logger->info("Usuario criado com sucesso", $createdData);
+
+            $this->logger->info("User created successfully", [
+                'email' => $data['email'] ?? 'unknown',
+                'user_id' => $createdData['id'] ?? 'unknown'
+            ]);
 
             // Dispatch creation event
             $this->dispatch("user.created", [

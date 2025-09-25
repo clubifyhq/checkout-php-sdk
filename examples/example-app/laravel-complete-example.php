@@ -197,20 +197,21 @@ function getOrCreateUserManagement($sdk, $userData, $tenantId): array
     logStep("Verificando se usuário admin '$userEmail' já existe...", 'info');
 
     try {
-        // Tentar encontrar usuário existente
-        $existingUser = $sdk->userManagement()->findUserByEmail($userEmail);
+        // Tentar encontrar usuário existente - busca com tenantId específico
+        $existingUser = $sdk->userManagement()->findUserByEmail($userEmail, $tenantId);
 
-        if ($existingUser && isset($existingUser['id'])) {
+        if ($existingUser && isset($existingUser['user']) && isset($existingUser['user']['id'])) {
+            $user = $existingUser['user'];
             logStep("Usuário admin já existe: $userEmail", 'success');
-            logStep("ID do usuário: " . $existingUser['id'], 'info');
+            logStep("ID do usuário: " . $user['id'], 'info');
 
             // Verificar se usuário tem as roles corretas para o tenant
-            $hasCorrectRoles = checkUserRoles($existingUser, $userData['roles'] ?? ['tenant_admin'], $tenantId);
+            $hasCorrectRoles = checkUserRoles($user, $userData['roles'] ?? ['tenant_admin'], $tenantId);
 
             if (!$hasCorrectRoles) {
                 logStep("Atualizando roles do usuário existente...", 'info');
                 try {
-                    $updatedUser = $sdk->userManagement()->updateUserRoles($existingUser['id'], [
+                    $updatedUser = $sdk->userManagement()->updateUserRoles($user['id'], [
                         'tenantId' => $tenantId,
                         'roles' => $userData['roles'] ?? ['tenant_admin']
                     ]);
@@ -221,182 +222,152 @@ function getOrCreateUserManagement($sdk, $userData, $tenantId): array
             }
 
             return [
-                'user' => $existingUser,
-                'user_id' => $existingUser['id'],
+                'user' => $user,
+                'user_id' => $user['id'],
                 'existed' => true,
                 'created' => false
             ];
         }
 
+        // Se chegou aqui, usuário não foi encontrado - criar novo
+        // (Continua para a lógica de criação abaixo)
+
     } catch (\Clubify\Checkout\Modules\UserManagement\Exceptions\UserNotFoundException $e) {
-        // Tratamento específico para usuário não encontrado - isso é normal, prosseguir para criação
-        logStep("Usuário não encontrado (esperado). Prosseguindo para criação...", 'info');
-        logStep("Criando usuário para tenant: $tenantId", 'info');
+        // Usuário não encontrado - normal, continuar para criação
+        // (Continua para a lógica de criação abaixo)
+    }
 
-        // Criar novo usuário com formato correto da API conforme user-management-service
-        $newUserData = [
-            'email' => $userEmail,
-            'firstName' => $firstName,
-            'lastName' => $lastName,
-            'password' => $userData['password'] ?? generateSecurePassword(),
-            'roles' => $userData['roles'] ?? ['tenant_admin'],
-            // tenantId (camelCase) quando super admin (nova exceção implementada)
-            'tenantId' => $tenantId,
-            // profile como objeto aninhado
-            'profile' => [
-                'language' => $userData['profile']['language'] ?? 'pt-BR',
-                'timezone' => $userData['profile']['timezone'] ?? 'America/Sao_Paulo'
-            ],
-            // preferences como objeto aninhado
-            'preferences' => [
-                'emailNotifications' => true,
-                'smsNotifications' => false,
-                'marketing' => false
-            ]
-        ];
+    // Lógica de criação de usuário (consolidada)
+    logStep("Criando novo usuário para tenant: $tenantId", 'info');
 
-        try {
-            $createResult = $sdk->userManagement()->createUser($newUserData, $tenantId);
+    // Criar novo usuário com formato correto da API conforme user-management-service
+    $newUserData = [
+        'email' => $userEmail,
+        'firstName' => $firstName,
+        'lastName' => $lastName,
+        'password' => $userData['password'] ?? generateSecurePassword(),
+        'roles' => $userData['roles'] ?? ['tenant_admin'],
+        // tenantId (camelCase) quando super admin (nova exceção implementada)
+        'tenantId' => $tenantId,
+        // profile como objeto aninhado
+        'profile' => [
+            'language' => $userData['profile']['language'] ?? 'pt-BR',
+            'timezone' => $userData['profile']['timezone'] ?? 'America/Sao_Paulo'
+        ],
+        // preferences como objeto aninhado
+        'preferences' => [
+            'emailNotifications' => true,
+            'smsNotifications' => false,
+            'marketing' => false
+        ]
+    ];
 
-            if ($createResult && $createResult['success'] && isset($createResult['user_id'])) {
-                $newUser = $createResult['user'];
-                $userId = $createResult['user_id'];
+    try {
+        $createResult = $sdk->userManagement()->createUser($newUserData, $tenantId);
 
-                logStep("Novo usuário admin criado com sucesso!", 'success');
-                logStep("ID do usuário: " . $userId, 'info');
-                logStep("Email: " . ($newUser['email'] ?? $userEmail), 'info');
+        if ($createResult && $createResult['success'] && isset($createResult['user_id'])) {
+            $newUser = $createResult['user'];
+            $userId = $createResult['user_id'];
 
-                if (!isset($userData['password'])) {
-                    logStep("Senha gerada automaticamente - usuário deve alterar no primeiro login", 'warning');
-                }
+            logStep("Novo usuário admin criado com sucesso!", 'success');
+            logStep("ID do usuário: " . $userId, 'info');
+            logStep("Email: " . ($newUser['email'] ?? $userEmail), 'info');
 
-                return [
-                    'user' => $newUser,
-                    'user_id' => $userId,
-                    'existed' => false,
-                    'created' => true
-                ];
-            } else {
-                throw new Exception('Falha na criação do usuário - resposta inválida da API');
+            if (!isset($userData['password'])) {
+                logStep("Senha gerada automaticamente - usuário deve alterar no primeiro login", 'warning');
             }
 
-        } catch (Exception $createError) {
-            // Tratamento de erro na criação do usuário
-            $errorMessage = $createError->getMessage();
-
-            // Verificar se é erro de usuário já existente
-            if (str_contains($errorMessage, 'already exists') ||
-                str_contains($errorMessage, 'User with this email already exists')) {
-
-                logStep("Usuário já existe. Tentando buscar usuário existente...", 'warning');
-
-                // Tentar buscar o usuário existente (agora com busca exata corrigida na API)
-                try {
-                    $userCheck = $sdk->superAdmin()->checkUserExists($userEmail, $tenantId);
-                    if ($userCheck['exists'] && isset($userCheck['user'])) {
-                        logStep("Usuário existente encontrado", 'success');
-                        return [
-                            'user' => $userCheck['user'],
-                            'user_id' => $userCheck['user']['id'] ?? $userCheck['user']['_id'],
-                            'existed' => true,
-                            'created' => false
-                        ];
-                    }
-                } catch (Exception $searchError) {
-                    logStep("Erro na busca do usuário existente: " . $searchError->getMessage(), 'warning');
-                }
-
-                // Se não encontrou, algo está inconsistente - a API disse que existe mas não conseguimos localizar
-                logStep("Usuário não localizado apesar da API indicar que existe. Possível inconsistência.", 'error');
-                throw new Exception("Inconsistência na API: usuário existe mas não foi localizado");
-
-            } elseif ($createError instanceof \Clubify\Checkout\Exceptions\ValidationException) {
-                logStep("❌ Erro de validação na criação do usuário:", 'error');
-                logStep("   Mensagem: $errorMessage", 'error');
-
-                $validationErrors = $createError->getValidationErrors();
-                if (!empty($validationErrors)) {
-                    logStep("   Campos com erro de validação:", 'error');
-                    foreach ($validationErrors as $field => $errors) {
-                        if (is_array($errors)) {
-                            foreach ($errors as $error) {
-                                logStep("      - $field: $error", 'error');
-                            }
-                        } else {
-                            logStep("      - $field: $errors", 'error');
-                        }
-                    }
-                }
-            } else {
-                logStep("❌ Erro na criação do usuário: $errorMessage", 'error');
-            }
-
-            throw $createError;
+            return [
+                'user' => $newUser,
+                'user_id' => $userId,
+                'existed' => false,
+                'created' => true
+            ];
+        } else {
+            throw new Exception('Falha na criação do usuário - resposta inválida da API');
         }
 
-    } catch (ConflictException $e) {
-        logStep("Conflito na criação do usuário: " . $e->getMessage(), 'warning');
+    } catch (Exception $createError) {
+        // Tratamento de erro na criação do usuário
+        $errorMessage = $createError->getMessage();
 
-        // Se for conflito de email, tentar buscar novamente
-        if (str_contains($e->getMessage(), 'email') || str_contains($e->getMessage(), 'already exists')) {
-            logStep("Tentando buscar usuário existente após conflito...", 'info');
+        // Verificar se é erro de usuário já existente
+        if (str_contains($errorMessage, 'already exists') ||
+            str_contains($errorMessage, 'User with this email already exists') ||
+            str_contains($errorMessage, 'Conflict')) {
+
+            logStep("Usuário já existe (409 Conflict). Buscando usuário existente...", 'warning');
+
             try {
-                $existingUser = $sdk->userManagement()->findUserByEmail($userEmail);
-                if ($existingUser && isset($existingUser['id'])) {
-                    logStep("Usuário encontrado após tratamento de conflito", 'success');
+                $existingUser = $sdk->userManagement()->findUserByEmail($userEmail, $tenantId);
+
+                if ($existingUser && isset($existingUser['user'])) {
+                    $user = $existingUser['user'];
+                    $foundEmail = $user['email'] ?? 'unknown';
+
+                    if ($foundEmail !== $userEmail) {
+                        logStep("Email encontrado ($foundEmail) difere do buscado ($userEmail)", 'warning');
+                    }
+
+                    logStep("Usuário existente encontrado", 'success');
                     return [
-                        'user' => $existingUser,
-                        'user_id' => $existingUser['id'],
+                        'user' => $user,
+                        'user_id' => $user['id'] ?? $user['_id'],
                         'existed' => true,
                         'created' => false,
-                        'conflict_resolved' => true
+                        'found_via_retry' => true,
+                        'email_mismatch' => $foundEmail !== $userEmail ? true : false,
+                        'found_email' => $foundEmail
                     ];
                 }
             } catch (Exception $retryError) {
-                logStep("Erro na segunda tentativa de busca: " . $retryError->getMessage(), 'error');
+                logStep("Busca falhou: " . $retryError->getMessage(), 'error');
             }
-        }
 
-        throw $e;
-    } catch (Exception $e) {
-        // Tratamento aprimorado de erros gerais
-        $errorMessage = $e->getMessage();
-        $errorClass = get_class($e);
+            // Se chegamos aqui, nenhum método funcionou
+            logStep("INCONSISTÊNCIA DETECTADA: API disse que usuário existe mas não conseguimos localizar", 'error');
+            logStep("Email: $userEmail | TenantId: $tenantId", 'error');
+            logStep("Possíveis causas: cache invalidado, contexto incorreto, ou timing issue", 'error');
 
-        logStep("❌ Erro na criação/verificação do usuário:", 'error');
-        logStep("   Tipo do erro: $errorClass", 'error');
-        logStep("   Mensagem: $errorMessage", 'error');
+            // Retornar um resultado que indica inconsistência mas permite continuidade
+            return [
+                'user' => ['email' => $userEmail, 'id' => 'inconsistent-state'],
+                'user_id' => 'inconsistent-state',
+                'existed' => true,
+                'created' => false,
+                'inconsistent' => true,
+                'error' => 'User exists but could not be located'
+            ];
 
-        // Tentar obter informações adicionais da exceção baseado no tipo
-        if ($e instanceof \Clubify\Checkout\Exceptions\ValidationException) {
-            $validationErrors = $e->getValidationErrors();
+        } elseif ($createError instanceof \Clubify\Checkout\Exceptions\ValidationException) {
+            logStep("❌ Erro de validação na criação do usuário:", 'error');
+            logStep("   Mensagem: $errorMessage", 'error');
+
+            $validationErrors = $createError->getValidationErrors();
             if (!empty($validationErrors)) {
-                logStep("   Erros de validação:", 'error');
-                logStep("      " . json_encode($validationErrors, JSON_PRETTY_PRINT), 'error');
+                logStep("   Campos com erro de validação:", 'error');
+                foreach ($validationErrors as $field => $errors) {
+                    if (is_array($errors)) {
+                        foreach ($errors as $error) {
+                            logStep("      - $field: $error", 'error');
+                        }
+                    } else {
+                        logStep("      - $field: $errors", 'error');
+                    }
+                }
             }
+        } else {
+            logStep("❌ Erro na criação do usuário: $errorMessage", 'error');
         }
 
-        if ($e instanceof \Clubify\Checkout\Exceptions\SDKException) {
-            if ($e->getErrorCode()) {
-                logStep("   Código do erro: " . $e->getErrorCode(), 'error');
-            }
-
-            $context = $e->getContext();
-            if (!empty($context)) {
-                logStep("   Contexto do erro:", 'error');
-                logStep("      " . json_encode($context, JSON_PRETTY_PRINT), 'error');
-            }
-        }
-
-        if (method_exists($e, 'getCode') && $e->getCode() !== 0) {
-            logStep("   Código do erro: " . $e->getCode(), 'error');
-        }
-
-        if (method_exists($e, 'getFile') && method_exists($e, 'getLine')) {
-            logStep("   Local: " . basename($e->getFile()) . ":" . $e->getLine(), 'debug');
-        }
-
-        throw $e;
+        // Retornar erro para indicar falha na criação
+        return [
+            'user' => ['email' => $userEmail],
+            'user_id' => null,
+            'existed' => false,
+            'created' => false,
+            'error' => $errorMessage
+        ];
     }
 }
 
@@ -551,61 +522,23 @@ function checkEmailAvailability($sdk, $email, $tenantId = null) {
     try {
         logStep("Verificando disponibilidade do email: $email", 'debug');
 
-        // Tentar diferentes métodos de verificação baseado na versão do SDK
-        $methods = [
-            // Método 1: Via customer service (mais comum)
-            function() use ($sdk, $email) {
-                return $sdk->customers()->findByEmail($email);
-            },
-            // Método 2: Via user management (se disponível)
-            function() use ($sdk, $email) {
-                return $sdk->userManagement()->findUserByEmail($email);
-            },
-            // Método 3: Via super admin (contexto específico)
-            function() use ($sdk, $email, $tenantId) {
-                if ($tenantId) {
-                    return $sdk->superAdmin()->findTenantUser($tenantId, $email);
-                }
-                return null;
-            }
-        ];
+        // Usar método corrigido do SDK
+        $result = $sdk->userManagement()->findUserByEmail($email, $tenantId);
 
-        foreach ($methods as $index => $method) {
-            try {
-                $result = $method();
-                if ($result) {
-                    // Padronizar estrutura de resposta
-                    $userData = $result['data'] ?? $result;
-                    $exists = isset($userData['id']) || isset($userData['_id']) ||
-                             isset($userData['email']) || !empty($userData);
-
-                    return [
-                        'exists' => $exists,
-                        'resource' => $userData,
-                        'method_used' => "method_" . ($index + 1)
-                    ];
-                }
-            } catch (Exception $e) {
-                logStep("Método " . ($index + 1) . " falhou: " . $e->getMessage(), 'debug');
-                continue;
-            }
+        if ($result && isset($result['user'])) {
+            logStep("Email já está em uso", 'debug');
+            return [
+                'exists' => true,
+                'user' => $result['user']
+            ];
         }
 
-        // Se chegou aqui, nenhum método funcionou ou email não existe
-        logStep("Email não encontrado ou não existe: $email", 'debug');
-        return [
-            'exists' => false,
-            'resource' => null,
-            'method_used' => 'none'
-        ];
+        return ['exists' => false];
 
     } catch (Exception $e) {
-        logStep("Erro na verificação de email: " . $e->getMessage(), 'warning');
-        return [
-            'exists' => false,
-            'resource' => null,
-            'error' => $e->getMessage()
-        ];
+        // Email não encontrado é esperado
+        logStep("Email disponível (não encontrado)", 'debug');
+        return ['exists' => false];
     }
 }
 
@@ -793,14 +726,40 @@ try {
             try {
                 $userManagement = getOrCreateUserManagement($sdk, $tenantAdminUserData, $tenantId);
 
-                if ($userManagement['existed']) {
-                    logStep("Usuário admin existente encontrado", 'success');
+                // Verificar se houve erro
+                if (isset($userManagement['error'])) {
+                    logStep("Erro na criação/verificação do usuário: " . $userManagement['error'], 'error');
+                    logStep("Continuando com outras operações...", 'info');
                 } else {
-                    logStep("Novo usuário admin criado", 'success');
+                    if ($userManagement['existed']) {
+                        logStep("Usuário admin existente encontrado", 'success');
+                    } else {
+                        logStep("Novo usuário admin criado", 'success');
+                    }
                 }
 
-                logStep("User ID: " . $userManagement['user_id'], 'info');
-                logStep("Email: " . ($userManagement['user']['email'] ?? $tenantAdminUserData['email']), 'info');
+                // Tratar casos especiais
+                if (isset($userManagement['inconsistent'])) {
+                    logStep("AVISO: Estado inconsistente detectado para usuário", 'warning');
+                    logStep("Usuário existe na API mas não foi localizado corretamente", 'warning');
+                    logStep("Sistema continuará operação, mas recomenda-se verificação manual", 'warning');
+                }
+
+                if (isset($userManagement['found_via_retry'])) {
+                    logStep("Usuário encontrado na segunda tentativa", 'success');
+
+                    if (isset($userManagement['email_mismatch']) && $userManagement['email_mismatch']) {
+                        logStep("AVISO: Email encontrado difere do solicitado:", 'warning');
+                        logStep("  Solicitado: " . $tenantAdminUserData['email'], 'warning');
+                        logStep("  Encontrado: " . $userManagement['found_email'], 'warning');
+                    }
+                }
+
+                // Mostrar informações do usuário apenas se não houve erro
+                if (!isset($userManagement['error']) && isset($userManagement['user_id'])) {
+                    logStep("User ID: " . $userManagement['user_id'], 'info');
+                    logStep("Email: " . ($userManagement['user']['email'] ?? $tenantAdminUserData['email']), 'info');
+                }
 
                 // Se houver resolução de conflito, informar
                 if (isset($userManagement['conflict_resolved'])) {
@@ -817,7 +776,6 @@ try {
         logStep("Erro na operação de organização: " . $e->getMessage(), 'error');
     }
 exit(1);
-
     // ===============================================
     // 4. INFRAESTRUTURA AVANÇADA (BLOCO B)
     // ===============================================

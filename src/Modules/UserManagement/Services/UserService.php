@@ -366,10 +366,10 @@ class UserService implements ServiceInterface
     /**
      * Busca usuário por email
      */
-    public function findUserByEmail(string $email): array
+    public function findUserByEmail(string $email, ?string $tenantId = null): array
     {
         try {
-            $user = $this->repository->findByEmail($email);
+            $user = $this->repository->findByEmail($email, $tenantId);
 
             if (!$user) {
                 throw new UserNotFoundException("User with email {$email} not found");
@@ -381,12 +381,16 @@ class UserService implements ServiceInterface
             ];
 
         } catch (UserNotFoundException $e) {
-            $this->logger->warning('User not found by email', ['email' => $email]);
+            $this->logger->warning('User not found by email', [
+                'email' => $email,
+                'tenant_id' => $tenantId
+            ]);
             throw $e;
 
         } catch (\Exception $e) {
             $this->logger->error('Failed to find user by email', [
                 'email' => $email,
+                'tenant_id' => $tenantId,
                 'error' => $e->getMessage()
             ]);
             throw $e;

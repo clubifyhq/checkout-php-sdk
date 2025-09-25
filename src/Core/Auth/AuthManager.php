@@ -335,7 +335,7 @@ class AuthManager implements AuthManagerInterface
     private function validateApiKey(string $apiKey, string $tenantId): bool
     {
         try {
-            // Fazer requisição com payload (X-Tenant-ID já incluído nos headers padrão)
+            // Fazer requisição com payload (X-Tenant-Id já incluído nos headers padrão)
             // makeHttpRequest já retorna os dados decodificados e verifica o status
             $data = $this->makeHttpRequest('POST', 'api-keys/public/validate', [
                 'json' => [
@@ -411,7 +411,7 @@ class AuthManager implements AuthManagerInterface
                 $loginData['deviceFingerprint'] = $deviceFingerprint;
             }
 
-            // Fazer login via endpoint correto (X-Tenant-ID já incluído nos headers padrão)
+            // Fazer login via endpoint correto (X-Tenant-Id já incluído nos headers padrão)
             // makeHttpRequest já retorna os dados decodificados e verifica o status
             $data = $this->makeHttpRequest('POST', 'auth/login', [
                 'json' => $loginData
@@ -999,7 +999,7 @@ class AuthManager implements AuthManagerInterface
                     'timeout' => 30,
                     'connect_timeout' => 10,
                     'headers' => [
-                        'X-Tenant-ID' => $credentials['tenant_id'] ?? $this->config->getTenantId()
+                        'X-Tenant-Id' => $credentials['tenant_id'] ?? $this->config->getTenantId()
                     ]
                 ]);
 

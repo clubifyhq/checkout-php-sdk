@@ -51,7 +51,7 @@ class DomainService
             $this->validateDomainData($domainData);
 
             // Verifica se o domínio já existe
-            if ($this->repository->domainExists($domainData['domain'])) {
+            if ($this->repository->domainExists($domainData['domain'], $tenantId)) {
                 throw new DomainValidationException("Domain '{$domainData['domain']}' already exists");
             }
 
@@ -62,13 +62,25 @@ class DomainService
             $domainDto->verification_method = $domainData['verification_method'] ?? 'dns';
             $domainDto->settings = $domainData['settings'] ?? [];
             $domainDto->metadata = $domainData['metadata'] ?? [];
+            $domainDto->dns_records = [];
+            $domainDto->ssl_config = [];
             $domainDto->verification_token = $this->generateVerificationToken();
             $domainDto->status = 'pending_verification';
             $domainDto->verified = false;
             $domainDto->created_at = new \DateTime();
 
             // Valida DTO
-            $domainDto->validate();
+            try {
+                $domainDto->validate();
+            } catch (\Exception $validationError) {
+                $this->logger->error('Domain DTO validation failed', [
+                    'tenant_id' => $tenantId,
+                    'domain' => $domainData['domain'],
+                    'validation_error' => $validationError->getMessage(),
+                    'dto_data' => $domainDto->toArray()
+                ]);
+                throw new DomainValidationException('Domain validation failed: ' . $validationError->getMessage());
+            }
 
             // Salva no repository
             $result = $this->repository->create($domainDto->toArray());

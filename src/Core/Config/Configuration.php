@@ -150,10 +150,10 @@ class Configuration implements ConfigurationInterface
             'X-SDK-Language' => 'php',
         ];
 
-        // Adicionar X-Tenant-ID se disponível
+        // Adicionar X-Tenant-Id se disponível
         $tenantId = $this->getTenantId();
         if ($tenantId) {
-            $headers['X-Tenant-ID'] = $tenantId;
+            $headers['X-Tenant-Id'] = $tenantId;
         }
 
         // Nota: O Authorization header será adicionado dinamicamente pelo AuthManager

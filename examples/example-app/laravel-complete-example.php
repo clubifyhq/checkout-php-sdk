@@ -803,64 +803,66 @@ try {
             logStep("Erro no provisionamento: " . $e->getMessage(), 'warning');
         }
 
-        // Sub-seção: Gestão de Credenciais Avançada
-        try {
-            if (method_exists($sdk->superAdmin(), 'getTenantCredentials')) {
-                $credentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
-
-                if ($credentials) {
-                    logStep("Credenciais obtidas com sucesso", 'success');
-                    $keyAge = $credentials['key_age_days'] ?? 'N/A';
-
-                    // Verificar se precisa rotacionar
-                    if (is_numeric($keyAge) && $keyAge > 90) {
-                        logStep("API Key antiga detectada ($keyAge dias)", 'warning');
-
-                        if (method_exists($sdk->superAdmin(), 'rotateApiKey') &&
-                            config('app.example_enable_key_rotation', false)) {
-
-                            $rotationResult = $sdk->superAdmin()->rotateApiKey($credentials['api_key_id'], [
-                                'gracePeriodHours' => 24,
-                                'forceRotation' => false
-                            ]);
-
-                            if ($rotationResult['success']) {
-                                logStep("API Key rotacionada com sucesso!", 'success');
-                            }
-                        }
-                    }
-                }
-            }
-
-        } catch (Exception $e) {
-            logStep("Erro na gestão de credenciais: " . $e->getMessage(), 'warning');
-        }
-
-        // Sub-seção: Estatísticas do Sistema
-        try {
-            if (method_exists($sdk->superAdmin(), 'getSystemStats')) {
-                $stats = $sdk->superAdmin()->getSystemStats(5);
-
-                if ($stats && isset($stats['data'])) {
-                    $totalTenants = $stats['data']['total_tenants'] ?? 'N/A';
-                    $activeTenants = $stats['data']['active_tenants'] ?? 'N/A';
-                    logStep("Tenants: $totalTenants total, $activeTenants ativos", 'info');
-                }
-            }
-        } catch (Exception $e) {
-            logStep("Erro ao obter estatísticas: " . $e->getMessage(), 'warning');
-        }
 
     } else {
         logStep("Nenhum tenant válido para infraestrutura", 'warning');
     }
 
     logStep("Seção de infraestrutura concluída", 'success');
-
-    exit(1);
     // ===============================================
     // 5. LISTAGEM DE TENANTS
     // ===============================================
+
+
+
+    // Sub-seção: Gestão de Credenciais Avançada
+    try {
+        if (method_exists($sdk->superAdmin(), 'getTenantCredentials')) {
+            $credentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
+
+            if ($credentials) {
+                logStep("Credenciais obtidas com sucesso", 'success');
+                $keyAge = $credentials['key_age_days'] ?? 'N/A';
+
+                // Verificar se precisa rotacionar
+                if (is_numeric($keyAge) && $keyAge > 90) {
+                    logStep("API Key antiga detectada ($keyAge dias)", 'warning');
+
+                    if (method_exists($sdk->superAdmin(), 'rotateApiKey') &&
+                        config('app.example_enable_key_rotation', false)) {
+
+                        $rotationResult = $sdk->superAdmin()->rotateApiKey($credentials['api_key_id'], [
+                            'gracePeriodHours' => 24,
+                            'forceRotation' => false
+                        ]);
+
+                        if ($rotationResult['success']) {
+                            logStep("API Key rotacionada com sucesso!", 'success');
+                        }
+                    }
+                }
+            }
+        }
+
+    } catch (Exception $e) {
+        logStep("Erro na gestão de credenciais: " . $e->getMessage(), 'warning');
+    }
+
+    // Sub-seção: Estatísticas do Sistema
+    try {
+        if (method_exists($sdk->superAdmin(), 'getSystemStats')) {
+            $stats = $sdk->superAdmin()->getSystemStats(5);
+
+            if ($stats && isset($stats['data'])) {
+                $totalTenants = $stats['data']['total_tenants'] ?? 'N/A';
+                $activeTenants = $stats['data']['active_tenants'] ?? 'N/A';
+                logStep("Tenants: $totalTenants total, $activeTenants ativos", 'info');
+            }
+        }
+    } catch (Exception $e) {
+        logStep("Erro ao obter estatísticas: " . $e->getMessage(), 'warning');
+    }
+
 
     echo "\n=== Listagem de Tenants Disponíveis ===\n";
 

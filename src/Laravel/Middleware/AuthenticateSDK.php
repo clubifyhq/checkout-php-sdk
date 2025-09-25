@@ -91,7 +91,7 @@ final class AuthenticateSDK
      */
     private function validateTenant(Request $request): void
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? $request->input('tenant_id');
+        $tenantId = $request->header('X-Tenant-Id') ?? $request->input('tenant_id');
 
         if ($tenantId) {
             $authManager = $this->sdk->getAuthManager();

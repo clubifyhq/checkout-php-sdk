@@ -36,7 +36,7 @@ class DomainData extends BaseData
     public function getRules(): array
     {
         return [
-            'id' => ['string'],
+            'id' => ['nullable', 'string'],
             'tenant_id' => ['required', 'string'],
             'domain' => ['required', 'string', 'max:253'],
             'status' => ['in:pending_verification,verifying,verified,failed,suspended'],
@@ -129,5 +129,30 @@ class DomainData extends BaseData
     public function canBeVerified(): bool
     {
         return in_array($this->status, ['pending_verification', 'failed']);
+    }
+
+    /**
+     * Sincroniza propriedades do objeto com o array data para validação
+     */
+    public function syncToDataArray(): void
+    {
+        $reflection = new \ReflectionClass($this);
+        $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC);
+
+        foreach ($properties as $property) {
+            $name = $property->getName();
+            if (isset($this->$name)) {
+                $this->data[$name] = $this->$name;
+            }
+        }
+    }
+
+    /**
+     * Override da validação para sincronizar dados primeiro
+     */
+    public function validate(): bool
+    {
+        $this->syncToDataArray();
+        return parent::validate();
     }
 }

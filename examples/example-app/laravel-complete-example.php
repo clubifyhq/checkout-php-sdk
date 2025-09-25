@@ -729,7 +729,6 @@ try {
                 // Verificar se houve erro
                 if (isset($userManagement['error'])) {
                     logStep("Erro na criação/verificação do usuário: " . $userManagement['error'], 'error');
-                    logStep("Continuando com outras operações...", 'info');
                 } else {
                     if ($userManagement['existed']) {
                         logStep("Usuário admin existente encontrado", 'success');
@@ -737,17 +736,44 @@ try {
                         logStep("Novo usuário admin criado", 'success');
                     }
                 }
-
-
             } catch (Exception $e) {
                 logStep("Erro na criação/verificação do usuário: " . $e->getMessage(), 'error');
-                logStep("Continuando com outras operações...", 'info');
             }
         }
 
     } catch (Exception $e) {
         logStep("Erro na operação de organização: " . $e->getMessage(), 'error');
     }
+
+
+
+    // ===============================================
+    // 4. ALTERNÂNCIA PARA CONTEXTO DO TENANT
+    // ===============================================
+
+    if ($tenantId && $tenantId !== 'unknown') {
+        echo "\n=== Alternando para Contexto do Tenant ===\n";
+
+        try {
+            logStep("Alternando para tenant: $tenantId", 'info');
+
+            $switchResult = $sdk->superAdmin()->switchToTenant($tenantId);
+
+            if ($switchResult['success'] ?? false) {
+                logStep("Contexto alternado com sucesso!", 'success');
+                logStep("   Current Tenant: " . ($switchResult['current_tenant_id'] ?? 'N/A'), 'info');
+                logStep("   Role: " . ($switchResult['current_role'] ?? 'tenant_admin'), 'info');
+            } else {
+                logStep("Falha na alternância de contexto", 'error');
+                logStep("   Erro: " . ($switchResult['error'] ?? 'Unknown error'), 'error');
+            }
+
+        } catch (Exception $e) {
+            logStep("Erro ao alternar contexto: " . $e->getMessage(), 'warning');
+        }
+    }
+
+
 
     // ===============================================
     // 4. INFRAESTRUTURA AVANÇADA (BLOCO B)
@@ -762,8 +788,8 @@ try {
         try {
             $customDomain = $EXAMPLE_CONFIG['organization']['custom_domain'];
 
-            if (method_exists($sdk->superAdmin(), 'provisionTenantDomain')) {
-                $domainResult = $sdk->superAdmin()->provisionTenantDomain($tenantId, [
+            if (method_exists($sdk->userManagement(), 'configureDomain')) {
+                $domainResult = $sdk->userManagement()->configureDomain($tenantId, [
                     'domain' => $customDomain,
                     'auto_ssl' => true,
                     'environment' => config('clubify-checkout.environment', 'sandbox')
@@ -831,6 +857,7 @@ try {
 
     logStep("Seção de infraestrutura concluída", 'success');
 
+    exit(1);
     // ===============================================
     // 5. LISTAGEM DE TENANTS
     // ===============================================
@@ -870,32 +897,6 @@ try {
 
     } catch (Exception $e) {
         logStep("Erro ao listar tenants: " . $e->getMessage(), 'warning');
-    }
-
-    // ===============================================
-    // 5. ALTERNÂNCIA PARA CONTEXTO DO TENANT
-    // ===============================================
-
-    if ($tenantId && $tenantId !== 'unknown') {
-        echo "\n=== Alternando para Contexto do Tenant ===\n";
-
-        try {
-            logStep("Alternando para tenant: $tenantId", 'info');
-
-            $switchResult = $sdk->superAdmin()->switchToTenant($tenantId);
-
-            if ($switchResult['success'] ?? false) {
-                logStep("Contexto alternado com sucesso!", 'success');
-                logStep("   Current Tenant: " . ($switchResult['current_tenant_id'] ?? 'N/A'), 'info');
-                logStep("   Role: " . ($switchResult['current_role'] ?? 'tenant_admin'), 'info');
-            } else {
-                logStep("Falha na alternância de contexto", 'error');
-                logStep("   Erro: " . ($switchResult['error'] ?? 'Unknown error'), 'error');
-            }
-
-        } catch (Exception $e) {
-            logStep("Erro ao alternar contexto: " . $e->getMessage(), 'warning');
-        }
     }
 
     // ===============================================

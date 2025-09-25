@@ -11,29 +11,25 @@ use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Core\Events\EventDispatcherInterface;
 use Clubify\Checkout\ClubifyCheckoutSDK;
-use Clubify\Checkout\Modules\UserManagement\Services\UserService;
-use Clubify\Checkout\Modules\UserManagement\Services\AuthService;
-use Clubify\Checkout\Modules\UserManagement\Services\PasskeyService;
 use Clubify\Checkout\Modules\UserManagement\Services\DomainService;
-use Clubify\Checkout\Modules\UserManagement\Repositories\ApiUserRepository;
 use Clubify\Checkout\Modules\UserManagement\Repositories\ApiDomainRepository;
 
 /**
- * Factory para criação de Services do UserManagement
+ * Factory para criação de DomainService
  *
- * Implementa o Factory Pattern para criar e gerenciar instâncias de services
- * específicos do módulo UserManagement com suas dependências.
+ * Implementa o Factory Pattern para criar e gerenciar instâncias do DomainService
+ * com todas as suas dependências necessárias.
  * Segue os princípios SOLID:
- * - S: Single Responsibility - Cria apenas services do UserManagement
- * - O: Open/Closed - Extensível para novos tipos de service
+ * - S: Single Responsibility - Cria apenas DomainService
+ * - O: Open/Closed - Extensível para novos tipos
  * - L: Liskov Substitution - Pode ser substituída
  * - I: Interface Segregation - Implementa interface específica
  * - D: Dependency Inversion - Depende de abstrações
  */
-class UserServiceFactory implements FactoryInterface
+class DomainServiceFactory implements FactoryInterface
 {
     /**
-     * Cache de services já criados (singleton per type)
+     * Cache de services já criados (singleton)
      */
     private array $services = [];
 
@@ -43,12 +39,12 @@ class UserServiceFactory implements FactoryInterface
     private array $repositories = [];
 
     public function __construct(
+        private ClubifyCheckoutSDK $sdk,
         private Configuration $config,
         private Logger $logger,
         private Client $httpClient,
         private CacheManagerInterface $cache,
-        private EventDispatcherInterface $eventDispatcher,
-        private ?ClubifyCheckoutSDK $sdk = null
+        private EventDispatcherInterface $eventDispatcher
     ) {
     }
 
@@ -66,31 +62,16 @@ class UserServiceFactory implements FactoryInterface
             return $this->services[$type];
         }
 
-        $this->logger->debug('Creating UserManagement service', [
+        $this->logger->debug('Creating Domain service', [
             'type' => $type,
             'config' => $config
         ]);
 
         switch ($type) {
-            case 'user':
-                $repository = $this->createRepository('user');
-                $this->services[$type] = new UserService($repository, $this->logger);
-                break;
-
-            case 'auth':
-                $repository = $this->createRepository('auth');
-                $this->services[$type] = new AuthService($repository, $this->logger);
-                break;
-
-            case 'passkey':
-                $repository = $this->createRepository('passkey');
-                $this->services[$type] = new PasskeyService($repository, $this->logger);
-                break;
-
             case 'domain':
                 $repository = $this->createRepository('domain');
                 $this->services[$type] = new DomainService(
-                    $this->sdk ?: throw new \InvalidArgumentException('SDK is required for domain service'),
+                    $this->sdk,
                     $this->config,
                     $this->logger,
                     $repository
@@ -104,7 +85,7 @@ class UserServiceFactory implements FactoryInterface
                 );
         }
 
-        $this->logger->info('UserManagement service created successfully', [
+        $this->logger->info('Domain service created successfully', [
             'type' => $type,
             'class' => get_class($this->services[$type])
         ]);
@@ -119,7 +100,7 @@ class UserServiceFactory implements FactoryInterface
      */
     public function getSupportedTypes(): array
     {
-        return ['user', 'auth', 'passkey', 'domain', 'tenant', 'role', 'session'];
+        return ['domain'];
     }
 
     /**
@@ -140,7 +121,7 @@ class UserServiceFactory implements FactoryInterface
     {
         $this->services = [];
         $this->repositories = [];
-        $this->logger->info('UserServiceFactory cache cleared');
+        $this->logger->info('DomainServiceFactory cache cleared');
     }
 
     /**
@@ -201,21 +182,8 @@ class UserServiceFactory implements FactoryInterface
     private function resolveRepositoryClass(string $type): string
     {
         $repositoryMapping = [
-            'user' => ApiUserRepository::class,
             'domain' => ApiDomainRepository::class,
-            // 'auth' => ApiAuthRepository::class,          // TODO: Implementar na próxima fase
-            // 'passkey' => ApiPasskeyRepository::class,    // TODO: Implementar na próxima fase
-            // 'tenant' => ApiTenantRepository::class,      // TODO: Implementar na próxima fase
-            // 'role' => ApiRoleRepository::class,          // TODO: Implementar na próxima fase
-            // 'session' => ApiSessionRepository::class,   // TODO: Implementar na próxima fase
         ];
-
-        // Para esta fase, user e domain repositories estão implementados
-        if (!in_array($type, ['user', 'domain'])) {
-            throw new \InvalidArgumentException(
-                "Repository type '{$type}' is not yet implemented. Currently 'user' and 'domain' are available."
-            );
-        }
 
         if (!isset($repositoryMapping[$type])) {
             throw new \InvalidArgumentException(

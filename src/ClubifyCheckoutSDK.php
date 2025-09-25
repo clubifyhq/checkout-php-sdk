@@ -972,7 +972,8 @@ class ClubifyCheckoutSDK
             $this->getLogger(),
             $this->getHttpClient(),
             $this->getCache(),
-            $this->getEventDispatcher()
+            $this->getEventDispatcher(),
+            $this
         );
     }
 

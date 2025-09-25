@@ -10,6 +10,7 @@ use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Modules\UserManagement\Factories\UserServiceFactory;
 use Clubify\Checkout\Modules\UserManagement\Services\UserService;
+use Clubify\Checkout\Modules\UserManagement\Services\DomainService;
 
 /**
  * Módulo de gestão de usuários refatorado
@@ -38,6 +39,7 @@ class UserManagementModule implements ModuleInterface
 
     // Services (lazy loading)
     private ?UserService $userService = null;
+    private ?DomainService $domainService = null;
 
     public function __construct(
         private ClubifyCheckoutSDK $sdk
@@ -114,6 +116,7 @@ class UserManagementModule implements ModuleInterface
             'available' => $this->isAvailable(),
             'services_loaded' => [
                 'user' => $this->userService !== null,
+                'domain' => $this->domainService !== null,
             ],
             'factory_loaded' => $this->factory !== null,
             'timestamp' => time()
@@ -126,6 +129,7 @@ class UserManagementModule implements ModuleInterface
     public function cleanup(): void
     {
         $this->userService = null;
+        $this->domainService = null;
         $this->factory = null;
         $this->initialized = false;
         $this->logger?->info('User Management module cleaned up');
@@ -138,7 +142,8 @@ class UserManagementModule implements ModuleInterface
     {
         try {
             return $this->initialized &&
-                   ($this->userService === null || $this->userService->isHealthy());
+                   ($this->userService === null || $this->userService->isHealthy()) &&
+                   ($this->domainService === null || $this->domainService->isHealthy());
         } catch (\Exception $e) {
             $this->logger?->error('UserManagementModule health check failed', [
                 'error' => $e->getMessage()
@@ -159,6 +164,7 @@ class UserManagementModule implements ModuleInterface
             'healthy' => $this->isHealthy(),
             'services' => [
                 'user' => $this->userService?->getMetrics(),
+                'domain' => $this->domainService?->getMetrics(),
             ],
             'factory_stats' => $this->factory?->getStats(),
             'timestamp' => time()
@@ -302,6 +308,75 @@ class UserManagementModule implements ModuleInterface
     }
 
 
+
+    /**
+     * Obtém o DomainService (lazy loading) - método público para injeção
+     */
+    public function getDomainService(): DomainService
+    {
+        if ($this->domainService === null) {
+            $this->domainService = $this->getFactory()->create('domain');
+        }
+        return $this->domainService;
+    }
+
+
+
+    // === DOMAIN MANAGEMENT METHODS ===
+
+    /**
+     * Configura um novo domínio para um tenant
+     */
+    public function configureDomain(string $tenantId, array $domainData): array
+    {
+        $this->requireInitialized();
+        return $this->getDomainService()->configureDomain($tenantId, $domainData);
+    }
+
+    /**
+     * Verifica um domínio
+     */
+    public function verifyDomain(string $domainId): array
+    {
+        $this->requireInitialized();
+        return $this->getDomainService()->verifyDomain($domainId);
+    }
+
+    /**
+     * Lista domínios de um tenant
+     */
+    public function getTenantDomains(string $tenantId, array $filters = []): array
+    {
+        $this->requireInitialized();
+        return $this->getDomainService()->getTenantDomains($tenantId, $filters);
+    }
+
+    /**
+     * Remove um domínio
+     */
+    public function removeDomain(string $domainId): array
+    {
+        $this->requireInitialized();
+        return $this->getDomainService()->removeDomain($domainId);
+    }
+
+    /**
+     * Atualiza configurações SSL de um domínio
+     */
+    public function updateSslConfig(string $domainId, array $sslConfig): array
+    {
+        $this->requireInitialized();
+        return $this->getDomainService()->updateSslConfig($domainId, $sslConfig);
+    }
+
+    /**
+     * Obtém estatísticas de domínios de um tenant
+     */
+    public function getDomainStats(string $tenantId): array
+    {
+        $this->requireInitialized();
+        return $this->getDomainService()->getDomainStats($tenantId);
+    }
 
     /**
      * Verifica se o módulo está inicializado antes de executar operações

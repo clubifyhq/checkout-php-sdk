@@ -16,6 +16,7 @@ use Clubify\Checkout\Modules\UserManagement\Services\UserService;
 use Clubify\Checkout\Modules\Organization\Services\ApiKeyService;
 use Clubify\Checkout\Modules\Organization\Services\TenantService as OrganizationTenantService;
 use Clubify\Checkout\Exceptions\SDKException;
+use Clubify\Checkout\Exceptions\HttpException;
 use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
@@ -724,13 +725,15 @@ class SuperAdminModule implements ModuleInterface
 
             // Se ainda não conseguiu extrair a API key, tentar buscar a recém-criada
             if (!$apiKey) {
-                $this->logger->warn('Failed to extract API key from creation response, attempting fallback retrieval', [
+                $this->logger->warning('Failed to extract API key from creation response, attempting fallback retrieval', [
                     'tenant_id' => $tenantId,
                     'response_structure' => json_encode($apiKeyResult, JSON_PRETTY_PRINT)
                 ]);
 
-                // Fallback: buscar a API key recém-criada
-                $fallbackApiKey = $this->retrieveLatestApiKey($tenantId);
+                // Fallback: tentar obter API key de outras propriedades da resposta
+                $fallbackApiKey = $apiKeyResult['api_key'] ??
+                                 $apiKeyResult['key'] ??
+                                 $apiKeyResult['token'] ?? null;
                 if ($fallbackApiKey['exists']) {
                     $apiKey = $fallbackApiKey['api_key'];
                     $apiKeyId = $fallbackApiKey['api_key_id'];
@@ -794,15 +797,13 @@ class SuperAdminModule implements ModuleInterface
     private function checkExistingApiKey(string $tenantId): array
     {
         try {
-            $response = $this->makeHttpRequest('GET', 'api-keys', [
+            $result = $this->makeHttpRequest('GET', 'api-keys', [
                 'headers' => [
                     'X-Tenant-Id' => $tenantId
                 ]
             ]);
 
-            $statusCode = $response->getStatusCode();
-            if ($statusCode >= 200 && $statusCode < 300) {
-                $result = json_decode($response->getBody()->getContents(), true);
+            if ($result) {
                 $apiKeys = $result['data'] ?? $result['api_keys'] ?? $result;
 
                 if (is_array($apiKeys) && count($apiKeys) > 0) {
@@ -891,18 +892,15 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->makeHttpRequest('PUT', "tenants/{$tenantId}/suspend", [
+            $result = $this->makeHttpRequest('PUT', "tenants/{$tenantId}/suspend", [
                 'json' => [
                     'reason' => $reason
                 ]
             ]);
 
-            $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 300) {
+            if (!$result) {
                 throw new SDKException('Failed to suspend tenant');
             }
-
-            $result = json_decode($response->getBody()->getContents(), true);
 
             $this->logger->info('Tenant suspended successfully', [
                 'tenant_id' => $tenantId,
@@ -929,14 +927,7 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
-            $response = $this->makeHttpRequest('PUT', "tenants/{$tenantId}/activate");
-
-            $statusCode = $response->getStatusCode();
-            if ($statusCode < 200 || $statusCode >= 300) {
-                throw new SDKException('Failed to reactivate tenant');
-            }
-
-            $result = json_decode($response->getBody()->getContents(), true);
+            $result = $this->makeHttpRequest('PUT', "tenants/{$tenantId}/activate");
 
             $this->logger->info('Tenant reactivated successfully', [
                 'tenant_id' => $tenantId
@@ -1224,11 +1215,7 @@ class SuperAdminModule implements ModuleInterface
 
         try {
             // Primeiro tentar obter informações detalhadas do tenant
-            $tenantResponse = $this->makeHttpRequest('GET', "tenants/{$tenantId}");
-            $tenantStatusCode = $tenantResponse->getStatusCode();
-
-            if ($tenantStatusCode >= 200 && $tenantStatusCode < 300) {
-                $tenantResult = json_decode($tenantResponse->getBody()->getContents(), true);
+            $tenantResult = $this->makeHttpRequest('GET', "tenants/{$tenantId}");
                 $tenantData = $tenantResult['data'] ?? $tenantResult;
 
                 // Verificar se já tem API key nos dados do tenant
@@ -1239,7 +1226,6 @@ class SuperAdminModule implements ModuleInterface
                         'message' => 'Tenant has API key available'
                     ];
                 }
-            }
 
             return [
                 'has_credentials' => false,

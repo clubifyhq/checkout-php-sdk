@@ -64,7 +64,7 @@ class SetupSuperAdminEnv extends Command
             'SUPER_ADMIN_JWT_REFRESH_TTL' => '604800',
             'SUPER_ADMIN_JWT_BLACKLIST_ENABLED' => 'true',
             'SUPER_ADMIN_JWT_BLACKLIST_GRACE_PERIOD' => '30',
-            'SUPER_ADMIN_API_PREFIX' => 'api/super-admin',
+            'SUPER_ADMIN_API_PREFIX' => '',
             'SUPER_ADMIN_API_MIDDLEWARE' => 'api,auth.super_admin',
             'SUPER_ADMIN_API_RATE_LIMIT' => '100',
             'SUPER_ADMIN_API_RATE_LIMIT_PERIOD' => '60',

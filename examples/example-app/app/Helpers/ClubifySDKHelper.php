@@ -443,7 +443,7 @@ class ClubifySDKHelper
                 'super_admin_mode' => true,
             ]),
             'base_url' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_API_URL', $baseConfig['base_url']),
-            'super_admin_prefix' => '/super-admin',
+            'super_admin_prefix' => '',
 
             'http' => array_merge($baseConfig['http'], [
                 'timeout' => 60, // Longer timeout for admin operations

@@ -848,47 +848,8 @@ try {
                 }
 
             } else {
-                // Fallback para método manual se o automatizado não estiver disponível
-                logStep("Método automatizado não disponível, usando abordagem legacy...", 'warning');
-
-                if (method_exists($sdk->superAdmin(), 'getTenantCredentials')) {
-                    $credentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
-
-                    if ($credentials) {
-                        logStep("Credenciais obtidas com sucesso (método legacy)", 'success');
-                        $keyAge = $credentials['key_age_days'] ?? 'N/A';
-
-                        // Verificar se precisa rotacionar
-                        if (is_numeric($keyAge) && $keyAge > 90) {
-                            logStep("API Key antiga detectada ({$keyAge} dias)", 'warning');
-
-                            if (method_exists($sdk->superAdmin(), 'rotateApiKey') &&
-                                config('app.example_enable_key_rotation', false)) {
-
-                                logStep("Rotacionando chave antiga...", 'info');
-
-                                $rotationResult = $sdk->superAdmin()->rotateApiKey($credentials['api_key_id'], [
-                                    'gracePeriodHours' => 24,
-                                    'forceRotation' => false
-                                ]);
-
-                                if ($rotationResult['success'] ?? false) {
-                                    logStep("API Key rotacionada com sucesso! 🔄", 'success');
-                                } else {
-                                    logStep("Falha na rotação da API Key", 'error');
-                                }
-                            } else {
-                                logStep("Rotação automática desabilitada ou método não disponível", 'warning');
-                            }
-                        } else {
-                            logStep("API Key válida (idade: {$keyAge} dias)", 'success');
-                        }
-                    } else {
-                        logStep("Nenhuma credencial encontrada para o tenant", 'warning');
-                    }
-                } else {
                     logStep("Método getTenantCredentials não disponível no SDK", 'error');
-                }
+                
             }
         }
 

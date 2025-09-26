@@ -67,65 +67,92 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
      */
     public function findByDomain(string $domain): ?array
     {
-        // Extrair domínio raiz se contém subdomínio (para consistência com criação)
-        $rootDomain = $domain;
-        if (preg_match('/^[^.]+\.(.+)$/', $domain, $matches)) {
-            $rootDomain = $matches[1];
-        }
-
+        // Busca em cascata: primeiro domínio completo, depois domínio raiz
         return $this->getCachedOrExecute(
             $this->getCacheKey("tenant:domain:{$domain}"),
-            function () use ($domain, $rootDomain) {
-                try {
-                    $this->logger->debug('ApiTenantRepository: Making HTTP request', [
-                        'original_domain' => $domain,
-                        'root_domain' => $rootDomain,
-                        'endpoint' => "tenants/domain/{$rootDomain}"
-                    ]);
-
-                    $data = $this->makeHttpRequest('GET', "tenants/domain/{$rootDomain}");
-
-                    $this->logger->debug('ApiTenantRepository: HTTP response received', [
-                        'original_domain' => $domain,
-                        'root_domain' => $rootDomain,
-                        'response_keys' => array_keys($data),
-                        'success' => $data['success'] ?? 'not_set',
-                        'has_data' => isset($data['data']) ? 'yes' : 'no',
-                        'has_tenant' => isset($data['tenant']) ? 'yes' : 'no'
-                    ]);
-
-                    // Verificar se a resposta indica sucesso
-                    if (isset($data['success']) && $data['success'] === false) {
-                        // API retornou "not found" estruturado - retornar null
-                        $this->logger->debug('ApiTenantRepository: API returned structured "not found"', [
-                            'original_domain' => $domain,
-                            'root_domain' => $rootDomain,
-                            'api_message' => $data['message'] ?? 'N/A'
-                        ]);
-                        return null;
-                    }
-
-                    // Priorizar 'data' depois 'tenant' para respostas de sucesso
-                    if (isset($data['data'])) {
-                        return $data['data'];
-                    } elseif (isset($data['tenant'])) {
-                        return $data['tenant'];
-                    } else {
-                        return $data;
-                    }
-                } catch (HttpException $e) {
-                    if ($e->getStatusCode() === 404) {
-                        $this->logger->debug('ApiTenantRepository: Tenant not found (404)', [
-                            'original_domain' => $domain,
-                            'root_domain' => $rootDomain
-                        ]);
-                        return null;
-                    }
-                    throw $e;
+            function () use ($domain) {
+                // 1. Tentar primeiro com domínio completo
+                $result = $this->tryFindByExactDomain($domain);
+                if ($result !== null) {
+                    return $result;
                 }
+
+                // 2. Se não encontrou, tentar com domínio raiz (para compatibilidade)
+                $rootDomain = $this->extractRootDomain($domain);
+                if ($rootDomain !== $domain) {
+                    $this->logger->debug('ApiTenantRepository: Fallback to root domain', [
+                        'original_domain' => $domain,
+                        'root_domain' => $rootDomain
+                    ]);
+
+                    return $this->tryFindByExactDomain($rootDomain);
+                }
+
+                return null;
             },
-            300 // 5 minutes cache
+            300
         );
+    }
+
+    /**
+     * Tenta buscar tenant por domínio específico
+     */
+    private function tryFindByExactDomain(string $domain): ?array
+    {
+        try {
+            $this->logger->debug('ApiTenantRepository: Making HTTP request', [
+                'domain' => $domain,
+                'endpoint' => "tenants/domain/{$domain}"
+            ]);
+
+            $data = $this->makeHttpRequest('GET', "tenants/domain/{$domain}");
+
+            $this->logger->debug('ApiTenantRepository: HTTP response received', [
+                'domain' => $domain,
+                'response_keys' => array_keys($data),
+                'success' => $data['success'] ?? 'not_set',
+                'has_data' => isset($data['data']) ? 'yes' : 'no',
+                'has_tenant' => isset($data['tenant']) ? 'yes' : 'no'
+            ]);
+
+            // Verificar se a resposta indica sucesso
+            if (isset($data['success']) && $data['success'] === false) {
+                // API retornou "not found" estruturado - retornar null
+                $this->logger->debug('ApiTenantRepository: API returned structured "not found"', [
+                    'domain' => $domain,
+                    'api_message' => $data['message'] ?? 'N/A'
+                ]);
+                return null;
+            }
+
+            // Priorizar 'data' depois 'tenant' para respostas de sucesso
+            if (isset($data['data'])) {
+                return $data['data'];
+            } elseif (isset($data['tenant'])) {
+                return $data['tenant'];
+            } else {
+                return $data;
+            }
+        } catch (HttpException $e) {
+            if ($e->getStatusCode() === 404) {
+                $this->logger->debug('ApiTenantRepository: Tenant not found (404)', [
+                    'domain' => $domain
+                ]);
+                return null;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Extrai o domínio raiz de um domínio completo
+     */
+    private function extractRootDomain(string $domain): string
+    {
+        if (preg_match('/^[^.]+\.(.+)$/', $domain, $matches)) {
+            return $matches[1];
+        }
+        return $domain;
     }
 
     /**

@@ -441,13 +441,8 @@ class TenantService
 
         // Mapear domínio principal (custom_domain -> domain)
         if (isset($organizationData['custom_domain'])) {
-            // Extrair o domínio raiz se contém subdomínio (ex: checkout.example.com -> example.com)
-            $domain = $organizationData['custom_domain'];
-            if (preg_match('/^[^.]+\.(.+)$/', $domain, $matches)) {
-                $tenantData['domain'] = $matches[1];
-            } else {
-                $tenantData['domain'] = $domain;
-            }
+            // Usar o domínio completo incluindo subdominios
+            $tenantData['domain'] = $organizationData['custom_domain'];
         }
 
         // Mapear subdomínio

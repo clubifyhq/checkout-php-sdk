@@ -182,29 +182,7 @@ function getOrCreateOrganization($sdk, $organizationData): array
                     $tenantId = null;
                 }
             }
-            // Estrutura antiga (retrocompatibilidade)
-            elseif (isset($existingTenant['data'])) {
-                $tenantData = $existingTenant['data'];
-                if (isset($tenantData['_id'])) {
-                    $tenantId = is_object($tenantData['_id']) ? (string)$tenantData['_id'] : $tenantData['_id'];
-                } elseif (isset($tenantData['id'])) {
-                    $tenantId = $tenantData['id'];
-                } else {
-                    $tenantId = null;
-                }
-            }
-            // Estrutura direta
-            else {
-                $tenantData = $existingTenant;
-                if (isset($existingTenant['_id'])) {
-                    $tenantId = is_object($existingTenant['_id']) ? (string)$existingTenant['_id'] : $existingTenant['_id'];
-                } elseif (isset($existingTenant['id'])) {
-                    $tenantId = $existingTenant['id'];
-                } else {
-                    $tenantId = null;
-                }
-            }
-
+            
             // Debug log para verificar o que estamos extraindo
             logStep("Debug - Tenant ID extraído: " . ($tenantId ?? 'NULL') . " do campo: " .
                 (isset($tenantData['_id']) ? '_id' :
@@ -802,6 +780,51 @@ try {
 
         logStep("Tenant ID: " . $tenantId, 'info');
 
+
+
+
+
+    // Sub-seção: Gestão de Credenciais Avançada
+    try {
+        if (method_exists($sdk->superAdmin(), 'getTenantCredentials')) {
+            if ($tenantId && $tenantId !== 'unknown') {
+                $credentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
+
+                if ($credentials) {
+                    logStep("Credenciais obtidas com sucesso", 'success');
+                $keyAge = $credentials['key_age_days'] ?? 'N/A';
+
+                // Verificar se precisa rotacionar
+                if (is_numeric($keyAge) && $keyAge > 90) {
+                    logStep("API Key antiga detectada ($keyAge dias)", 'warning');
+
+                    if (method_exists($sdk->superAdmin(), 'rotateApiKey') &&
+                        config('app.example_enable_key_rotation', false)) {
+
+                        $rotationResult = $sdk->superAdmin()->rotateApiKey($credentials['api_key_id'], [
+                            'gracePeriodHours' => 24,
+                            'forceRotation' => false
+                        ]);
+
+                        if ($rotationResult['success']) {
+                            logStep("API Key rotacionada com sucesso!", 'success');
+                        }
+                    }
+                }
+                } // Fecha o if ($credentials)
+            } else {
+                logStep("Tenant ID inválido ou não encontrado, pulando gestão de credenciais", 'warning');
+            }
+        }
+
+    } catch (Exception $e) {
+        logStep("Erro na gestão de credenciais: " . $e->getMessage(), 'warning');
+    }
+
+exit(1);
+
+
+
         // ===============================================
         // 3. PROVISIONAMENTO DE CREDENCIAIS
         // ===============================================
@@ -832,9 +855,7 @@ try {
     } catch (Exception $e) {
         logStep("Erro na operação de organização: " . $e->getMessage(), 'error');
     }
-
-
-
+    
     // ===============================================
     // 4. ALTERNÂNCIA PARA CONTEXTO DO TENANT
     // ===============================================
@@ -901,44 +922,6 @@ try {
     // 5. LISTAGEM DE TENANTS
     // ===============================================
 
-
-
-    // Sub-seção: Gestão de Credenciais Avançada
-    try {
-        if (method_exists($sdk->superAdmin(), 'getTenantCredentials')) {
-            if ($tenantId && $tenantId !== 'unknown') {
-                $credentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
-
-                if ($credentials) {
-                    logStep("Credenciais obtidas com sucesso", 'success');
-                $keyAge = $credentials['key_age_days'] ?? 'N/A';
-
-                // Verificar se precisa rotacionar
-                if (is_numeric($keyAge) && $keyAge > 90) {
-                    logStep("API Key antiga detectada ($keyAge dias)", 'warning');
-
-                    if (method_exists($sdk->superAdmin(), 'rotateApiKey') &&
-                        config('app.example_enable_key_rotation', false)) {
-
-                        $rotationResult = $sdk->superAdmin()->rotateApiKey($credentials['api_key_id'], [
-                            'gracePeriodHours' => 24,
-                            'forceRotation' => false
-                        ]);
-
-                        if ($rotationResult['success']) {
-                            logStep("API Key rotacionada com sucesso!", 'success');
-                        }
-                    }
-                }
-                } // Fecha o if ($credentials)
-            } else {
-                logStep("Tenant ID inválido ou não encontrado, pulando gestão de credenciais", 'warning');
-            }
-        }
-
-    } catch (Exception $e) {
-        logStep("Erro na gestão de credenciais: " . $e->getMessage(), 'warning');
-    }
 
     // Sub-seção: Estatísticas do Sistema
     try {

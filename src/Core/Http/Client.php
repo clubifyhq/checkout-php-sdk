@@ -181,7 +181,7 @@ class Client
     {
         return new GuzzleClient([
             'base_uri' => rtrim($this->config->getBaseUrl(), '/') . '/',
-            'timeout' => $this->config->getTimeout() / 1000, // Guzzle espera segundos
+            'timeout' => $this->config->getTimeout(), // Guzzle espera segundos
             'connect_timeout' => $this->config->getHttpConfig()['connect_timeout'] ?? 10,
             'verify' => $this->config->getHttpConfig()['verify_ssl'] ?? true,
             'headers' => $this->config->getDefaultHeaders(),

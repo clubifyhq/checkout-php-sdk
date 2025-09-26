@@ -8,6 +8,15 @@
         "framework"
     ],
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../../",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
     "require": {
         "php": "^8.2",
         "clubify/checkout-sdk-php": "*@dev",
@@ -30,8 +39,7 @@
         "psr-4": {
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
-            "Database\\Seeders\\": "database/seeders/",
-            "Clubify\\Checkout\\": "../../src/"
+            "Database\\Seeders\\": "database/seeders/"
         }
     },
     "autoload-dev": {

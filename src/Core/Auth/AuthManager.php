@@ -985,10 +985,10 @@ class AuthManager implements AuthManagerInterface
     private function authenticateWithSuperAdminCredentials(array $credentials): bool
     {
         // Para super admin, priorizar email/senha sobre API key
-        if (isset($credentials['email']) && isset($credentials['password'])) {
+        if (isset($credentials['username']) && isset($credentials['password'])) {
             try {
                 $loginData = [
-                    'email' => $credentials['email'],
+                    'username' => $credentials['username'],
                     'password' => $credentials['password'],
                     'rememberMe' => true
                 ];

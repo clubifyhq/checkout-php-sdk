@@ -115,10 +115,10 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
         $this->app->singleton(CacheManagerInterface::class, function (Container $app): CacheManager {
             try {
                 $config = $app[ConfigurationInterface::class];
-                return new CacheManager($config->getCacheConfig());
+                return new \Clubify\Checkout\Core\Cache\CacheManager($config->getCacheConfig());
             } catch (\Throwable $e) {
                 // Fallback se houver problema na configuração
-                return new CacheManager([]);
+                return new \Clubify\Checkout\Core\Cache\CacheManager([]);
             }
         });
 
@@ -140,7 +140,7 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
                 return new TokenStorage($cache);
             } catch (\Throwable $e) {
                 // Fallback sem cache se necessário
-                return new TokenStorage(new CacheManager([]));
+                return new TokenStorage(new \Clubify\Checkout\Core\Cache\CacheManager([]));
             }
         });
 
@@ -185,7 +185,7 @@ final class ClubifyCheckoutServiceProvider extends ServiceProvider
                 return new AuthManager(
                     new Client($fallbackConfig, new Logger($fallbackConfig)),
                     $fallbackConfig,
-                    new TokenStorage(new CacheManager([]))
+                    new TokenStorage(new \Clubify\Checkout\Core\Cache\CacheManager([]))
                 );
             }
         });

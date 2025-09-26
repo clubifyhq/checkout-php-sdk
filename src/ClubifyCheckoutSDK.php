@@ -840,7 +840,7 @@ class ClubifyCheckoutSDK
         }
 
         if ($this->cache === null) {
-            $this->cache = new CacheManager($this->config);
+            $this->cache = new \Clubify\Checkout\Core\Cache\CacheManager($this->config);
         }
     }
 
@@ -914,7 +914,7 @@ class ClubifyCheckoutSDK
     private function getCache(): CacheManager
     {
         if ($this->cache === null) {
-            $this->cache = new CacheManager($this->config);
+            $this->cache = new \Clubify\Checkout\Core\Cache\CacheManager($this->config);
         }
         return $this->cache;
     }

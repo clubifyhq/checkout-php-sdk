@@ -130,6 +130,21 @@
         ],
         "post-autoload-dump": [
             "echo 'Autoload generated successfully'"
+        ],
+        "post-install-cmd": [
+            "@clubify:setup"
+        ],
+        "post-update-cmd": [
+            "@clubify:setup"
+        ],
+        "clubify:setup": [
+            "php scripts/post-install-setup.php"
+        ],
+        "clubify:config": [
+            "php scripts/setup-credentials-config.php"
+        ],
+        "clubify:env": [
+            "php scripts/generate-env-config.php"
         ]
     },
     "scripts-descriptions": {
@@ -144,6 +159,9 @@
         "cs-fix": "Fix code style issues",
         "cs-check": "Check code style without fixing",
         "quality": "Run all quality checks",
-        "check": "Alias for quality checks"
+        "check": "Alias for quality checks",
+        "clubify:setup": "Run post-installation setup for Clubify SDK",
+        "clubify:config": "Setup credentials configuration files",
+        "clubify:env": "Generate environment configuration template"
     }
 }

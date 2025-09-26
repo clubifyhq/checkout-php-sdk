@@ -765,32 +765,76 @@ class ClubifyCheckoutSDK
      */
     private function validateMinimalConfig(array $config): void
     {
-        $requiredFields = ['credentials'];
-
-        foreach ($requiredFields as $field) {
-            if (!isset($config[$field])) {
-                throw new ConfigurationException(
-                    "Missing required configuration field: {$field}",
-                    0,
-                    null,
-                    ['field' => $field, 'config' => array_keys($config)]
-                );
-            }
+        // Para uso com super-admin, credentials pode estar vazio inicialmente
+        // O super-admin se autentica com email/password e cria credenciais dinamicamente
+        if (!isset($config['credentials'])) {
+            // Permitir configuração sem credentials para super-admin workflow
+            return;
         }
 
         $credentials = $config['credentials'];
-        $requiredCredentials = ['tenant_id', 'api_key'];
 
-        foreach ($requiredCredentials as $field) {
-            if (!isset($credentials[$field]) || empty($credentials[$field])) {
+        // Se credentials está vazio, permitir (será usado super-admin email/password)
+        if (empty($credentials)) {
+            return;
+        }
+
+        // Verificar se é configuração para super admin ou tenant
+        $hasApiKey = isset($credentials['api_key']) && !empty($credentials['api_key']);
+        $hasTenantId = isset($credentials['tenant_id']) && !empty($credentials['tenant_id']);
+        $hasEmailPassword = (isset($credentials['email']) && !empty($credentials['email'])) ||
+                           (isset($credentials['password']) && !empty($credentials['password']));
+
+        // Se tem credenciais, validar baseado no tipo
+        if ($hasApiKey || $hasTenantId) {
+            // Fluxo tradicional com API key - validar normalmente
+            if (!$hasApiKey) {
                 throw new ConfigurationException(
-                    "Missing required credential: {$field}",
+                    "Missing required credential: api_key",
                     0,
                     null,
-                    ['field' => $field, 'credentials' => array_keys($credentials)]
+                    ['field' => 'api_key', 'credentials' => array_keys($credentials)]
+                );
+            }
+
+            // Para single tenant, exigir tenant_id
+            if (!$hasTenantId && !$this->detectSuperAdminConfig($credentials)) {
+                throw new ConfigurationException(
+                    "Missing required credential: tenant_id",
+                    0,
+                    null,
+                    ['field' => 'tenant_id', 'credentials' => array_keys($credentials)]
                 );
             }
         }
+        // Se tem email/password, é fluxo super-admin - não validar mais nada
+        // Se não tem nada, também permitir (será configurado depois)
+    }
+
+    /**
+     * Detectar se a configuração é para super admin
+     */
+    private function detectSuperAdminConfig(array $credentials): bool
+    {
+        // Se tem api_key mas não tem tenant_id, pode ser super admin
+        $hasApiKey = isset($credentials['api_key']) && !empty($credentials['api_key']);
+        $hasTenantId = isset($credentials['tenant_id']) && !empty($credentials['tenant_id']);
+
+        // Se tem role super_admin explícito
+        if (isset($credentials['role']) && $credentials['role'] === 'super_admin') {
+            return true;
+        }
+
+        // Se a API key começa com super_admin_ ou sk_super_
+        if ($hasApiKey && (
+            strpos($credentials['api_key'], 'super_admin_') === 0 ||
+            strpos($credentials['api_key'], 'sk_super_') === 0
+        )) {
+            return true;
+        }
+
+        // Se tem api_key mas não tem tenant_id, assumir super admin por compatibilidade
+        return $hasApiKey && !$hasTenantId;
     }
 
     /**

@@ -59,7 +59,16 @@ class Configuration implements ConfigurationInterface
 
     public function getTenantId(): ?string
     {
-        return $this->get('credentials.tenant_id');
+        // Primeiro tentar credenciais padrão
+        $tenantId = $this->get('credentials.tenant_id');
+
+        // Se não encontrou e há configuração super_admin, usar tenant_id do super_admin
+        if (empty($tenantId)) {
+            $tenantId = $this->get('super_admin.tenant_id');
+        }
+
+        // Retornar null se for string vazia
+        return empty($tenantId) ? null : $tenantId;
     }
 
     public function getApiKey(): ?string
@@ -313,15 +322,15 @@ class Configuration implements ConfigurationInterface
             throw new ConfigurationException('Retry attempts must be >= 0');
         }
 
-        // Validar tenant_id se fornecido
+        // Validar tenant_id se fornecido (tratar string vazia como null)
         $tenantId = $this->getTenantId();
-        if ($tenantId !== null && (empty($tenantId) || !is_string($tenantId))) {
+        if ($tenantId !== null && $tenantId !== '' && (!is_string($tenantId) || empty($tenantId))) {
             throw new ConfigurationException('Tenant ID must be a non-empty string');
         }
 
-        // Validar api_key se fornecido
+        // Validar api_key se fornecido (tratar string vazia como null)
         $apiKey = $this->getApiKey();
-        if ($apiKey !== null && (empty($apiKey) || !is_string($apiKey))) {
+        if ($apiKey !== null && $apiKey !== '' && (!is_string($apiKey) || empty($apiKey))) {
             throw new ConfigurationException('API Key must be a non-empty string');
         }
     }

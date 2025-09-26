@@ -1419,6 +1419,314 @@ class SuperAdminModule implements ModuleInterface
     }
 
     /**
+     * Gestão automatizada de credenciais para tenant
+     *
+     * Busca credenciais existentes e cria automaticamente se não existir.
+     * Retorna sempre uma chave válida com role tenant_admin.
+     */
+    public function ensureTenantCredentials(string $tenantId, array $options = []): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $this->logger->info('Starting automated tenant credentials management', [
+                'tenant_id' => $tenantId,
+                'options' => array_keys($options)
+            ]);
+
+            // 1. Buscar credenciais existentes
+            $existingCredentials = $this->getTenantApiCredentials($tenantId);
+
+            if ($existingCredentials) {
+                $this->logger->info('Existing tenant credentials found', [
+                    'tenant_id' => $tenantId,
+                    'key_id' => $existingCredentials['api_key_id'] ?? 'N/A',
+                    'age_days' => $existingCredentials['key_age_days'] ?? 'N/A'
+                ]);
+
+                // Verificar se precisa rotacionar
+                $maxAge = $options['max_key_age_days'] ?? 90;
+                $keyAge = $existingCredentials['key_age_days'] ?? 0;
+
+                if (is_numeric($keyAge) && $keyAge > $maxAge && ($options['auto_rotate'] ?? false)) {
+                    $this->logger->warning("API key is old ({$keyAge} days), rotating...", [
+                        'tenant_id' => $tenantId,
+                        'max_age' => $maxAge
+                    ]);
+
+                    $rotationResult = $this->rotateApiKey($existingCredentials['api_key_id'], array_merge([
+                        'gracePeriodHours' => 24,
+                        'forceRotation' => false
+                    ], $options));
+
+                    // Adaptar formato de resposta
+                    return array_merge($existingCredentials, [
+                        'api_key' => $rotationResult['new_api_key'] ?? $existingCredentials['api_key'],
+                        'secret_key' => $rotationResult['new_secret_key'] ?? $existingCredentials['secret_key'],
+                        'hash_key' => $rotationResult['new_hash_key'] ?? $existingCredentials['hash_key'],
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'key_age_days' => 0,
+                        'is_rotated' => true
+                    ]);
+                }
+
+                return $existingCredentials;
+            }
+
+            // 2. Criar novas credenciais
+            $this->logger->warning('No tenant credentials found, creating new API key', [
+                'tenant_id' => $tenantId
+            ]);
+
+            return $this->createTenantApiKey($tenantId, $options);
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to ensure tenant credentials', [
+                'tenant_id' => $tenantId,
+                'error' => $e->getMessage()
+            ]);
+
+            throw new SDKException('Failed to ensure tenant credentials: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Busca credenciais existentes do tenant (melhorado)
+     */
+    public function getTenantApiCredentials(string $tenantId): ?array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $this->logger->debug('Searching for tenant API credentials', [
+                'tenant_id' => $tenantId
+            ]);
+
+            // Buscar através da API do user-management-service
+            $response = $this->makeHttpRequest('GET', "api-keys", [
+                'headers' => [
+                    'X-Tenant-Id' => $tenantId
+                ],
+                'query' => [
+                    'limit' => 10 // Buscar mais para filtrar depois
+                ]
+            ]);
+
+            if (!empty($response['api_keys'])) {
+                // Filtrar chaves para encontrar a do tenant específico
+                foreach ($response['api_keys'] as $key) {
+                    // Verificar se é chave do tenant correto (assumindo que há campo tenant_id na resposta)
+                    if (isset($key['tenant_id']) && $key['tenant_id'] === $tenantId) {
+                        return [
+                            'api_key' => $key['key'] ?? null,
+                            'api_key_id' => $key['id'] ?? null,
+                            'secret_key' => $key['secret'] ?? null,
+                            'hash_key' => $key['hash'] ?? null,
+                            'role' => $key['role'] ?? 'tenant_admin',
+                            'permissions' => $key['permissions'] ?? [],
+                            'scopes' => $key['scopes'] ?? [],
+                            'created_at' => $key['created_at'] ?? null,
+                            'key_age_days' => $this->calculateKeyAge($key['created_at'] ?? null),
+                            'status' => $key['status'] ?? 'active'
+                        ];
+                    }
+                }
+            }
+
+            return null;
+
+        } catch (\Exception $e) {
+            $this->logger->warning('Error searching for tenant API credentials', [
+                'tenant_id' => $tenantId,
+                'error' => $e->getMessage()
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Cria nova chave de API para tenant com permissões completas
+     */
+    public function createTenantApiKey(string $tenantId, array $options = []): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $this->logger->info('Creating new tenant API key', [
+                'tenant_id' => $tenantId
+            ]);
+
+            // Configuração seguindo o CreateApiKeyDto do user-management-service
+            $keyConfig = array_merge([
+                'name' => "Tenant Admin Key - " . date('Y-m-d H:i:s'),
+                'description' => 'Auto-generated tenant admin key with full permissions',
+                'environment' => 'test', // Valor válido conforme enum: 'test' | 'live'
+                'allowedOrigins' => $options['allowed_origins'] ?? ['*'],
+                'allowedIps' => !empty($options['ip_whitelist']) ? explode(',', $options['ip_whitelist']) : null,
+                'permissions' => [
+                    'tenants:read',
+                    'tenants:write',
+                    'tenants:delete',
+                    'users:read',
+                    'users:write',
+                    'users:delete',
+                    'orders:read',
+                    'orders:write',
+                    'orders:cancel',
+                    'orders:refund',
+                    'products:read',
+                    'products:write',
+                    'products:delete',
+                    'products:publish',
+                    'payments:process',
+                    'payments:refund',
+                    'payments:view',
+                    'payments:export',
+                    'analytics:view',
+                    'analytics:export',
+                    'analytics:configure',
+                    'webhooks:read',
+                    'webhooks:write',
+                    'webhooks:delete',
+                    'webhooks:test',
+                    'api_keys:read',
+                    'api_keys:write',
+                    'api_keys:rotate',
+                    'settings:read',
+                    'settings:write',
+                    'settings:configure'
+                ],
+                'rateLimiting' => [
+                    'requestsPerMinute' => 1000,
+                    'requestsPerHour' => 50000,
+                    'requestsPerDay' => 1000000
+                ]
+            ], $options['key_config'] ?? []);
+
+            // Criar via API do user-management-service
+            $response = $this->makeHttpRequest('POST', 'api-keys', [
+                'json' => $keyConfig,
+                'headers' => [
+                    'X-Tenant-Id' => $tenantId
+                ]
+            ]);
+
+            if ($response['success'] ?? false) {
+                $this->logger->info('Tenant API key created successfully', [
+                    'tenant_id' => $tenantId,
+                    'key_id' => $response['key_id'] ?? 'N/A'
+                ]);
+
+                return [
+                    'api_key' => $response['data']['apiKey'] ?? $response['api_key'] ?? null,
+                    'api_key_id' => $response['data']['keyId'] ?? $response['key_id'] ?? null,
+                    'secret_key' => $response['data']['secret'] ?? $response['secret_key'] ?? null,
+                    'hash_key' => $response['data']['hashKey'] ?? $response['hash_key'] ?? null,
+                    'role' => 'tenant_admin',
+                    'permissions' => $keyConfig['permissions'],
+                    'scopes' => $keyConfig['permissions'], // Usar permissions como scopes
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'key_age_days' => 0,
+                    'status' => 'active',
+                    'is_new' => true
+                ];
+            }
+
+            throw new SDKException('Failed to create API key: API returned unsuccessful response');
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to create tenant API key', [
+                'tenant_id' => $tenantId,
+                'error' => $e->getMessage()
+            ]);
+
+            throw new SDKException('Failed to create tenant API key: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+
+    /**
+     * Lista todas as chaves de API para um tenant
+     */
+    public function listApiKeys(array $filters = []): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $response = $this->makeHttpRequest('GET', 'api-keys', [
+                'query' => $filters
+            ]);
+
+            return $response;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to list API keys', [
+                'filters' => $filters,
+                'error' => $e->getMessage()
+            ]);
+
+            throw new SDKException('Failed to list API keys: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
+     * Agenda revogação de uma chave de API
+     */
+    public function scheduleKeyRevocation(string $keyId, array $options = []): array
+    {
+        $this->ensureInitialized();
+
+        try {
+            $this->logger->info('Scheduling API key revocation', [
+                'key_id' => $keyId,
+                'delay_hours' => $options['delay_hours'] ?? 24
+            ]);
+
+            $revocationConfig = array_merge([
+                'delay_hours' => 24,
+                'reason' => 'Scheduled revocation after rotation'
+            ], $options);
+
+            $response = $this->makeHttpRequest('POST', "api-keys/{$keyId}/schedule-revocation", [
+                'json' => $revocationConfig
+            ]);
+
+            return $response;
+
+        } catch (\Exception $e) {
+            $this->logger->warning('Failed to schedule key revocation', [
+                'key_id' => $keyId,
+                'error' => $e->getMessage()
+            ]);
+
+            // Não falhar se agendamento não funcionar
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Calcula a idade de uma chave em dias
+     */
+    private function calculateKeyAge(?string $createdAt): int
+    {
+        if (!$createdAt) {
+            return 0;
+        }
+
+        try {
+            $created = new \DateTime($createdAt);
+            $now = new \DateTime();
+            return (int) $created->diff($now)->days;
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
      * Garante uso consistente do ResponseHelper
      */

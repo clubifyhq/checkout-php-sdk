@@ -780,50 +780,127 @@ try {
 
         logStep("Tenant ID: " . $tenantId, 'info');
 
+    } catch (Exception $e) {
+        logStep("Erro na criação de organização: " . $e->getMessage(), 'error');
+        logStep("Detalhes do erro: " . $e->getFile() . ':' . $e->getLine(), 'error');
+    }
 
 
 
-
-    // Sub-seção: Gestão de Credenciais Avançada
+    // Sub-seção: Gestão de Credenciais Avançada (Versão Melhorada)
     try {
-        if (method_exists($sdk->superAdmin(), 'getTenantCredentials')) {
-            if ($tenantId && $tenantId !== 'unknown') {
-                $credentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
+        logStep("🔑 Iniciando gestão automatizada de credenciais...", 'info');
+
+        if (!$tenantId || $tenantId === 'unknown') {
+            logStep("Tenant ID inválido ou não encontrado, pulando gestão de credenciais", 'warning');
+        } else {
+            // Configuração para gestão de credenciais (usando configurações instaladas automaticamente)
+            $credentialConfig = [
+                'auto_rotate' => $_ENV['CLUBIFY_ENABLE_KEY_ROTATION'] ?? config('app.example_enable_key_rotation', true),
+                'max_key_age_days' => $_ENV['CLUBIFY_MAX_API_KEY_AGE_DAYS'] ?? config('app.max_api_key_age_days', 90),
+                'grace_period_hours' => $_ENV['CLUBIFY_KEY_ROTATION_GRACE_PERIOD'] ?? config('app.key_rotation_grace_period', 24),
+                'force_rotation' => $_ENV['CLUBIFY_FORCE_KEY_ROTATION'] ?? config('app.force_key_rotation', false),
+                'create_if_missing' => $_ENV['CLUBIFY_AUTO_CREATE_API_KEYS'] ?? config('app.auto_create_api_keys', true),
+                'key_config' => [
+                    'name' => "Laravel Example App - " . date('Y-m-d H:i:s'),
+                    'description' => 'Auto-generated tenant admin key for Laravel example'
+                ],
+                'ip_whitelist' => $_ENV['CLUBIFY_IP_WHITELIST'] ?? null,
+                'allowed_origins' => explode(',', $_ENV['CLUBIFY_ALLOWED_ORIGINS'] ?? '*')
+            ];
+
+            // Tentar usar método automatizado se disponível
+            if (method_exists($sdk->superAdmin(), 'ensureTenantCredentials')) {
+                logStep("Usando gestão automatizada de credenciais...", 'info');
+
+                $credentials = $sdk->superAdmin()->ensureTenantCredentials($tenantId, $credentialConfig);
 
                 if ($credentials) {
-                    logStep("Credenciais obtidas com sucesso", 'success');
-                $keyAge = $credentials['key_age_days'] ?? 'N/A';
-
-                // Verificar se precisa rotacionar
-                if (is_numeric($keyAge) && $keyAge > 90) {
-                    logStep("API Key antiga detectada ($keyAge dias)", 'warning');
-
-                    if (method_exists($sdk->superAdmin(), 'rotateApiKey') &&
-                        config('app.example_enable_key_rotation', false)) {
-
-                        $rotationResult = $sdk->superAdmin()->rotateApiKey($credentials['api_key_id'], [
-                            'gracePeriodHours' => 24,
-                            'forceRotation' => false
-                        ]);
-
-                        if ($rotationResult['success']) {
-                            logStep("API Key rotacionada com sucesso!", 'success');
-                        }
+                    // Determinar status da credencial
+                    $status = '';
+                    if ($credentials['is_new'] ?? false) {
+                        $status = '🆕 Nova chave criada automaticamente';
+                    } elseif ($credentials['is_rotated'] ?? false) {
+                        $status = '🔄 Chave rotacionada automaticamente';
+                    } else {
+                        $status = '✅ Chave existente válida';
                     }
+
+                    logStep("Credenciais obtidas com sucesso! {$status}", 'success');
+                    logStep("Role: " . ($credentials['role'] ?? 'N/A'), 'info');
+                    logStep("Idade: " . ($credentials['key_age_days'] ?? 'N/A') . " dias", 'info');
+                    logStep("API Key ID: " . ($credentials['api_key_id'] ?? 'N/A'), 'info');
+
+                    // Exibir chave mascarada para debug
+                    if (isset($credentials['api_key'])) {
+                        $maskedKey = substr($credentials['api_key'], 0, 12) . '...';
+                        logStep("🔑 API Key: {$maskedKey}", 'info');
+                    }
+
+                    // Log de permissões se disponível
+                    if (!empty($credentials['permissions'])) {
+                        $permissionCount = count($credentials['permissions']);
+                        logStep("🔐 Permissões configuradas: {$permissionCount} módulos", 'info');
+                    }
+
+                } else {
+                    logStep("Falha ao obter credenciais através do método automatizado", 'error');
                 }
-                } // Fecha o if ($credentials)
+
             } else {
-                logStep("Tenant ID inválido ou não encontrado, pulando gestão de credenciais", 'warning');
+                // Fallback para método manual se o automatizado não estiver disponível
+                logStep("Método automatizado não disponível, usando abordagem legacy...", 'warning');
+
+                if (method_exists($sdk->superAdmin(), 'getTenantCredentials')) {
+                    $credentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
+
+                    if ($credentials) {
+                        logStep("Credenciais obtidas com sucesso (método legacy)", 'success');
+                        $keyAge = $credentials['key_age_days'] ?? 'N/A';
+
+                        // Verificar se precisa rotacionar
+                        if (is_numeric($keyAge) && $keyAge > 90) {
+                            logStep("API Key antiga detectada ({$keyAge} dias)", 'warning');
+
+                            if (method_exists($sdk->superAdmin(), 'rotateApiKey') &&
+                                config('app.example_enable_key_rotation', false)) {
+
+                                logStep("Rotacionando chave antiga...", 'info');
+
+                                $rotationResult = $sdk->superAdmin()->rotateApiKey($credentials['api_key_id'], [
+                                    'gracePeriodHours' => 24,
+                                    'forceRotation' => false
+                                ]);
+
+                                if ($rotationResult['success'] ?? false) {
+                                    logStep("API Key rotacionada com sucesso! 🔄", 'success');
+                                } else {
+                                    logStep("Falha na rotação da API Key", 'error');
+                                }
+                            } else {
+                                logStep("Rotação automática desabilitada ou método não disponível", 'warning');
+                            }
+                        } else {
+                            logStep("API Key válida (idade: {$keyAge} dias)", 'success');
+                        }
+                    } else {
+                        logStep("Nenhuma credencial encontrada para o tenant", 'warning');
+                    }
+                } else {
+                    logStep("Método getTenantCredentials não disponível no SDK", 'error');
+                }
             }
         }
 
     } catch (Exception $e) {
-        logStep("Erro na gestão de credenciais: " . $e->getMessage(), 'warning');
+        logStep("Erro na gestão de credenciais: " . $e->getMessage(), 'error');
+        logStep("Detalhes do erro: " . $e->getFile() . ':' . $e->getLine(), 'error');
     }
 
 exit(1);
 
 
+    try {
 
         // ===============================================
         // 3. PROVISIONAMENTO DE CREDENCIAIS
@@ -855,7 +932,7 @@ exit(1);
     } catch (Exception $e) {
         logStep("Erro na operação de organização: " . $e->getMessage(), 'error');
     }
-    
+
     // ===============================================
     // 4. ALTERNÂNCIA PARA CONTEXTO DO TENANT
     // ===============================================

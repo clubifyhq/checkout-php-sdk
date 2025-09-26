@@ -32,7 +32,6 @@ Thumbs.db
 logs/
 
 # Cache
-cache/
 *.cache
 .phpunit.result.cache
 

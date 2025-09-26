@@ -9,7 +9,9 @@ use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Modules\UserManagement\Factories\UserServiceFactory;
+use Clubify\Checkout\Modules\UserManagement\Factories\TenantServiceFactory;
 use Clubify\Checkout\Modules\UserManagement\Services\UserService;
+use Clubify\Checkout\Modules\UserManagement\Services\TenantService;
 use Clubify\Checkout\Modules\UserManagement\Services\DomainService;
 
 /**
@@ -39,6 +41,7 @@ class UserManagementModule implements ModuleInterface
 
     // Services (lazy loading)
     private ?UserService $userService = null;
+    private ?TenantService $tenantService = null;
     private ?DomainService $domainService = null;
 
     public function __construct(
@@ -116,6 +119,7 @@ class UserManagementModule implements ModuleInterface
             'available' => $this->isAvailable(),
             'services_loaded' => [
                 'user' => $this->userService !== null,
+                'tenant' => $this->tenantService !== null,
                 'domain' => $this->domainService !== null,
             ],
             'factory_loaded' => $this->factory !== null,
@@ -129,6 +133,7 @@ class UserManagementModule implements ModuleInterface
     public function cleanup(): void
     {
         $this->userService = null;
+        $this->tenantService = null;
         $this->domainService = null;
         $this->factory = null;
         $this->initialized = false;
@@ -143,6 +148,7 @@ class UserManagementModule implements ModuleInterface
         try {
             return $this->initialized &&
                    ($this->userService === null || $this->userService->isHealthy()) &&
+                   ($this->tenantService === null || true) && // TenantService não tem isHealthy() ainda
                    ($this->domainService === null || $this->domainService->isHealthy());
         } catch (\Exception $e) {
             $this->logger?->error('UserManagementModule health check failed', [
@@ -307,7 +313,17 @@ class UserManagementModule implements ModuleInterface
         return $this->userService;
     }
 
-
+    /**
+     * Obtém o TenantService (lazy loading) - método público para injeção
+     */
+    public function getTenantService(): TenantService
+    {
+        if ($this->tenantService === null) {
+            // Usar factory interno do SDK que já tem acesso às dependências privadas
+            $this->tenantService = $this->sdk->createTenantService();
+        }
+        return $this->tenantService;
+    }
 
     /**
      * Obtém o DomainService (lazy loading) - método público para injeção

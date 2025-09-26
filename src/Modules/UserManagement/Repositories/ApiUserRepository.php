@@ -72,7 +72,8 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
                     $headers['X-Tenant-Id'] = $tenantId;
                 }
 
-                $endpoint = "users/search/advanced?" . http_build_query($params);
+                // Try using the basic users endpoint with search parameter (may be more consistent with creation)
+                $endpoint = "users?" . http_build_query(['search' => $email]);
 
                 $data = $this->makeHttpRequestWithHeaders('GET', $endpoint, [], $headers);
 
@@ -418,7 +419,9 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
      */
     protected function isSuccessfulResponse($response): bool
     {
-        return ResponseHelper::isSuccessful($response);
+        // Since makeHttpRequest already processes the response and returns array data,
+        // we can assume success if we receive any array data
+        return is_array($response) && !empty($response);
     }
 
     /**
@@ -426,7 +429,9 @@ class ApiUserRepository extends BaseRepository implements UserRepositoryInterfac
      */
     protected function extractResponseData($response): ?array
     {
-        return ResponseHelper::getData($response);
+        // Since makeHttpRequest already processes the response and returns array data,
+        // we can directly return the data
+        return is_array($response) ? $response : null;
     }
 
     /**

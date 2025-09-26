@@ -13,6 +13,7 @@ use Clubify\Checkout\Core\Events\EventDispatcherInterface;
 use Clubify\Checkout\Modules\SuperAdmin\Services\TenantManagementService;
 use Clubify\Checkout\Modules\SuperAdmin\Services\OrganizationCreationService;
 use Clubify\Checkout\Modules\UserManagement\Services\UserService;
+use Clubify\Checkout\Modules\UserManagement\Services\TenantService as UserManagementTenantService;
 use Clubify\Checkout\Modules\Organization\Services\ApiKeyService;
 use Clubify\Checkout\Modules\Organization\Services\TenantService as OrganizationTenantService;
 use Clubify\Checkout\Exceptions\SDKException;
@@ -39,6 +40,7 @@ class SuperAdminModule implements ModuleInterface
 
     // Centralized Services (Dependency Injection)
     private ?UserService $userService = null;
+    private ?UserManagementTenantService $userManagementTenantService = null;
     private ?ApiKeyService $apiKeyService = null;
     private ?OrganizationTenantService $organizationTenantService = null;
 
@@ -82,18 +84,21 @@ class SuperAdminModule implements ModuleInterface
      */
     public function setCentralizedServices(
         UserService $userService,
+        UserManagementTenantService $userManagementTenantService,
         ApiKeyService $apiKeyService,
         OrganizationTenantService $organizationTenantService
     ): void {
         $this->userService = $userService;
+        $this->userManagementTenantService = $userManagementTenantService;
         $this->apiKeyService = $apiKeyService;
         $this->organizationTenantService = $organizationTenantService;
 
         $this->logger->debug('SuperAdmin: Centralized services injected', [
             'services' => [
                 'user_service' => $userService->getName(),
+                'user_management_tenant_service' => get_class($userManagementTenantService),
                 'api_key_service' => get_class($apiKeyService),
-                'tenant_service' => get_class($organizationTenantService)
+                'organization_tenant_service' => get_class($organizationTenantService)
             ]
         ]);
     }
@@ -189,20 +194,46 @@ class SuperAdminModule implements ModuleInterface
         $this->ensureInitialized();
 
         try {
+            // Se temos o TenantService do UserManagement disponível, usar ele
+            if ($this->userManagementTenantService !== null) {
+                $this->logger->info('Creating organization via UserManagement TenantService', [
+                    'data_keys' => array_keys($data)
+                ]);
+
+                $result = $this->userManagementTenantService->createOrganization($data);
+
+                $this->logger->info('Organization created successfully via TenantService', [
+                    'organization_id' => $result['organization']['id'] ?? $result['tenant_id'] ?? 'unknown',
+                    'success' => $result['success'] ?? false
+                ]);
+
+                // Padronizar formato de resposta
+                return [
+                    'success' => $result['success'] ?? true,
+                    'organization' => $result['organization'] ?? $result['tenant'] ?? $result,
+                    'tenant_id' => $result['tenant_id'] ?? $result['organization']['id'] ?? null,
+                    'via_service' => 'UserManagement TenantService'
+                ];
+            }
+
+            // Fallback para chamada HTTP direta se o service não estiver disponível
+            $this->logger->warning('UserManagement TenantService not available, falling back to direct HTTP call');
+
             $result = $this->makeHttpRequest('POST', 'organizations', [
                 'json' => $data
             ]);
 
-            $this->logger->info('Organization created successfully', [
+            $this->logger->info('Organization created successfully via direct HTTP', [
                 'organization_id' => $result['organization']['id'] ?? 'unknown'
             ]);
 
-            return $result;
+            return array_merge($result, ['via_service' => 'Direct HTTP']);
 
         } catch (\Exception $e) {
             $this->logger->error('Failed to create organization', [
                 'error' => $e->getMessage(),
-                'data' => $data
+                'data' => $data,
+                'service_available' => $this->userManagementTenantService !== null
             ]);
 
             throw new SDKException('Organization creation failed: ' . $e->getMessage(), 0, $e);
@@ -259,30 +290,115 @@ class SuperAdminModule implements ModuleInterface
     /**
      * Buscar tenant por domínio
      */
-    public function getTenantByDomain(string $domain): ?array
+    public function getTenantByDomain(string $domain): array
     {
         $this->ensureInitialized();
 
         try {
+            // Usar TenantService do UserManagement se disponível
+            if ($this->userManagementTenantService !== null) {
+                $this->logger->info('Getting tenant by domain via UserManagement TenantService', [
+                    'domain' => $domain
+                ]);
+
+                $result = $this->userManagementTenantService->getTenantByDomain($domain);
+
+                // Debug log para verificar estrutura
+                $this->logger->debug('TenantService result structure', [
+                    'domain' => $domain,
+                    'result_keys' => array_keys($result),
+                    'success' => $result['success'] ?? 'not_set',
+                    'has_tenant' => isset($result['tenant']) ? 'yes' : 'no',
+                    'has_data' => isset($result['data']) ? 'yes' : 'no'
+                ]);
+
+                // A API pode retornar tanto 'tenant' quanto 'data' como campo principal
+                $tenantData = null;
+                if ($result['success'] === true) {
+                    if (isset($result['tenant'])) {
+                        $tenantData = $result['tenant'];
+                    } elseif (isset($result['data'])) {
+                        $tenantData = $result['data'];
+                    }
+                }
+
+                if ($result['success'] === true && $tenantData !== null) {
+                    $this->logger->info('Tenant found by domain via TenantService', [
+                        'domain' => $domain,
+                        'tenant_id' => $tenantData['_id'] ?? $tenantData['id'] ?? 'unknown'
+                    ]);
+
+                    return [
+                        'success' => true,
+                        'tenant' => $tenantData,
+                        'message' => 'Tenant found successfully',
+                        'via_service' => 'UserManagement TenantService'
+                    ];
+                } else {
+                    // Tenant não encontrado pelo TenantService - retornar resposta estruturada
+                    $this->logger->info('Tenant not found by domain via TenantService', [
+                        'domain' => $domain,
+                        'tenant_service_message' => $result['message'] ?? 'N/A'
+                    ]);
+
+                    return [
+                        'success' => false,
+                        'tenant' => null,
+                        'message' => $result['message'] ?? "Tenant not found for domain: {$domain}",
+                        'via_service' => 'UserManagement TenantService'
+                    ];
+                }
+            }
+
+            // Fallback para chamada HTTP direta
+            $this->logger->warning('UserManagement TenantService not available, falling back to direct HTTP call', [
+                'domain' => $domain
+            ]);
+
             $result = $this->makeHttpRequest('GET', "tenants/domain/{$domain}");
 
-            $this->logger->info('Tenant found by domain', [
+            $this->logger->info('Tenant found by domain via direct HTTP', [
                 'domain' => $domain,
                 'tenant_id' => $result['data']['_id'] ?? $result['id'] ?? 'unknown'
             ]);
 
-            return $result;
+            return [
+                'success' => true,
+                'tenant' => $result,
+                'message' => 'Tenant found successfully',
+                'via_service' => 'Direct HTTP'
+            ];
 
         } catch (HttpException $e) {
-            // Se for 404, retorna null (tenant não encontrado)
+            // Se for 404, retorna mensagem amigável ao invés de null
             if ($e->getStatusCode() === 404) {
-                return null;
+                $this->logger->info('Tenant not found by domain (404)', [
+                    'domain' => $domain
+                ]);
+
+                return [
+                    'success' => false,
+                    'tenant' => null,
+                    'message' => "Tenant not found for domain: {$domain}",
+                    'error_code' => 404,
+                    'via_service' => 'Direct HTTP'
+                ];
             }
             throw $e;
         } catch (\Exception $e) {
             // Para outros tipos de erro, verifica se é 404 na mensagem
             if (strpos($e->getMessage(), '404') !== false) {
-                return null;
+                $this->logger->info('Tenant not found by domain (404 in message)', [
+                    'domain' => $domain
+                ]);
+
+                return [
+                    'success' => false,
+                    'tenant' => null,
+                    'message' => "Tenant not found for domain: {$domain}",
+                    'error_code' => 404,
+                    'via_service' => 'Direct HTTP'
+                ];
             }
 
             $this->logger->error('Failed to get tenant by domain', [
@@ -290,7 +406,13 @@ class SuperAdminModule implements ModuleInterface
                 'domain' => $domain
             ]);
 
-            throw new SDKException('Failed to get tenant by domain: ' . $e->getMessage(), 0, $e);
+            return [
+                'success' => false,
+                'tenant' => null,
+                'message' => "Error searching for tenant by domain: {$domain}",
+                'error' => $e->getMessage(),
+                'via_service' => 'Direct HTTP'
+            ];
         }
     }
 
@@ -1152,6 +1274,7 @@ class SuperAdminModule implements ModuleInterface
                 'api_key_existed' => $apiKeyResult['existed'],
                 'services_used' => [
                     'user_service' => $this->userService->getName(),
+                    'user_management_tenant_service' => get_class($this->userManagementTenantService),
                     'api_key_service' => get_class($this->apiKeyService)
                 ]
             ]
@@ -1165,6 +1288,10 @@ class SuperAdminModule implements ModuleInterface
     {
         if (!$this->userService) {
             throw new SDKException('UserService not injected. Call setCentralizedServices() first.');
+        }
+
+        if (!$this->userManagementTenantService) {
+            throw new SDKException('UserManagement TenantService not injected. Call setCentralizedServices() first.');
         }
 
         if (!$this->apiKeyService) {

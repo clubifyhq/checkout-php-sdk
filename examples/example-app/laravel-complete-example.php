@@ -100,18 +100,35 @@ function generateIdempotencyKey(string $operation, array $data): string
  */
 function findTenantByDomain($sdk, $domain) {
     try {
-        $tenant = $sdk->superAdmin()->getTenantByDomain($domain);
-        if ($tenant) {
-            return $tenant;
+        $response = $sdk->superAdmin()->getTenantByDomain($domain);
+
+        // Debug: mostrar estrutura da resposta
+        logStep("Debug - Estrutura da resposta: " . json_encode(array_keys($response), JSON_UNESCAPED_SLASHES), 'debug');
+        if (isset($response['tenant'])) {
+            logStep("Debug - Chaves do tenant: " . json_encode(array_keys($response['tenant']), JSON_UNESCAPED_SLASHES), 'debug');
         }
 
+        // Com as mudanças no user-management-service, agora temos uma estrutura padronizada
+        if (isset($response['success']) && $response['success'] === true && isset($response['tenant'])) {
+            // Tenant encontrado com nova estrutura
+            return $response;
+        } elseif (isset($response['success']) && $response['success'] === false) {
+            // Tenant não encontrado, mas não é erro - é esperado
+            logStep("Tenant não encontrado para domínio '$domain': " . ($response['message'] ?? 'N/A'), 'info');
+            return null;
+        } elseif ($response && !isset($response['success'])) {
+            // Formato antigo (retrocompatibilidade)
+            return $response;
+        }
+
+        // Fallback: buscar em lista de tenants se não encontrou diretamente
         $tenants = $sdk->superAdmin()->listTenants();
         foreach ($tenants['data'] as $tenant) {
             if (isset($tenant['domain']) && $tenant['domain'] === $domain) {
-                return $tenant;
+                return ['tenant' => $tenant, 'success' => true];
             }
             if (isset($tenant['custom_domain']) && $tenant['custom_domain'] === $domain) {
-                return $tenant;
+                return ['tenant' => $tenant, 'success' => true];
             }
         }
         return null;
@@ -138,20 +155,52 @@ function getOrCreateOrganization($sdk, $organizationData): array
         if ($existingTenant) {
             logStep("Organização encontrada pelo domínio '$customDomain'", 'success');
 
-            // Extrair tenant_id do retorno da API
+            // Extrair tenant_id do retorno da API (nova estrutura)
             $tenantId = null;
-            if (isset($existingTenant['data']['_id'])) {
-                $tenantId = $existingTenant['data']['_id'];
-            } elseif (isset($existingTenant['data']['id'])) {
-                $tenantId = $existingTenant['data']['id'];
-            } elseif (isset($existingTenant['_id'])) {
-                $tenantId = $existingTenant['_id'];
-            } elseif (isset($existingTenant['id'])) {
-                $tenantId = $existingTenant['id'];
+            $tenantData = null;
+
+            // Nova estrutura padronizada
+            if (isset($existingTenant['tenant'])) {
+                $tenantData = $existingTenant['tenant'];
+                // Para MongoDB, _id é um objeto, precisa converter para string
+                if (isset($tenantData['_id'])) {
+                    $tenantId = is_object($tenantData['_id']) ? (string)$tenantData['_id'] : $tenantData['_id'];
+                } elseif (isset($tenantData['id'])) {
+                    $tenantId = $tenantData['id'];
+                } else {
+                    $tenantId = null;
+                }
+            }
+            // Estrutura antiga (retrocompatibilidade)
+            elseif (isset($existingTenant['data'])) {
+                $tenantData = $existingTenant['data'];
+                if (isset($tenantData['_id'])) {
+                    $tenantId = is_object($tenantData['_id']) ? (string)$tenantData['_id'] : $tenantData['_id'];
+                } elseif (isset($tenantData['id'])) {
+                    $tenantId = $tenantData['id'];
+                } else {
+                    $tenantId = null;
+                }
+            }
+            // Estrutura direta
+            else {
+                $tenantData = $existingTenant;
+                if (isset($existingTenant['_id'])) {
+                    $tenantId = is_object($existingTenant['_id']) ? (string)$existingTenant['_id'] : $existingTenant['_id'];
+                } elseif (isset($existingTenant['id'])) {
+                    $tenantId = $existingTenant['id'];
+                } else {
+                    $tenantId = null;
+                }
             }
 
+            // Debug log para verificar o que estamos extraindo
+            logStep("Debug - Tenant ID extraído: " . ($tenantId ?? 'NULL') . " do campo: " .
+                (isset($tenantData['_id']) ? '_id' :
+                (isset($tenantData['id']) ? 'id' : 'nenhum')), 'debug');
+
             return [
-                'organization' => $existingTenant,
+                'organization' => $tenantData,
                 'tenant_id' => $tenantId,
                 'existed' => true
             ];
@@ -574,14 +623,14 @@ try {
 
     $EXAMPLE_CONFIG = [
         'organization' => [
-            'name' => config('app.example_org_name', 'Nova Empresa Ltda'),
-            'admin_email' => config('app.example_admin_email', 'admin@nova-empresa.com'),
-            'admin_name' => config('app.example_admin_name', 'João Admin'),
-            'subdomain' => config('app.example_subdomain', 'nova-empresa'),
-            'custom_domain' => config('app.example_custom_domain', 'checkout.nova-empresa.com')
+            'name' => config('app.example_org_name', 'Nova Empresa de Testes Ltda'),
+            'admin_email' => config('app.example_admin_email', 'admin@nova-empresa-testes.com'),
+            'admin_name' => config('app.example_admin_name', 'João Admin Tes'),
+            'subdomain' => config('app.example_subdomain', 'nova-empresa-teste'),
+            'custom_domain' => config('app.example_custom_domain', 'checkout.nova-empresa-teste.com')
         ],
         'product' => [
-            'name' => config('app.example_product_name', 'Produto Demo Laravel'),
+            'name' => config('app.example_product_name', 'Produto Demo Laravel Teste'),
             'description' => config('app.example_product_desc', 'Produto criado via SDK integrado com Laravel'),
             'price_amount' => (int) config('app.example_product_price', 9999), // R$ 99,99 em centavos
             'currency' => config('app.example_product_currency', 'BRL'),
@@ -606,8 +655,8 @@ try {
             'tenant_id' => config('clubify-checkout.super_admin.default_tenant', '507f1f77bcf86cd799439011')
         ],
         'user' => [
-            "email" => "tenant.admin-super@nova-empresa.com",
-            "firstName" => "User Tenant",
+            "email" => "tenant.admin-super-tese@nova-empresa.com",
+            "firstName" => "User Tenant teste",
             "lastName" => "Admin",
             "password" => "P@ssw0rd!",
             "roles" => ["tenant_admin"],
@@ -818,10 +867,11 @@ try {
     // Sub-seção: Gestão de Credenciais Avançada
     try {
         if (method_exists($sdk->superAdmin(), 'getTenantCredentials')) {
-            $credentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
+            if ($tenantId && $tenantId !== 'unknown') {
+                $credentials = $sdk->superAdmin()->getTenantCredentials($tenantId);
 
-            if ($credentials) {
-                logStep("Credenciais obtidas com sucesso", 'success');
+                if ($credentials) {
+                    logStep("Credenciais obtidas com sucesso", 'success');
                 $keyAge = $credentials['key_age_days'] ?? 'N/A';
 
                 // Verificar se precisa rotacionar
@@ -841,6 +891,9 @@ try {
                         }
                     }
                 }
+                } // Fecha o if ($credentials)
+            } else {
+                logStep("Tenant ID inválido ou não encontrado, pulando gestão de credenciais", 'warning');
             }
         }
 

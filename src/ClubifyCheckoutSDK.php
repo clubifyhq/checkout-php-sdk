@@ -748,6 +748,7 @@ class ClubifyCheckoutSDK
             // Injetar serviços centralizados necessários
             $this->superAdmin->setCentralizedServices(
                 $this->userManagement()->getUserService(),
+                $this->userManagement()->getTenantService(),
                 $this->organization()->apiKey(),
                 $this->organization()->tenant()
             );
@@ -974,6 +975,22 @@ class ClubifyCheckoutSDK
             $this->getCache(),
             $this->getEventDispatcher(),
             $this
+        );
+    }
+
+    /**
+     * Cria TenantService com todas as dependências necessárias
+     */
+    public function createTenantService(): \Clubify\Checkout\Modules\UserManagement\Services\TenantService
+    {
+        $this->requireInitialized('createTenantService');
+
+        return \Clubify\Checkout\Modules\UserManagement\Factories\TenantServiceFactory::create(
+            $this->config,
+            $this->getLogger(),
+            $this->getHttpClient(),
+            $this->getCache(),
+            $this->getEventDispatcher()
         );
     }
 

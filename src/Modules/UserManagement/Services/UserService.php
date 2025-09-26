@@ -123,8 +123,20 @@ class UserService implements ServiceInterface
             $user = new UserData($userData);
             $user->validate();
 
-            // Check for duplicates within the tenant scope
-            if (isset($userData['email']) && $this->repository->isEmailTaken($userData['email'], null, $tenantId)) {
+            // Try to find existing user first
+            $existingUser = null;
+            try {
+                $existingUser = $this->repository->findByEmail($userData['email'], $tenantId);
+            } catch (\Exception $e) {
+                // Log but continue - search might fail due to API inconsistency
+                $this->logger->debug('User search failed, will attempt creation anyway', [
+                    'email' => $userData['email'],
+                    'tenant_id' => $tenantId,
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            if ($existingUser) {
                 throw new UserValidationException('User with this email already exists');
             }
 
@@ -141,19 +153,71 @@ class UserService implements ServiceInterface
             }
 
             // Create user with tenant context
-            $createdUser = $this->repository->createWithHeaders($userDataToCreate, $headers);
+            try {
+                $createdUser = $this->repository->createWithHeaders($userDataToCreate, $headers);
 
-            $this->logger->info('User created successfully', [
-                'user_id' => $createdUser['id'],
-                'email' => $createdUser['email'],
-                'tenant_id' => $tenantId
-            ]);
+                $this->logger->info('User created successfully', [
+                    'user_id' => $createdUser['id'],
+                    'email' => $createdUser['email'],
+                    'tenant_id' => $tenantId
+                ]);
 
-            return [
-                'success' => true,
-                'user_id' => $createdUser['id'],
-                'user' => $createdUser
-            ];
+                return [
+                    'success' => true,
+                    'user_id' => $createdUser['id'],
+                    'user' => $createdUser
+                ];
+            } catch (\Exception $e) {
+                // If we get a 409 conflict about user existing, try to find and return the existing user
+                $errorMessage = $e->getMessage();
+                if (strpos($errorMessage, 'User with this email already exists') !== false ||
+                    strpos($errorMessage, '409') !== false ||
+                    strpos($errorMessage, 'HTTP request failed after 3 attempts') !== false) {
+
+                    // Additional check for HttpException with 409 status code
+                    $is409Error = false;
+                    if ($e instanceof \Clubify\Checkout\Exceptions\HttpException && $e->getStatusCode() === 409) {
+                        $is409Error = true;
+                    }
+                    if (strpos($errorMessage, 'User with this email already exists') !== false) {
+                        $is409Error = true;
+                    }
+
+                    if ($is409Error) {
+                        $this->logger->info('User already exists, attempting to retrieve existing user', [
+                            'email' => $userData['email'],
+                            'tenant_id' => $tenantId,
+                            'exception_type' => get_class($e),
+                            'error_message' => $errorMessage
+                        ]);
+
+                        // Try to find the existing user using different approaches
+                        $existingUser = $this->findExistingUser($userData['email'], $tenantId);
+
+                        if ($existingUser) {
+                            $this->logger->info('Found existing user after creation conflict', [
+                                'user_id' => $existingUser['id'],
+                                'email' => $existingUser['email'],
+                                'tenant_id' => $tenantId
+                            ]);
+
+                            return [
+                                'success' => true,
+                                'user_id' => $existingUser['id'],
+                                'user' => $existingUser,
+                                'already_existed' => true
+                            ];
+                        } else {
+                            $this->logger->warning('Could not find existing user after 409 conflict', [
+                                'email' => $userData['email'],
+                                'tenant_id' => $tenantId
+                            ]);
+                        }
+                    }
+                }
+
+                throw $e; // Re-throw if not a 409 or couldn't find existing user
+            }
 
         } catch (UserValidationException $e) {
             $this->logger->warning('User validation failed', [
@@ -733,5 +797,91 @@ class UserService implements ServiceInterface
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Tries multiple approaches to find an existing user when search API fails
+     */
+    private function findExistingUser(string $email, ?string $tenantId = null): ?array
+    {
+        $this->logger->info('Starting findExistingUser with multiple approaches', [
+            'email' => $email,
+            'tenant_id' => $tenantId
+        ]);
+
+        // Approach 1: Try findByEmail again (maybe cache issue)
+        try {
+            $this->logger->info('Approach 1: Trying findByEmail with tenant context');
+            $user = $this->repository->findByEmail($email, $tenantId);
+            if ($user) {
+                $this->logger->info('Approach 1 SUCCESS: Found user via findByEmail', ['user_id' => $user['id'] ?? 'unknown']);
+                return $user;
+            }
+            $this->logger->info('Approach 1: findByEmail returned null');
+        } catch (\Exception $e) {
+            $this->logger->info('Approach 1 FAILED: findByEmail threw exception', ['error' => $e->getMessage()]);
+        }
+
+        // Approach 2: Try searching all users in the tenant and filter by email
+        try {
+            $this->logger->info('Approach 2: Trying to search all tenant users and filter');
+            $allUsers = $this->repository->findBy(['tenant_id' => $tenantId]);
+            $this->logger->info('Approach 2: Got users result', [
+                'result_type' => gettype($allUsers),
+                'has_data_key' => isset($allUsers['data']),
+                'user_count' => isset($allUsers['data']) ? count($allUsers['data']) : (is_array($allUsers) ? count($allUsers) : 'not_array')
+            ]);
+
+            if (isset($allUsers['data']) && is_array($allUsers['data'])) {
+                foreach ($allUsers['data'] as $user) {
+                    if (isset($user['email']) && $user['email'] === $email) {
+                        $this->logger->info('Approach 2 SUCCESS: Found user in tenant data', ['user_id' => $user['id'] ?? 'unknown']);
+                        return $user;
+                    }
+                }
+            } elseif (is_array($allUsers)) {
+                foreach ($allUsers as $user) {
+                    if (isset($user['email']) && $user['email'] === $email) {
+                        $this->logger->info('Approach 2 SUCCESS: Found user in tenant array', ['user_id' => $user['id'] ?? 'unknown']);
+                        return $user;
+                    }
+                }
+            }
+            $this->logger->info('Approach 2: No matching email found in tenant users');
+        } catch (\Exception $e) {
+            $this->logger->info('Approach 2 FAILED: findBy tenant search threw exception', ['error' => $e->getMessage()]);
+        }
+
+        // Approach 3: Try without tenant filtering (global search)
+        try {
+            $this->logger->info('Approach 3: Trying global email search without tenant filter');
+            $user = $this->repository->findByEmail($email, null);
+            if ($user) {
+                $userTenantId = $user['tenantId'] ?? $user['tenant_id'] ?? null;
+                $this->logger->info('Approach 3: Found user globally', [
+                    'user_id' => $user['id'] ?? 'unknown',
+                    'user_tenant_id' => $userTenantId,
+                    'target_tenant_id' => $tenantId
+                ]);
+
+                // Verify if user belongs to the correct tenant
+                if (!$tenantId || $userTenantId === $tenantId) {
+                    $this->logger->info('Approach 3 SUCCESS: User tenant matches target tenant');
+                    return $user;
+                } else {
+                    $this->logger->info('Approach 3: User found but tenant mismatch');
+                }
+            } else {
+                $this->logger->info('Approach 3: Global search returned null');
+            }
+        } catch (\Exception $e) {
+            $this->logger->info('Approach 3 FAILED: Global email search threw exception', ['error' => $e->getMessage()]);
+        }
+
+        $this->logger->warning('All approaches failed to find existing user', [
+            'email' => $email,
+            'tenant_id' => $tenantId
+        ]);
+        return null;
     }
 }

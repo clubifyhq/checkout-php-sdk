@@ -917,7 +917,7 @@ class ClubifyCheckoutSDK
     private function getCache(): CacheManagerInterface
     {
         if ($this->cache === null) {
-            $this->cache = new CacheManagerInterface($this->config);
+            $this->cache = new CacheManager($this->config);
         }
         return $this->cache;
     }

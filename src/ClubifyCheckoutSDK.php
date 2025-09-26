@@ -13,6 +13,7 @@ use Clubify\Checkout\Core\Auth\EncryptedFileStorage;
 use Clubify\Checkout\Core\Events\EventDispatcher;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\Core\Cache\CacheManager;
+use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Modules\Organization\OrganizationModule;
 use Clubify\Checkout\Modules\Products\ProductsModule;
 use Clubify\Checkout\Modules\Checkout\CheckoutModule;
@@ -39,6 +40,8 @@ use Clubify\Checkout\Modules\Offer\Factories\OfferServiceFactory;
 use Clubify\Checkout\Enums\Environment;
 use Clubify\Checkout\Exceptions\ConfigurationException;
 use Clubify\Checkout\Exceptions\SDKException;
+use Clubify\Checkout\Modules\UserManagement\Services\TenantService;
+use Clubify\Checkout\Modules\UserManagement\Factories\TenantServiceFactory;
 
 /**
  * Classe principal do Clubify Checkout SDK para PHP
@@ -840,7 +843,7 @@ class ClubifyCheckoutSDK
         }
 
         if ($this->cache === null) {
-            $this->cache = new \Clubify\Checkout\Core\Cache\CacheManager($this->config);
+            $this->cache = new CacheManager($this->config);
         }
     }
 
@@ -911,10 +914,10 @@ class ClubifyCheckoutSDK
     /**
      * Obter Cache Manager (Lazy Loading)
      */
-    private function getCache(): CacheManager
+    private function getCache(): CacheManagerInterface
     {
         if ($this->cache === null) {
-            $this->cache = new \Clubify\Checkout\Core\Cache\CacheManager($this->config);
+            $this->cache = new CacheManagerInterface($this->config);
         }
         return $this->cache;
     }
@@ -981,11 +984,11 @@ class ClubifyCheckoutSDK
     /**
      * Cria TenantService com todas as dependências necessárias
      */
-    public function createTenantService(): \Clubify\Checkout\Modules\UserManagement\Services\TenantService
+    public function createTenantService(): TenantService
     {
         $this->requireInitialized('createTenantService');
 
-        return \Clubify\Checkout\Modules\UserManagement\Factories\TenantServiceFactory::create(
+        return TenantServiceFactory::create(
             $this->config,
             $this->getLogger(),
             $this->getHttpClient(),

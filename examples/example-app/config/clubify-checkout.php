@@ -351,11 +351,18 @@ return [
 
     'super_admin' => [
         'enabled' => env('SUPER_ADMIN_ENABLED', false),
-        'api_key' => env('CLUBIFY_SUPER_ADMIN_API_KEY'),
-        'api_secret' => env('CLUBIFY_SUPER_ADMIN_API_SECRET'),
-        'username' => env('CLUBIFY_SUPER_ADMIN_USERNAME'),
-        'password' => env('CLUBIFY_SUPER_ADMIN_PASSWORD'),
-        'api_hash' => env('CLUBIFY_SUPER_ADMIN_HASH_KEY'),
+
+        // ✨ PADRÃO API: Email/Password como método primário
+        'email' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_EMAIL'),
+        'password' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_PASSWORD'),
+        'tenant_id' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_TENANT_ID'),
+
+        // 🔄 FALLBACK: API Key (opcional, mantido para compatibilidade)
+        'api_key' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_API_KEY'),
+        'api_secret' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_API_SECRET'),
+        'api_hash' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_HASH_KEY'),
+
+        
         'session_ttl' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_SESSION_TTL', 3600), // 1 hour
         'tenant_switch_ttl' => env('CLUBIFY_CHECKOUT_SUPER_ADMIN_TENANT_SWITCH_TTL', 1800), // 30 minutes
 

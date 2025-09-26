@@ -984,11 +984,14 @@ class AuthManager implements AuthManagerInterface
      */
     private function authenticateWithSuperAdminCredentials(array $credentials): bool
     {
-        // Para super admin, priorizar email/senha sobre API key
-        if (isset($credentials['username']) && isset($credentials['password'])) {
+        // PADRÃO API: Para super admin, usar email/password como método primário
+        // A API espera campo 'email', não 'username' (baseado nos DTOs do user-management-service)
+        $email = $credentials['email'] ?? $credentials['username'] ?? null;
+
+        if ($email && isset($credentials['password'])) {
             try {
                 $loginData = [
-                    'username' => $credentials['username'],
+                    'email' => $email,  // API espera campo 'email' (padrão baseado nos DTOs)
                     'password' => $credentials['password'],
                     'rememberMe' => true
                 ];
@@ -1004,12 +1007,13 @@ class AuthManager implements AuthManagerInterface
                 ]);
 
                 // makeHttpRequest já retorna os dados da resposta se bem-sucedida
-                return $this->storeAuthTokens($data, $credentials, 'login');
+                return $this->storeAuthTokens($data, $credentials, 'user_login');
 
             } catch (\Exception $e) {
                 // Security: Avoid exposing sensitive authentication details in logs
                 $this->logSecurityEvent('auth_failure', [
-                    'method' => 'login',
+                    'method' => 'user_login',
+                    'identifier_type' => 'email', // Padronizado: sempre email
                     'error_type' => get_class($e)
                 ]);
             }
@@ -1061,15 +1065,25 @@ class AuthManager implements AuthManagerInterface
      */
     private function storeAuthTokens(array $data, array $credentials, string $authType): bool
     {
-        // Extrair tokens dependendo do formato da resposta
-        $accessToken = $data['access_token'] ?? $data['tokens']['accessToken'] ?? null;
-        $refreshToken = $data['refresh_token'] ?? $data['tokens']['refreshToken'] ?? null;
-        $expiresIn = $data['expires_in'] ?? 3600;
-
-        // Security: Remove sensitive token logging
+        // CORREÇÃO: Extrair tokens dependendo do formato da resposta (user login vs api key)
+        if ($authType === 'user_login') {
+            // Formato de resposta do login de usuário
+            $accessToken = $data['tokens']['accessToken'] ?? null;
+            $refreshToken = $data['tokens']['refreshToken'] ?? null;
+            $expiresIn = $data['tokens']['accessTokenExpires'] ?? 3600;
+        } else {
+            // Formato de resposta do API key
+            $accessToken = $data['access_token'] ?? null;
+            $refreshToken = $data['refresh_token'] ?? null;
+            $expiresIn = $data['expires_in'] ?? 3600;
+        }
 
         // Se retornou tokens, armazenar
         if ($accessToken) {
+            // Para expiresIn do user login, converter data para segundos se necessário
+            if ($authType === 'user_login' && is_string($expiresIn)) {
+                $expiresIn = max(0, strtotime($expiresIn) - time());
+            }
             $this->tokenStorage->storeAccessToken($accessToken, $expiresIn);
         }
 
@@ -1077,13 +1091,15 @@ class AuthManager implements AuthManagerInterface
             $this->tokenStorage->storeRefreshToken($refreshToken);
         }
 
-        // Armazenar informações do super admin
+        // Armazenar informações do usuário
         $this->userInfo = [
             'user_id' => $data['user']['id'] ?? null,
-            'username' => $data['user']['username'] ?? $credentials['username'] ?? $credentials['email'],
+            'username' => $data['user']['name'] ?? $credentials['username'] ?? $credentials['email'],
             'email' => $data['user']['email'] ?? $credentials['email'],
+            'roles' => $data['user']['roles'] ?? [],
+            'tenant_id' => $data['user']['tenantId'] ?? $credentials['tenant_id'],
             'role' => 'super_admin',
-            'permissions' => $data['user']['permissions'] ?? [],
+            'permissions' => $data['user']['permissions'] ?? $data['permissions'] ?? [],
             'authenticated_at' => date('Y-m-d H:i:s'),
             'auth_type' => $authType
         ];

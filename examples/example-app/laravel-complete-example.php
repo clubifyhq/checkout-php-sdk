@@ -9,7 +9,8 @@
  * FUNCIONALIDADES COMPLETAS:
  * ==========================
  * ✅ Usa sistema de configuração do Laravel (config/)
- * ✅ Login com super admin (email/senha ou API key)
+ * ✅ ✨ NOVO: Login com super admin usando EMAIL/PASSWORD (padrão da API)
+ * ✅ 🔄 Fallback: API key para robustez
  * ✅ Criação/verificação de organizações
  * ✅ Provisionamento de credenciais
  * ✅ Verificação prévia para evitar conflitos
@@ -24,6 +25,16 @@
  * - Bootstrap completo do Laravel
  * - Acesso a todos os serviços do Laravel
  * - Configuração através de arquivos em /config/
+ *
+ * ✨ AUTENTICAÇÃO SUPER ADMIN:
+ * ===========================
+ * PADRÃO: Email/Password (alinhado com DTOs da API)
+ * - CLUBIFY_CHECKOUT_SUPER_ADMIN_EMAIL=admin@empresa.com
+ * - CLUBIFY_CHECKOUT_SUPER_ADMIN_PASSWORD=senha_segura
+ * - CLUBIFY_CHECKOUT_SUPER_ADMIN_TENANT_ID=507f1f77bcf86cd799439011
+ *
+ * FALLBACK: API Key (para robustez)
+ * - CLUBIFY_CHECKOUT_SUPER_ADMIN_API_KEY=clb_live_key_here
  *
  * USO:
  * ====
@@ -647,12 +658,9 @@ try {
             'skip_super_admin_init' => (bool) config('app.example_skip_super_admin_init', false)
         ],
         'super_admin' => [
-            'api_key' => config('clubify-checkout.super_admin.api_key'),
-            'access_token' => config('clubify-checkout.super_admin.access_token'),
-            'refresh_token' => config('clubify-checkout.super_admin.refresh_token'),
-            'email' => config('clubify-checkout.super_admin.username'),
+            'email' => config('clubify-checkout.super_admin.email'),
             'password' => config('clubify-checkout.super_admin.password'),
-            'tenant_id' => config('clubify-checkout.super_admin.default_tenant', '507f1f77bcf86cd799439011')
+            'tenant_id' => config('clubify-checkout.super_admin.tenant_id')
         ],
         'user' => [
             "email" => "tenant.admin-super-tese@nova-empresa.com",
@@ -684,19 +692,50 @@ try {
     $sdk = new ClubifyCheckoutSDK($config);
     logStep("SDK inicializado v" . $sdk->getVersion(), 'success');
 
-    // Inicializar como super admin
+    // ✨ NOVO: Inicializar como super admin usando EMAIL/PASSWORD
     try {
-        logStep("Inicializando como super admin...", 'info');
+        logStep("Inicializando como super admin com email/password...", 'info');
 
         if (method_exists($sdk, 'setHttpTimeout')) {
             $sdk->setHttpTimeout(30);
         }
 
-        $initResult = $sdk->initializeAsSuperAdmin($EXAMPLE_CONFIG['super_admin']);
-        logStep("SDK inicializado como super admin", 'success');
+        // Credenciais do super admin (padrão: email/password)
+        $superAdminCredentials = $EXAMPLE_CONFIG['super_admin'];
+
+        // Debug: mostrar qual método está sendo usado
+        if (!empty($superAdminCredentials['email'])) {
+            logStep("   Método: Email/Password (padrão da API)", 'info');
+            logStep("   Email: " . $superAdminCredentials['email'], 'info');
+        } elseif (!empty($superAdminCredentials['username'])) {
+            logStep("   Método: Username/Password (legacy - tratado como email)", 'info');
+            logStep("   Username: " . $superAdminCredentials['username'], 'info');
+        } elseif (!empty($superAdminCredentials['api_key'])) {
+            logStep("   Método: API Key (fallback)", 'info');
+            logStep("   API Key: " . substr($superAdminCredentials['api_key'], 0, 10) . "...", 'info');
+        }
+
+        $initResult = $sdk->initializeAsSuperAdmin($superAdminCredentials);
+
+        if ($initResult['success']) {
+            logStep("✅ SDK inicializado como super admin", 'success');
+            logStep("   Modo: " . $initResult['mode'], 'info');
+            logStep("   Role: " . $initResult['role'], 'info');
+        } else {
+            logStep("❌ Falha na inicialização como super admin", 'error');
+        }
+
     } catch (Exception $e) {
         $errorMsg = $e->getMessage();
-        logStep("Erro ao inicializar como super admin: " . $errorMsg, 'error');
+        logStep("❌ Erro ao inicializar como super admin: " . $errorMsg, 'error');
+
+        // Sugestões de troubleshooting
+        if (str_contains($errorMsg, 'authentication') || str_contains($errorMsg, 'login')) {
+            logStep("💡 Sugestão: Verifique as credenciais no .env:", 'info');
+            logStep("   - CLUBIFY_CHECKOUT_SUPER_ADMIN_EMAIL", 'info');
+            logStep("   - CLUBIFY_CHECKOUT_SUPER_ADMIN_PASSWORD", 'info');
+            logStep("   - CLUBIFY_CHECKOUT_SUPER_ADMIN_TENANT_ID", 'info');
+        }
     }
 
     // ===============================================

@@ -50,12 +50,13 @@ class ClubifyCheckoutServiceProvider extends ServiceProvider
             $sdk->setCredentialManager($credentialManager);
 
             // Auto-configure super admin credentials if available
-            if (!empty($config['super_admin']['api_key'])) {
+            if (!empty($config['super_admin']['api_key']) || !empty($config['super_admin']['email'])) {
                 try {
                     $credentialManager->addSuperAdminContext([
-                        'api_key' => $config['super_admin']['api_key'],
-                        'username' => $config['super_admin']['username'] ?? null,
+                        'api_key' => $config['super_admin']['api_key'] ?? null,
+                        'email' => $config['super_admin']['email'] ?? $config['super_admin']['username'] ?? null, // Padronizado: email
                         'password' => $config['super_admin']['password'] ?? null,
+                        'tenant_id' => $config['super_admin']['tenant_id'] ?? null,
                     ]);
                 } catch (\Exception $e) {
                     // Log warning but don't fail app initialization

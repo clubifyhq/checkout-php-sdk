@@ -23,11 +23,11 @@ use Clubify\Checkout\Exceptions\HttpException;
 class OrganizationRepository extends BaseRepository implements OrganizationRepositoryInterface
 {
     /**
-     * Obtém o endpoint específico do repository
+     * Obtém o endpoint específico do repository (integração com user-management-service)
      */
     protected function getEndpoint(): string
     {
-        return '/organizations';
+        return '/api/v1/organizations';
     }
 
     /**
@@ -310,11 +310,28 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
 
     /**
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
-     * Garante uso consistente do ResponseHelper
+     * Garante uso consistente do ResponseHelper e adiciona headers organizacionais
      */
     protected function makeHttpRequest(string $method, string $uri, array $options = []): array
     {
         try {
+            // Adicionar headers organizacionais se disponíveis
+            if (!isset($options['headers'])) {
+                $options['headers'] = [];
+            }
+
+            // Header organizationId para multi-tenancy
+            $organizationId = $this->config->get('organization_id');
+            if ($organizationId) {
+                $options['headers']['X-Organization-Id'] = $organizationId;
+            }
+
+            // Headers de autenticação e tenant
+            $tenantId = $this->config->get('tenant_id');
+            if ($tenantId) {
+                $options['headers']['X-Tenant-Id'] = $tenantId;
+            }
+
             $response = $this->httpClient->request($method, $uri, $options);
 
             if (!ResponseHelper::isSuccessful($response)) {

@@ -82,39 +82,32 @@ class TenantService
     }
 
     /**
-     * Cria uma organização (alias para createTenant)
+     * Cria um tenant
      */
-    public function createOrganization(array $organizationData): array
+    public function createTenant(array $tenantData): array
     {
         try {
-            // Mapear dados de organização para formato de tenant se necessário
-            $tenantData = $this->mapOrganizationToTenant($organizationData);
+            // Criar tenant
+            $createdTenant = $this->tenantRepository->create($tenantData);
 
-            // Usar método específico do repository se disponível
-            if (method_exists($this->tenantRepository, 'createOrganization')) {
-                $createdOrganization = $this->tenantRepository->createOrganization($tenantData);
-            } else {
-                $createdOrganization = $this->tenantRepository->create($tenantData);
-            }
-
-            $this->logger->info('Organization created successfully', [
-                'organization_id' => $createdOrganization['tenant_id'] ?? $createdOrganization['id'] ?? 'unknown',
-                'name' => $createdOrganization['name'] ?? 'unknown'
+            $this->logger->info('Tenant created successfully', [
+                'tenant_id' => $createdTenant['tenant_id'] ?? $createdTenant['id'] ?? 'unknown',
+                'name' => $createdTenant['name'] ?? 'unknown'
             ]);
 
             return [
                 'success' => true,
-                'organization' => $createdOrganization,
-                'tenant_id' => $createdOrganization['tenant_id'] ?? $createdOrganization['id'] ?? null
+                'tenant' => $createdTenant,
+                'tenant_id' => $createdTenant['tenant_id'] ?? $createdTenant['id'] ?? null
             ];
 
         } catch (\Exception $e) {
-            $this->logger->error('Failed to create organization', [
+            $this->logger->error('Failed to create tenant', [
                 'error' => $e->getMessage(),
-                'data' => $organizationData
+                'data' => $tenantData
             ]);
 
-            throw new SDKException('Failed to create organization: ' . $e->getMessage(), 0, $e);
+            throw new SDKException('Failed to create tenant: ' . $e->getMessage(), 0, $e);
         }
     }
 

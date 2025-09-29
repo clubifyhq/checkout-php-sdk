@@ -256,19 +256,94 @@ class ClubifyCheckoutSDK
     }
 
     /**
-     * Criar organização (apenas super admin)
+     * Criar tenant (apenas super admin)
+     */
+    public function createTenant(array $tenantData): array
+    {
+        $this->requireSuperAdminMode();
+
+        // Criar tenant e tenant_admin
+        $result = $this->getAuthManager()->createTenantCredentials(
+            $tenantData['name'],
+            $tenantData
+        );
+
+        return $result;
+    }
+
+    /**
+     * Criar organização REAL (nova hierarquia organizacional)
      */
     public function createOrganization(array $organizationData): array
     {
         $this->requireSuperAdminMode();
 
-        // Criar organização e tenant_admin
-        $result = $this->getAuthManager()->createTenantCredentials(
-            $organizationData['name'],
-            $organizationData
+        // Usar OrganizationModule para criar organização real
+        return $this->organization()->setupOrganization($organizationData);
+    }
+
+    /**
+     * ✅ NEW: Autenticar usando Organization API Key
+     */
+    public function authenticateWithOrganizationApiKey(
+        string $organizationId,
+        string $apiKey,
+        ?string $tenantId = null
+    ): array {
+        $orgAuthManager = new \Clubify\Checkout\Core\Auth\OrganizationAuthManager(
+            $this->config,
+            $this->getHttpClient(),
+            $this->getLogger()
         );
 
-        return $result;
+        return $orgAuthManager->authenticateWithOrganizationApiKey($organizationId, $apiKey, $tenantId);
+    }
+
+    /**
+     * ✅ NEW: Autenticar com acesso total à organização
+     */
+    public function authenticateAsOrganization(string $organizationId, string $organizationApiKey): array
+    {
+        return $this->authenticateWithOrganizationApiKey($organizationId, $organizationApiKey);
+    }
+
+    /**
+     * ✅ NEW: Autenticar com acesso multi-tenant
+     */
+    public function authenticateAsCrossTenant(
+        string $organizationId,
+        string $crossTenantApiKey,
+        string $targetTenantId
+    ): array {
+        return $this->authenticateWithOrganizationApiKey($organizationId, $crossTenantApiKey, $targetTenantId);
+    }
+
+    /**
+     * ✅ NEW: Verificar se está autenticado com organization key
+     */
+    public function isOrganizationAuthenticated(): bool
+    {
+        $orgAuthManager = new \Clubify\Checkout\Core\Auth\OrganizationAuthManager(
+            $this->config,
+            $this->getHttpClient(),
+            $this->getLogger()
+        );
+
+        return $orgAuthManager->isAuthenticated();
+    }
+
+    /**
+     * ✅ NEW: Obter contexto organizacional atual
+     */
+    public function getOrganizationContext(): array
+    {
+        $orgAuthManager = new \Clubify\Checkout\Core\Auth\OrganizationAuthManager(
+            $this->config,
+            $this->getHttpClient(),
+            $this->getLogger()
+        );
+
+        return $orgAuthManager->getOrganizationContext();
     }
 
     /**

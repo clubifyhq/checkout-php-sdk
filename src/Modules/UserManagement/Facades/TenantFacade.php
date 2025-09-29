@@ -77,11 +77,11 @@ class TenantFacade
     }
 
     /**
-     * Cria uma organização
+     * Cria um tenant
      */
-    public function createOrganization(array $organizationData): array
+    public function createTenant(array $tenantData): array
     {
-        return $this->service()->createOrganization($organizationData);
+        return $this->service()->createTenant($tenantData);
     }
 
     /**

@@ -856,9 +856,123 @@ try {
     } catch (Exception $e) {
         logStep("Erro na gestão de credenciais: " . $e->getMessage(), 'error');
         logStep("Detalhes do erro: " . $e->getFile() . ':' . $e->getLine(), 'error');
+
+        $credentials = null;
     }
 
-exit(1);
+
+
+    // ===============================================
+    // 2.1. DEMONSTRAÇÃO ORGANIZATION API KEYS
+    // ===============================================
+
+    echo "\n=== Organization API Keys - Demonstração ===\n";
+
+    if ($credentials && isset($credentials['api_key'])) {
+        try {
+            logStep("Demonstrando funcionalidades de Organization API Keys...", 'info');
+
+            // Inicializar SDK com Organization API Key
+            $organizationConfig = [
+                'organization_id' => config('clubify-checkout.organization.id', $EXAMPLE_CONFIG['super_admin']['tenant_id']),
+                'api_key' => $credentials['api_key'],
+                'scope' => 'ORGANIZATION',
+                'environment' => config('clubify-checkout.environment', 'sandbox')
+            ];
+
+            // Criar nova instância SDK para organização
+            $orgSdk = new ClubifyCheckoutSDK($organizationConfig);
+
+            // Demonstrar authenticateAsOrganization
+            logStep("Autenticando como organização...", 'info');
+            $authResult = $orgSdk->authenticateAsOrganization(
+                $organizationConfig['organization_id'],
+                $organizationConfig['api_key']
+            );
+
+            if ($authResult['success']) {
+                logStep("✅ Autenticação como organização bem-sucedida!", 'success');
+                logStep("   Organization ID: " . $authResult['organization_id'], 'info');
+                logStep("   Scope: " . $authResult['scope'], 'info');
+                logStep("   Available Tenants: " . count($authResult['available_tenants'] ?? []), 'info');
+
+                // Listar tenants disponíveis para a organização
+                if (!empty($authResult['available_tenants'])) {
+                    logStep("Tenants disponíveis na organização:", 'info');
+                    foreach (array_slice($authResult['available_tenants'], 0, 3) as $tenant) {
+                        $tenantName = $tenant['name'] ?? 'Unknown';
+                        $tenantId = $tenant['id'] ?? $tenant['_id'] ?? 'unknown';
+                        logStep("   - $tenantName (ID: " . substr($tenantId, -8) . ")", 'info');
+                    }
+                }
+
+                // Demonstrar operações cross-tenant
+                logStep("Demonstrando operações cross-tenant...", 'info');
+
+                // Listar produtos de todos os tenants
+                if (method_exists($orgSdk, 'products')) {
+                    try {
+                        // Simular operação cross-tenant usando método list padrão
+                        $allProducts = $orgSdk->products()->list([
+                            'limit' => 10,
+                            'include_inactive' => false,
+                            'organization_scope' => true // Flag para operação organizacional
+                        ]);
+
+                        if ($allProducts && isset($allProducts['data'])) {
+                            $productCount = count($allProducts['data']);
+                            logStep("Produtos encontrados (organização): $productCount", 'success');
+                        }
+                    } catch (Exception $e) {
+                        logStep("Erro ao listar produtos da organização: " . $e->getMessage(), 'info');
+                    }
+                }
+
+                // Demonstrar switch de contexto para tenant específico
+                if (!empty($authResult['available_tenants'])) {
+                    $firstTenant = $authResult['available_tenants'][0];
+                    $targetTenantId = $firstTenant['id'] ?? $firstTenant['_id'];
+
+                    if ($targetTenantId) {
+                        try {
+                            logStep("Demonstrando acesso a tenant específico...", 'info');
+
+                            // Simular operação no contexto do tenant usando headers
+                            $originalConfig = $orgSdk->getConfig();
+                            $tenantConfig = array_merge($originalConfig, [
+                                'tenant_id' => $targetTenantId,
+                                'context' => 'tenant'
+                            ]);
+
+                            // Criar SDK temporário para o tenant
+                            $tenantSdk = new ClubifyCheckoutSDK($tenantConfig);
+
+                            logStep("✅ Contexto configurado para tenant: " . substr($targetTenantId, -8), 'success');
+
+                            // Realizar operação no contexto do tenant
+                            $tenantProducts = $tenantSdk->products()->list(['limit' => 5]);
+                            $tenantProductCount = count($tenantProducts['data'] ?? []);
+                            logStep("Produtos no tenant atual: $tenantProductCount", 'info');
+
+                            logStep("✅ Operação no tenant concluída", 'success');
+
+                        } catch (Exception $e) {
+                            logStep("Erro na operação do tenant: " . $e->getMessage(), 'warning');
+                        }
+                    }
+                }
+
+            } else {
+                logStep("❌ Falha na autenticação como organização", 'error');
+                logStep("   Erro: " . ($authResult['error'] ?? 'Unknown error'), 'error');
+            }
+
+        } catch (Exception $e) {
+            logStep("Erro na demonstração de Organization API Keys: " . $e->getMessage(), 'error');
+        }
+    } else {
+        logStep("Credenciais não disponíveis para demonstração de Organization API Keys", 'warning');
+    }
 
 
     try {
@@ -1114,12 +1228,13 @@ exit(1);
 
             if ($productId) {
                 $productTags = config('app.example_product_tags', ['laravel', 'sdk', 'auto']);
-                if (!empty($productTags) && method_exists($sdk->products(), 'addTags')) {
+                if (!empty($productTags)) {
                     try {
-                        $sdk->products()->addTags($productId, $productTags);
-                        logStep("Tags adicionadas: " . implode(', ', $productTags), 'info');
+                        // Demonstrar possível adição de tags (método pode não existir ainda)
+                        logStep("Tags que seriam adicionadas: " . implode(', ', $productTags), 'info');
+                        logStep("Funcionalidade de tags será implementada em versão futura do SDK", 'debug');
                     } catch (Exception $tagError) {
-                        logStep("Erro ao adicionar tags: " . $tagError->getMessage(), 'debug');
+                        logStep("Erro ao processar tags: " . $tagError->getMessage(), 'debug');
                     }
                 }
             }

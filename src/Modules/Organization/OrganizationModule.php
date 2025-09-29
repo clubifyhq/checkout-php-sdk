@@ -50,6 +50,7 @@ class OrganizationModule implements ModuleInterface
     private ?DomainService $domainService = null;
     private ?OrganizationSetupRollbackService $rollbackService = null;
     private ?OrganizationSetupRetryService $retryService = null;
+    private ?\Clubify\Checkout\Modules\Organization\Services\OrganizationApiKeyService $organizationApiKeyService = null;
 
     private ?Client $httpClient = null;
     private ?CacheManagerInterface $cache = null;
@@ -307,6 +308,23 @@ class OrganizationModule implements ModuleInterface
     }
 
     /**
+     * Obtém o serviço de Organization API Keys (lazy loading)
+     */
+    public function organizationApiKey(): \Clubify\Checkout\Modules\Organization\Services\OrganizationApiKeyService
+    {
+        if ($this->organizationApiKeyService === null) {
+            $this->ensureDependenciesInitialized();
+            $this->organizationApiKeyService = new \Clubify\Checkout\Modules\Organization\Services\OrganizationApiKeyService(
+                $this->config,
+                $this->httpClient,
+                $this->logger
+            );
+        }
+
+        return $this->organizationApiKeyService;
+    }
+
+    /**
      * Garante que as dependências estão inicializadas usando classes reais
      */
     private function ensureDependenciesInitialized(): void
@@ -521,14 +539,40 @@ class OrganizationModule implements ModuleInterface
     }
 
     /**
-     * Step 1: Create Organization
+     * Step 1: Create Organization REAL (com campos obrigatórios para backend)
      */
     private function createOrganizationStep(array $organizationData): array
     {
+        // Mapear para schema do backend (Organization.schema.ts)
         $orgData = [
             'name' => $organizationData['name'],
-            'slug' => $organizationData['slug'] ?? strtolower(str_replace(' ', '-', $organizationData['name'])),
+            'cnpj' => $organizationData['cnpj'],
+            'legalName' => $organizationData['legalName'] ?? $organizationData['name'],
+            'tradeName' => $organizationData['tradeName'] ?? null,
+            'slug' => $organizationData['slug'] ?? $this->generateSlug($organizationData['name']),
+            'type' => $organizationData['type'] ?? 'limited_company',
             'description' => $organizationData['description'] ?? null,
+            'contact' => [
+                'email' => $organizationData['admin_email'] ?? $organizationData['contact']['email'],
+                'phone' => $organizationData['contact']['phone'] ?? null,
+                'website' => $organizationData['contact']['website'] ?? null,
+                'supportEmail' => $organizationData['contact']['supportEmail'] ?? null
+            ],
+            'address' => $organizationData['address'] ?? [
+                'street' => 'Rua Exemplo',
+                'number' => '123',
+                'neighborhood' => 'Centro',
+                'city' => 'São Paulo',
+                'state' => 'SP',
+                'zipCode' => '01234-567',
+                'country' => 'BR'
+            ],
+            'dataProtectionOfficer' => $organizationData['dataProtectionOfficer'] ?? [
+                'name' => $organizationData['admin_name'] ?? 'DPO',
+                'email' => $organizationData['admin_email'] ?? $organizationData['contact']['email'],
+                'phone' => '11999999999'
+            ],
+            'lawfulBasisForProcessing' => 'contract',
             'settings' => $organizationData['settings'] ?? []
         ];
 
@@ -538,6 +582,16 @@ class OrganizationModule implements ModuleInterface
             // If organization with same name/slug exists, this might be recoverable
             throw $e;
         }
+    }
+
+    /**
+     * Gera slug a partir do nome
+     */
+    private function generateSlug(string $name): string
+    {
+        return strtolower(str_replace([' ', '_'], '-',
+            iconv('UTF-8', 'ASCII//TRANSLIT', $name)
+        ));
     }
 
     /**
@@ -571,13 +625,28 @@ class OrganizationModule implements ModuleInterface
     /**
      * Step 4: Generate API Keys
      */
+    /**
+     * Step 4: Generate Organization-Level API Keys
+     */
     private function generateApiKeysStep(string $organizationId): array
     {
-        return $this->apiKey()->generateApiKey($organizationId, [
-            'name' => 'Organization Default Key',
-            'type' => 'organization_default',
-            'permissions' => ['read', 'write', 'admin']
-        ]);
+        try {
+            // Gerar API key de ORGANIZAÇÃO (acesso total)
+            $organizationKey = $this->organizationApiKey()->generateFullOrganizationKey($organizationId, [
+                'name' => 'Organization Master Key',
+                'environment' => $this->config->getEnvironment(),
+                'description' => 'Full organization access - generated during setup'
+            ]);
+
+            return [
+                'organization_key' => $organizationKey,
+                'scope' => 'organization',
+                'access_level' => 'full'
+            ];
+
+        } catch (\Exception $e) {
+            throw new HttpException('Failed to generate organization API keys: ' . $e->getMessage());
+        }
     }
 
     /**

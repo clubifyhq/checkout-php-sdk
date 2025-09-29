@@ -1,0 +1,620 @@
+{
+  "info": {
+    "name": "Clubify Organization API Keys",
+    "description": "Collection for testing Organization API Keys functionality in Clubify Checkout SDK",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{organization_api_key}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://checkout.svelve.com/api/v1"
+    },
+    {
+      "key": "organization_id",
+      "value": "org_example_123456789"
+    },
+    {
+      "key": "organization_api_key",
+      "value": "org_live_1234567890abcdef1234567890abcdef"
+    },
+    {
+      "key": "cross_tenant_api_key",
+      "value": "ct_live_fedcba0987654321fedcba0987654321"
+    },
+    {
+      "key": "tenant_api_key",
+      "value": "tenant_live_abcd1234efgh5678ijkl9012mnop3456"
+    },
+    {
+      "key": "super_admin_token",
+      "value": "{{super_admin_jwt_token}}"
+    },
+    {
+      "key": "tenant_id",
+      "value": "tenant_123456789abcdef"
+    },
+    {
+      "key": "user_id",
+      "value": "user_123456789abcdef"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Authenticate as Organization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization_id\": \"{{organization_id}}\",\n  \"api_key\": \"{{organization_api_key}}\",\n  \"scope\": \"ORGANIZATION\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/organization",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "organization"]
+            },
+            "description": "Authenticate as organization using Organization API Key"
+          },
+          "response": []
+        },
+        {
+          "name": "Authenticate with Cross-Tenant Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization_id\": \"{{organization_id}}\",\n  \"api_key\": \"{{cross_tenant_api_key}}\",\n  \"scope\": \"CROSS_TENANT\",\n  \"allowed_tenant_ids\": [\"tenant_123\", \"tenant_456\", \"tenant_789\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/organization",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "organization"]
+            },
+            "description": "Authenticate with Cross-Tenant API Key for multi-tenant access"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Organization API Keys Management",
+      "item": [
+        {
+          "name": "Generate Organization API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{super_admin_token}}"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Master Organization Key\",\n  \"scope\": \"ORGANIZATION\",\n  \"environment\": \"live\",\n  \"permissions\": [\n    \"checkout:read\",\n    \"checkout:write\",\n    \"products:read\",\n    \"products:write\",\n    \"orders:read\",\n    \"customers:read\"\n  ],\n  \"description\": \"Full access organization key for admin operations\",\n  \"rateLimit\": {\n    \"requests\": 1000,\n    \"window\": 3600,\n    \"burst\": 100\n  },\n  \"allowedDomains\": [\"*.example.com\", \"admin.mystore.com\"],\n  \"autoRotate\": true,\n  \"rotationInterval\": 90\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{organization_id}}/api-keys",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{organization_id}}", "api-keys"]
+            },
+            "description": "Generate a new Organization scope API key with full access"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Cross-Tenant API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{super_admin_token}}"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Multi-Tenant Integration Key\",\n  \"scope\": \"CROSS_TENANT\",\n  \"environment\": \"live\",\n  \"allowedTenantIds\": [\n    \"tenant_123456789abcdef\",\n    \"tenant_987654321fedcba\",\n    \"tenant_456789abcdef123\"\n  ],\n  \"permissions\": [\n    \"checkout:read\",\n    \"products:read\",\n    \"orders:read\"\n  ],\n  \"description\": \"Multi-tenant access for franchise management\",\n  \"rateLimit\": {\n    \"requests\": 500,\n    \"window\": 3600\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{organization_id}}/api-keys",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{organization_id}}", "api-keys"]
+            },
+            "description": "Generate a Cross-Tenant scope API key for multi-tenant access"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Tenant API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{super_admin_token}}"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Single Store API Key\",\n  \"scope\": \"TENANT\",\n  \"environment\": \"live\",\n  \"tenantId\": \"{{tenant_id}}\",\n  \"permissions\": [\n    \"checkout:read\",\n    \"checkout:write\",\n    \"products:read\",\n    \"orders:read\"\n  ],\n  \"description\": \"Single tenant access for store-specific operations\",\n  \"rateLimit\": {\n    \"requests\": 200,\n    \"window\": 3600\n  },\n  \"allowedIPs\": [\"192.168.1.100\", \"203.0.113.0/24\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{organization_id}}/api-keys",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{organization_id}}", "api-keys"]
+            },
+            "description": "Generate a Tenant scope API key for single tenant access"
+          },
+          "response": []
+        },
+        {
+          "name": "List Organization API Keys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{super_admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{organization_id}}/api-keys?scope=ORGANIZATION&environment=live&includeInactive=false&limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{organization_id}}", "api-keys"],
+              "query": [
+                {
+                  "key": "scope",
+                  "value": "ORGANIZATION",
+                  "description": "Filter by scope (ORGANIZATION, CROSS_TENANT, TENANT)"
+                },
+                {
+                  "key": "environment",
+                  "value": "live",
+                  "description": "Filter by environment (sandbox, live)"
+                },
+                {
+                  "key": "includeInactive",
+                  "value": "false",
+                  "description": "Include inactive keys"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "List all API keys for the organization"
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Organization API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{super_admin_token}}"
+              },
+              {
+                "key": "X-Requested-Tenant-Id",
+                "value": "{{tenant_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"apiKey\": \"{{organization_api_key}}\",\n  \"endpoint\": \"/api/v1/checkout\",\n  \"ipAddress\": \"192.168.1.100\",\n  \"userAgent\": \"MyApp/1.0.0\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{organization_id}}/api-keys/validate",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{organization_id}}", "api-keys", "validate"]
+            },
+            "description": "Validate an organization API key"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Organization Operations",
+      "item": [
+        {
+          "name": "Switch to Tenant Context",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organization_api_key}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organization/switch-tenant",
+              "host": ["{{base_url}}"],
+              "path": ["organization", "switch-tenant"]
+            },
+            "description": "Switch organization context to a specific tenant"
+          },
+          "response": []
+        },
+        {
+          "name": "List Organization Tenants",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organization_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organization/tenants?status=active&limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["organization", "tenants"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "List all tenants within the organization"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cross-Tenant Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organization_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organization/products/cross-tenant?limit=20&status=active",
+              "host": ["{{base_url}}"],
+              "path": ["organization", "products", "cross-tenant"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            },
+            "description": "Get products across all organization tenants"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cross-Tenant Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organization_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organization/orders/cross-tenant?start_date=2024-01-01&end_date=2024-12-31&status=completed&limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["organization", "orders", "cross-tenant"],
+              "query": [
+                {
+                  "key": "start_date",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2024-12-31"
+                },
+                {
+                  "key": "status",
+                  "value": "completed"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Get orders across all organization tenants"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Analytics & Reporting",
+      "item": [
+        {
+          "name": "Get Usage Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{super_admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{organization_id}}/api-keys/usage/statistics?startDate=2024-01-01&endDate=2024-12-31&scope=ORGANIZATION",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{organization_id}}", "api-keys", "usage", "statistics"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-12-31"
+                },
+                {
+                  "key": "scope",
+                  "value": "ORGANIZATION"
+                }
+              ]
+            },
+            "description": "Get usage statistics for organization API keys"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Organization Dashboard Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organization_api_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organization/dashboard?period=30d&include_tenants=true",
+              "host": ["{{base_url}}"],
+              "path": ["organization", "dashboard"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "30d"
+                },
+                {
+                  "key": "include_tenants",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Get comprehensive organization dashboard data"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "API Key Management",
+      "item": [
+        {
+          "name": "Get API Key Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{super_admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/organizations/{{organization_id}}/api-keys/{{key_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{organization_id}}", "api-keys", "{{key_id}}"],
+              "variable": [
+                {
+                  "key": "key_id",
+                  "value": "key_123456789abcdef"
+                }
+              ]
+            },
+            "description": "Get details of a specific API key"
+          },
+          "response": []
+        },
+        {
+          "name": "Update API Key",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{super_admin_token}}"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated API key description\",\n  \"permissions\": [\n    \"checkout:read\",\n    \"products:read\",\n    \"orders:read\"\n  ],\n  \"rateLimit\": {\n    \"requests\": 500,\n    \"window\": 3600\n  },\n  \"allowedDomains\": [\"*.example.com\"],\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{organization_id}}/api-keys/{{key_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{organization_id}}", "api-keys", "{{key_id}}"],
+              "variable": [
+                {
+                  "key": "key_id",
+                  "value": "key_123456789abcdef"
+                }
+              ]
+            },
+            "description": "Update an existing API key configuration"
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke API Key",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{super_admin_token}}"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{user_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Security concern - suspected compromise\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/organizations/{{organization_id}}/api-keys/{{key_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizations", "{{organization_id}}", "api-keys", "{{key_id}}"],
+              "variable": [
+                {
+                  "key": "key_id",
+                  "value": "key_123456789abcdef"
+                }
+              ]
+            },
+            "description": "Revoke an existing API key"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-generate timestamps for requests",
+          "pm.globals.set('timestamp', new Date().toISOString());",
+          "",
+          "// Validate required variables",
+          "const requiredVars = ['base_url', 'organization_id'];",
+          "requiredVars.forEach(varName => {",
+          "    if (!pm.variables.get(varName)) {",
+          "        console.warn(`Warning: Required variable '${varName}' is not set`);",
+          "    }",
+          "});"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test for response time",
+          "pm.test('Response time is less than 5000ms', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "// Global test for successful responses",
+          "if (pm.response.code >= 200 && pm.response.code < 300) {",
+          "    pm.test('Response has success field', function () {",
+          "        const jsonData = pm.response.json();",
+          "        pm.expect(jsonData).to.have.property('success');",
+          "    });",
+          "}",
+          "",
+          "// Log response for debugging",
+          "console.log('Response Status:', pm.response.status);",
+          "console.log('Response Time:', pm.response.responseTime + 'ms');"
+        ]
+      }
+    }
+  ]
+}

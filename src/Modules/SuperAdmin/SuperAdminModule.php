@@ -187,23 +187,23 @@ class SuperAdminModule implements ModuleInterface
     }
 
     /**
-     * Criar organização
+     * Criar tenant
      */
-    public function createOrganization(array $data): array
+    public function createTenant(array $data): array
     {
         $this->ensureInitialized();
 
         try {
             // Se temos o TenantService do UserManagement disponível, usar ele
             if ($this->userManagementTenantService !== null) {
-                $this->logger->info('Creating organization via UserManagement TenantService', [
+                $this->logger->info('Creating tenant via UserManagement TenantService', [
                     'data_keys' => array_keys($data)
                 ]);
 
-                $result = $this->userManagementTenantService->createOrganization($data);
+                $result = $this->userManagementTenantService->createTenant($data);
 
-                $this->logger->info('Organization created successfully via TenantService', [
-                    'organization_id' => $result['organization']['id'] ?? $result['tenant_id'] ?? 'unknown',
+                $this->logger->info('Tenant created successfully via TenantService', [
+                    'tenant_id' => $result['tenant']['id'] ?? $result['tenant_id'] ?? 'unknown',
                     'success' => $result['success'] ?? false
                 ]);
 

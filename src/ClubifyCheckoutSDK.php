@@ -284,6 +284,17 @@ class ClubifyCheckoutSDK
 
     /**
      * ✅ NEW: Autenticar usando Organization API Key
+     *
+     * Este método autentica usando Organization-Level API Keys e configura
+     * automaticamente:
+     * - Access token no TokenStorage para uso em requisições HTTP
+     * - Headers organizacionais (X-Organization-Id, X-Tenant-Id)
+     * - Contexto organizacional na configuração
+     *
+     * @param string $organizationId ID da organização
+     * @param string $apiKey Organization API Key (clb_org_*, clb_multi_*, clb_tenant_*)
+     * @param string|null $tenantId Tenant específico (opcional, para cross-tenant keys)
+     * @return array Resultado da autenticação com access_token, scope, permissions, etc.
      */
     public function authenticateWithOrganizationApiKey(
         string $organizationId,
@@ -296,7 +307,27 @@ class ClubifyCheckoutSDK
             $this->getLogger()
         );
 
-        return $orgAuthManager->authenticateWithOrganizationApiKey($organizationId, $apiKey, $tenantId);
+        $result = $orgAuthManager->authenticateWithOrganizationApiKey($organizationId, $apiKey, $tenantId);
+
+        // IMPORTANTE: Também atualizar o AuthManager regular para que o token seja usado nas requisições
+        if ($result['success'] && isset($result['access_token'])) {
+            $authManager = $this->getAuthManager();
+
+            // Armazenar token no TokenStorage do AuthManager
+            $tokenStorage = new \ReflectionClass($authManager);
+            $tokenStorageProperty = $tokenStorage->getProperty('tokenStorage');
+            $tokenStorageProperty->setAccessible(true);
+            $storage = $tokenStorageProperty->getValue($authManager);
+
+            if ($storage) {
+                $storage->storeAccessToken($result['access_token'], $result['expires_in']);
+                if (isset($result['refresh_token'])) {
+                    $storage->storeRefreshToken($result['refresh_token']);
+                }
+            }
+        }
+
+        return $result;
     }
 
     /**

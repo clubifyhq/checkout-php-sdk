@@ -154,6 +154,17 @@ class Client
             }
         }
 
+        // Adicionar headers de organização se disponíveis na configuração
+        $organizationId = $this->config->get('organization_id');
+        if ($organizationId) {
+            $headers['X-Organization-Id'] = $organizationId;
+        }
+
+        $tenantId = $this->config->get('tenant_id');
+        if ($tenantId) {
+            $headers['X-Tenant-Id'] = $tenantId;
+        }
+
         return $headers;
     }
 

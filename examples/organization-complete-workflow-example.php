@@ -944,10 +944,7 @@ if (isset($offerId)) {
 
     } catch (Exception $e) {
         echo "  ⚠️  Erro ao gerar URL: " . $e->getMessage() . "\n";
-        // Fallback para URL genérica
-        if (isset($offer['slug'])) {
-            echo "  - Oferta (público): https://checkout.seudominio.com/offer/" . $offer['slug'] . "\n";
-        }
+        
     }
 }
 echo "\n";

@@ -189,33 +189,96 @@ echo "-------------------------\n";
 $offerData = [
     'name' => 'Oferta Especial - Marketing Digital',
     'description' => 'Aproveite nossa oferta especial com bônus exclusivos',
-    'type' => 'single_product',
-    'products' => [$productId],
-    'status' => 'active',
+    'type' => 'single', // Tipos: single, combo, subscription, bundle
+    'products' => [
+        [
+            'productId' => $productId,
+            'quantity' => 1,
+            'position' => 0,
+            'isOptional' => false,
+            'discountType' => 'percentage',
+            'discountValue' => 10 // 10% de desconto
+        ]
+    ],
     'settings' => [
-        'max_purchases' => 100,
-        'currency' => 'BRL',
-        'show_guarantee' => true,
-        'guarantee_days' => 30
+        'allowQuantityChange' => true,
+        'maxQuantity' => 10,
+        'minQuantity' => 1,
+        'requiresShipping' => false,
+        'taxable' => true,
+        'collectCustomerInfo' => [
+            'name' => true,
+            'email' => true,
+            'phone' => true,
+            'address' => false,
+            'cpf' => true
+        ]
     ],
     'theme' => [
-        'primary_color' => '#007bff',
-        'secondary_color' => '#6c757d',
-        'font_family' => 'Roboto, sans-serif'
+        'name' => 'modern', // Opções: light, dark, modern, premium, custom
+        'colors' => [
+            'primary' => '#007bff',
+            'secondary' => '#6c757d',
+            'background' => '#ffffff',
+            'surface' => '#f9fafb',
+            'text' => '#212529',
+            'textSecondary' => '#6c757d',
+            'border' => '#e5e7eb',
+            'success' => '#28a745',
+            'warning' => '#ffc107',
+            'error' => '#dc3545'
+        ],
+        'typography' => [
+            'fontFamily' => 'Roboto, sans-serif',
+            'headingScale' => 1.25,
+            'lineHeight' => 1.6
+        ],
+        'spacing' => [
+            'unit' => 8 // Base spacing em pixels
+        ],
+        'borderRadius' => [
+            'small' => 4,
+            'medium' => 8,
+            'large' => 12
+        ],
+        'shadows' => [
+            'small' => '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+            'medium' => '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+            'large' => '0 10px 15px -3px rgb(0 0 0 / 0.1)'
+        ],
+        'customCSS' => '.checkout-button { transition: all 0.3s ease; }'
     ],
     'layout' => [
-        'type' => 'single_column',
-        'show_testimonials' => true,
-        'show_guarantee' => true,
-        'show_timer' => false
-    ]
+        'structure' => 'single-column', // single-column, two-column, default
+        'showHeader' => true,
+        'showFooter' => true,
+        'showProgress' => false,
+        'enableAnimations' => true
+    ],
+    'seo' => [
+        'title' => 'Curso Completo de Marketing Digital - Oferta Especial',
+        'description' => 'Aprenda marketing digital do zero ao avançado com desconto especial',
+        'keywords' => ['marketing digital', 'curso online', 'vendas online'],
+        'ogImage' => 'https://exemplo.com/imagem-oferta.jpg'
+    ],
+    'tracking' => [
+        'googleAnalyticsId' => 'UA-XXXXXXXXX-X',
+        'facebookPixelId' => '1234567890',
+        'customScripts' => []
+    ],
+    'metadata' => [
+        'campaign' => 'black-friday-2024',
+        'source' => 'sdk-example',
+        'version' => '1.0'
+    ],
+    'isActive' => true
 ];
 
 try {
     echo "Criando oferta: " . $offerData['name'] . "\n";
 
     // Verificar se a oferta já existe
-    $existingOffers = $sdk->offer()->list([
+    $existingOffers = $sdk->offer()->offers()->list([
         'search' => $offerData['name'],
         'limit' => 1
     ]);
@@ -232,7 +295,7 @@ try {
     }
 
     if (!$offer) {
-        $offer = $sdk->offer()->create($offerData);
+        $offer = $sdk->offer()->offers()->create($offerData);
         echo "✅ Oferta criada com sucesso!\n";
     }
 
@@ -240,28 +303,25 @@ try {
     echo "   ID: " . $offerId . "\n";
     echo "   Nome: " . $offer['name'] . "\n";
     echo "   Tipo: " . $offer['type'] . "\n";
-    echo "   Status: " . ($offer['status'] ?? 'active') . "\n";
+    echo "   Slug: " . ($offer['slug'] ?? 'não definido') . "\n";
+    echo "   Status: " . ($offer['status'] ?? 'draft') . "\n";
+    echo "   Ativa: " . (($offer['isActive'] ?? false) ? 'Sim' : 'Não') . "\n";
 
-    // Configurar tema da oferta
-    if (isset($offerData['theme'])) {
-        try {
-            echo "   Configurando tema...\n";
-            $sdk->offer()->configureTheme($offerId, $offerData['theme']);
-            echo "   ✅ Tema configurado\n";
-        } catch (Exception $themeError) {
-            echo "   ⚠️  Tema: " . $themeError->getMessage() . "\n";
-        }
+    // Mostrar configurações aplicadas
+    if (isset($offer['settings'])) {
+        echo "   Settings: Configurado ✅\n";
     }
-
-    // Configurar layout da oferta
-    if (isset($offerData['layout'])) {
-        try {
-            echo "   Configurando layout...\n";
-            $sdk->offer()->configureLayout($offerId, $offerData['layout']);
-            echo "   ✅ Layout configurado\n";
-        } catch (Exception $layoutError) {
-            echo "   ⚠️  Layout: " . $layoutError->getMessage() . "\n";
-        }
+    if (isset($offer['theme'])) {
+        echo "   Theme: Configurado ✅\n";
+    }
+    if (isset($offer['layout'])) {
+        echo "   Layout: Configurado ✅\n";
+    }
+    if (isset($offer['seo'])) {
+        echo "   SEO: Configurado ✅\n";
+    }
+    if (isset($offer['tracking'])) {
+        echo "   Tracking: Configurado ✅\n";
     }
 
 } catch (Exception $e) {
@@ -277,85 +337,419 @@ echo "-----------------------------------\n";
 
 $flowData = [
     'name' => 'Flow Marketing Digital',
-    'type' => 'standard',
-    'offer_id' => $offerId,
-    'steps' => [
-        [
-            'type' => 'product_selection',
-            'config' => [
-                'show_related' => true,
-                'allow_multiple' => false
-            ]
-        ],
-        [
-            'type' => 'customer_info',
-            'config' => [
-                'required_fields' => ['name', 'email', 'phone'],
-                'optional_fields' => ['cpf']
-            ]
-        ],
-        [
-            'type' => 'payment_info',
-            'config' => [
-                'methods' => ['credit_card', 'pix', 'boleto'],
-                'installments' => [
-                    'enabled' => true,
-                    'max' => 12,
-                    'min_value' => 5000 // R$ 50,00 mínimo por parcela
+    'description' => 'Flow completo para venda de cursos digitais com múltiplas etapas e personalização',
+    'version' => '1.0.0',
+    'status' => 'draft', // draft, testing, active, paused, archived
+    'isDefault' => false,
+    'isActive' => true,
+    'deviceTarget' => 'both', // mobile, desktop, both
+    'tags' => ['marketing', 'digital', 'curso'],
+
+    // Configuração completa do fluxo
+    'flowConfig' => [
+        'startStep' => 'step-information',
+
+        'steps' => [
+            'step-information' => [
+                'id' => 'step-information',
+                'name' => 'Informações do Cliente',
+                'type' => 'information',
+                'component' => 'InformationStep',
+                'ui' => [
+                    'title' => 'Seus Dados',
+                    'subtitle' => 'Preencha suas informações para continuar',
+                    'showProgress' => true,
+                    'progressType' => 'steps',
+                    'showBackButton' => false,
+                    'nextButtonText' => 'Continuar para Pagamento',
+                    'layout' => [
+                        'columns' => 1,
+                        'spacing' => 'normal',
+                        'alignment' => 'left',
+                        'width' => 'normal'
+                    ],
+                    'styling' => [
+                        'backgroundColor' => '#ffffff',
+                        'textColor' => '#212529',
+                        'primaryColor' => '#007bff',
+                        'secondaryColor' => '#6c757d',
+                        'borderRadius' => 8,
+                        'shadow' => 'medium'
+                    ]
+                ],
+                'fields' => [
+                    [
+                        'id' => 'name',
+                        'type' => 'text',
+                        'name' => 'name',
+                        'label' => 'Nome Completo',
+                        'placeholder' => 'Digite seu nome completo',
+                        'required' => true,
+                        'validation' => [
+                            'minLength' => 3,
+                            'maxLength' => 100
+                        ],
+                        'styling' => [
+                            'width' => '100%'
+                        ]
+                    ],
+                    [
+                        'id' => 'email',
+                        'type' => 'email',
+                        'name' => 'email',
+                        'label' => 'E-mail',
+                        'placeholder' => 'seu@email.com',
+                        'required' => true,
+                        'validation' => [
+                            'pattern' => '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                        ],
+                        'styling' => [
+                            'width' => '100%'
+                        ]
+                    ],
+                    [
+                        'id' => 'phone',
+                        'type' => 'phone',
+                        'name' => 'phone',
+                        'label' => 'Telefone/WhatsApp',
+                        'placeholder' => '(00) 00000-0000',
+                        'required' => true,
+                        'validation' => [
+                            'minLength' => 10,
+                            'maxLength' => 15
+                        ],
+                        'styling' => [
+                            'width' => '100%'
+                        ]
+                    ],
+                    [
+                        'id' => 'cpf',
+                        'type' => 'text',
+                        'name' => 'cpf',
+                        'label' => 'CPF',
+                        'placeholder' => '000.000.000-00',
+                        'required' => false,
+                        'validation' => [
+                            'pattern' => '^\d{3}\.\d{3}\.\d{3}-\d{2}$'
+                        ],
+                        'styling' => [
+                            'width' => '100%'
+                        ]
+                    ]
+                ],
+                'transitions' => [
+                    [
+                        'condition' => [
+                            'type' => 'always'
+                        ],
+                        'target' => 'step-payment',
+                        'priority' => 1
+                    ]
+                ],
+                'validations' => [
+                    [
+                        'type' => 'required_fields',
+                        'fields' => ['name', 'email', 'phone'],
+                        'message' => 'Por favor, preencha todos os campos obrigatórios'
+                    ]
                 ]
+            ],
+
+            'step-payment' => [
+                'id' => 'step-payment',
+                'name' => 'Pagamento',
+                'type' => 'payment',
+                'component' => 'PaymentStep',
+                'ui' => [
+                    'title' => 'Forma de Pagamento',
+                    'subtitle' => 'Escolha como deseja pagar',
+                    'showProgress' => true,
+                    'progressType' => 'steps',
+                    'showBackButton' => true,
+                    'backButtonText' => 'Voltar',
+                    'nextButtonText' => 'Finalizar Compra',
+                    'layout' => [
+                        'columns' => 1,
+                        'spacing' => 'normal',
+                        'alignment' => 'left',
+                        'width' => 'normal'
+                    ],
+                    'styling' => [
+                        'backgroundColor' => '#ffffff',
+                        'textColor' => '#212529',
+                        'primaryColor' => '#007bff',
+                        'secondaryColor' => '#6c757d',
+                        'borderRadius' => 8,
+                        'shadow' => 'medium'
+                    ]
+                ],
+                'stepConfig' => [
+                    'methods' => ['credit_card', 'pix', 'boleto'],
+                    'installments' => [
+                        'enabled' => true,
+                        'max' => 12,
+                        'min_value' => 5000
+                    ]
+                ],
+                'transitions' => [
+                    [
+                        'condition' => [
+                            'type' => 'always'
+                        ],
+                        'target' => 'step-review',
+                        'priority' => 1
+                    ]
+                ],
+                'validations' => [
+                    [
+                        'type' => 'payment_method',
+                        'message' => 'Por favor, selecione uma forma de pagamento'
+                    ]
+                ]
+            ],
+
+            'step-review' => [
+                'id' => 'step-review',
+                'name' => 'Revisão do Pedido',
+                'type' => 'review',
+                'component' => 'ReviewStep',
+                'ui' => [
+                    'title' => 'Revise seu Pedido',
+                    'subtitle' => 'Confira os detalhes antes de finalizar',
+                    'showProgress' => true,
+                    'progressType' => 'steps',
+                    'showBackButton' => true,
+                    'backButtonText' => 'Voltar',
+                    'nextButtonText' => 'Confirmar Compra',
+                    'layout' => [
+                        'columns' => 1,
+                        'spacing' => 'normal',
+                        'alignment' => 'left',
+                        'width' => 'normal'
+                    ],
+                    'styling' => [
+                        'backgroundColor' => '#ffffff',
+                        'textColor' => '#212529',
+                        'primaryColor' => '#007bff',
+                        'secondaryColor' => '#6c757d',
+                        'borderRadius' => 8,
+                        'shadow' => 'medium'
+                    ]
+                ],
+                'stepConfig' => [
+                    'show_summary' => true,
+                    'allow_edit' => true
+                ],
+                'transitions' => [
+                    [
+                        'condition' => [
+                            'type' => 'always'
+                        ],
+                        'target' => 'step-confirmation',
+                        'priority' => 1
+                    ]
+                ]
+            ],
+
+            'step-confirmation' => [
+                'id' => 'step-confirmation',
+                'name' => 'Confirmação',
+                'type' => 'final',
+                'component' => 'ConfirmationStep',
+                'ui' => [
+                    'title' => 'Pedido Confirmado!',
+                    'subtitle' => 'Obrigado pela sua compra',
+                    'showProgress' => false,
+                    'progressType' => 'none',
+                    'showBackButton' => false,
+                    'nextButtonText' => 'Acessar Curso',
+                    'layout' => [
+                        'columns' => 1,
+                        'spacing' => 'normal',
+                        'alignment' => 'center',
+                        'width' => 'normal'
+                    ],
+                    'styling' => [
+                        'backgroundColor' => '#ffffff',
+                        'textColor' => '#212529',
+                        'primaryColor' => '#28a745',
+                        'secondaryColor' => '#6c757d',
+                        'borderRadius' => 8,
+                        'shadow' => 'medium'
+                    ]
+                ],
+                'stepConfig' => [
+                    'redirect_url' => 'https://example.com/thank-you',
+                    'show_download' => true
+                ],
+                'transitions' => []
             ]
         ],
-        [
-            'type' => 'order_review',
-            'config' => [
-                'show_summary' => true,
-                'allow_edit' => true
-            ]
-        ],
-        [
-            'type' => 'order_confirmation',
-            'config' => [
-                'redirect_url' => 'https://example.com/thank-you',
-                'show_download' => true
+
+        'globalSettings' => [
+            'allowSkipSteps' => false,
+            'saveProgress' => true,
+            'progressStorageType' => 'localStorage',
+            'showExitConfirmation' => true,
+            'exitConfirmationMessage' => 'Tem certeza que deseja sair? Seu progresso será salvo.',
+            'sessionTimeout' => 1800,
+            'routing' => [
+                'baseUrl' => '/checkout',
+                'useHashRouting' => false,
+                'stepUrlFormat' => 'step/{stepId}',
+                'preserveQueryParams' => true
+            ],
+            'abandonment' => [
+                'trackAbandonment' => true,
+                'abandonmentTimeout' => 600,
+                'recoveryEmail' => [
+                    'enabled' => true,
+                    'delayMinutes' => 30
+                ],
+                'retargeting' => [
+                    'enabled' => true,
+                    'pixels' => []
+                ]
             ]
         ]
     ],
-    'config' => [
-        'auto_advance' => true,
-        'save_progress' => true,
-        'session_timeout' => 1800 // 30 minutos
+
+    // Funções customizadas (opcional)
+    'customFunctions' => [
+        'validateCPF' => [
+            'code' => 'function(cpf) { /* validação de CPF */ return true; }',
+            'description' => 'Valida um CPF brasileiro',
+            'parameters' => [
+                [
+                    'name' => 'cpf',
+                    'type' => 'string',
+                    'required' => true
+                ]
+            ]
+        ]
+    ],
+
+    // Localizações (opcional)
+    'localizations' => [
+        'pt-BR' => [
+            'steps' => [
+                'step-information' => [
+                    'ui' => [
+                        'title' => 'Seus Dados',
+                        'subtitle' => 'Preencha suas informações para continuar'
+                    ]
+                ]
+            ]
+        ]
+    ],
+
+    // Metadata adicional
+    'metadata' => [
+        'campaign' => 'black-friday-2024',
+        'source' => 'sdk-example',
+        'version' => '1.0',
+        'notes' => 'Flow de exemplo completo criado via SDK'
     ]
 ];
 
 try {
     echo "Criando flow de checkout: " . $flowData['name'] . "\n";
 
-    // Criar flow
-    $flow = $sdk->checkout()->flow()->create($organizationId, $flowData);
+    // Criar flow para a oferta
+    // Nota: Flow é criado para uma oferta específica no cart-service
+    $flow = $sdk->checkout()->flow()->create($offerId, $flowData);
 
     echo "✅ Flow criado com sucesso!\n";
     $flowId = $flow['id'] ?? $flow['_id'];
     echo "   ID: " . $flowId . "\n";
     echo "   Nome: " . $flow['name'] . "\n";
-    echo "   Tipo: " . $flow['type'] . "\n";
+    echo "   Versão: " . $flow['version'] . "\n";
+    echo "   Status: " . $flow['status'] . "\n";
+    echo "   Device Target: " . $flow['deviceTarget'] . "\n";
     echo "   Oferta: " . $offerId . "\n";
-    echo "   Steps: " . count($flowData['steps']) . "\n";
 
     // Listar steps do flow
-    echo "   \n   Steps configurados:\n";
-    foreach ($flowData['steps'] as $index => $step) {
-        echo "   " . ($index + 1) . ". " . $step['type'] . "\n";
+    if (isset($flow['flowConfig']['steps'])) {
+        $steps = $flow['flowConfig']['steps'];
+        echo "   Steps: " . count($steps) . "\n\n";
+        echo "   Steps configurados:\n";
+        $stepNumber = 1;
+        foreach ($steps as $stepId => $step) {
+            echo "   " . $stepNumber . ". " . $step['name'] . " (" . $step['type'] . ")\n";
+            echo "      ID: " . $stepId . "\n";
+            echo "      Component: " . $step['component'] . "\n";
+            $stepNumber++;
+        }
+    }
+
+    // Mostrar configurações globais
+    if (isset($flow['flowConfig']['globalSettings'])) {
+        echo "\n   Configurações Globais:\n";
+        $settings = $flow['flowConfig']['globalSettings'];
+        echo "      - Save Progress: " . ($settings['saveProgress'] ? 'Sim' : 'Não') . "\n";
+        echo "      - Session Timeout: " . $settings['sessionTimeout'] . "s\n";
+        echo "      - Track Abandonment: " . ($settings['abandonment']['trackAbandonment'] ? 'Sim' : 'Não') . "\n";
     }
 
 } catch (Exception $e) {
     echo "❌ Erro ao criar flow: " . $e->getMessage() . "\n";
-    echo "   Detalhes: " . json_encode($e->getTrace()[0] ?? [], JSON_PRETTY_PRINT) . "\n";
 }
 
 echo "\n";
 
-// ===== PASSO 6: Alternância de Tenant (Opcional) =====
-echo "🔄 PASSO 6: Alternância de Tenant (Organization Scope)\n";
+// ===== PASSO 6: Ativar Oferta =====
+echo "✅ PASSO 6: Ativar Oferta\n";
+echo "-------------------------\n";
+
+try {
+    echo "Ativando oferta: " . $offerId . "\n";
+
+    // Ativar a oferta para que ela possa ser usada
+    $activated = $sdk->offer()->offers()->activate($offerId);
+
+    if ($activated) {
+        echo "✅ Oferta ativada com sucesso!\n";
+        echo "   ID: " . $offerId . "\n";
+        echo "   Status: active\n";
+    } else {
+        echo "⚠️  Não foi possível ativar a oferta\n";
+    }
+
+} catch (Exception $e) {
+    echo "❌ Erro ao ativar oferta: " . $e->getMessage() . "\n";
+}
+
+echo "\n";
+
+// ===== PASSO 7: Publicar/Ativar Flow =====
+echo "🚀 PASSO 7: Publicar Flow\n";
+echo "-------------------------\n";
+
+try {
+    if (isset($flowId)) {
+        echo "Publicando flow: " . $flowId . "\n";
+
+        // Publicar o flow (muda status de 'draft' para 'active')
+        $publishResult = $sdk->checkout()->flow()->publish($flowId);
+
+        echo "✅ Flow publicado com sucesso!\n";
+        echo "   Flow ID: " . ($publishResult['flowId'] ?? $flowId) . "\n";
+        echo "   Status: active\n";
+        echo "   Publicado em: " . ($publishResult['publishedAt'] ?? date('Y-m-d H:i:s')) . "\n";
+
+        echo "\n   ⚡ O flow agora está ativo e pronto para receber checkout!\n";
+    } else {
+        echo "⚠️  Flow ID não disponível para publicação\n";
+    }
+
+} catch (Exception $e) {
+    echo "❌ Erro ao publicar flow: " . $e->getMessage() . "\n";
+}
+
+echo "\n";
+
+// ===== PASSO 8: Alternância de Tenant (Opcional) =====
+echo "🔄 PASSO 8: Alternância de Tenant (Organization Scope)\n";
 echo "-------------------------------------------------------\n";
 
 // Este passo demonstra como alternar entre tenants quando você tem organization scope
@@ -401,8 +795,8 @@ echo "*/\n\n";
 
 echo "\n";
 
-// ===== PASSO 7: Resumo Final =====
-echo "📊 PASSO 7: Resumo Final\n";
+// ===== PASSO 9: Resumo Final =====
+echo "📊 PASSO 9: Resumo Final\n";
 echo "========================\n";
 
 try {
@@ -411,7 +805,7 @@ try {
     echo "✅ Produtos cadastrados: " . count($products['data'] ?? []) . "\n";
 
     // Listar ofertas da organização
-    $offers = $sdk->offer()->list(['limit' => 5]);
+    $offers = $sdk->offer()->offers()->list(['limit' => 5]);
     echo "✅ Ofertas cadastradas: " . count($offers['data'] ?? []) . "\n";
 
     // Informações do contexto (usando dados da autenticação)
@@ -451,23 +845,111 @@ echo "   - Configuração de layout e elementos visuais\n";
 echo "   - Garantias e limites de compra\n\n";
 
 echo "4. 🔄 CRIAÇÃO DE FLOWS:\n";
-echo "   - Flow personalizado de checkout\n";
-echo "   - Múltiplos steps configuráveis\n";
+echo "   - Flow personalizado de checkout com 4 steps\n";
+echo "   - Configuração completa de UI e validações\n";
+echo "   - Múltiplos steps configuráveis (information, payment, review, confirmation)\n";
 echo "   - Métodos de pagamento e parcelamento\n";
-echo "   - Validações e campos obrigatórios\n\n";
+echo "   - Campos customizados com validação\n";
+echo "   - Transições e condições entre steps\n";
+echo "   - Configurações globais (progress, routing, abandonment)\n\n";
 
-echo "5. 🔀 ALTERNÂNCIA DE TENANT:\n";
+echo "5. ✅ ATIVAÇÃO DE OFERTA:\n";
+echo "   - Mudança de status da oferta para 'active'\n";
+echo "   - Oferta disponível para uso em checkouts\n";
+echo "   - Validação de regras de negócio\n\n";
+
+echo "6. 🚀 PUBLICAÇÃO DE FLOW:\n";
+echo "   - Mudança de status do flow de 'draft' para 'active'\n";
+echo "   - Flow validado e pronto para produção\n";
+echo "   - Data de publicação registrada\n";
+echo "   - Flow disponível para receber checkouts\n\n";
+
+echo "7. 🔀 ALTERNÂNCIA DE TENANT:\n";
 echo "   - Demonstração de como trocar entre tenants\n";
 echo "   - Três métodos diferentes de alternância\n";
 echo "   - Considerações de segurança por tipo de key\n\n";
 
+echo "8. 🔗 GERAÇÃO DE URLs DE CHECKOUT:\n";
+echo "   - URL completa de checkout com tracking UTM\n";
+echo "   - Short URL para compartilhamento\n";
+echo "   - QR Code para acesso mobile\n";
+echo "   - Opções de expiração (data ou número de usos)\n";
+echo "   - Proteção por senha (opcional)\n";
+echo "   - Listagem de todas as URLs geradas\n\n";
+
 echo "🎉 Exemplo concluído com sucesso!\n\n";
 
 echo "📚 Próximos passos:\n";
-echo "  1. Integrar webhook para receber notificações de pagamento\n";
-echo "  2. Implementar upsells e order bumps na oferta\n";
-echo "  3. Configurar automações de email marketing\n";
-echo "  4. Adicionar analytics e tracking de conversão\n";
-echo "  5. Implementar split de pagamento (se aplicável)\n\n";
+echo "  1. Testar o flow de checkout acessando a URL da oferta\n";
+echo "  2. Integrar webhook para receber notificações de pagamento\n";
+echo "  3. Implementar upsells e order bumps na oferta\n";
+echo "  4. Configurar automações de email marketing\n";
+echo "  5. Adicionar analytics e tracking de conversão\n";
+echo "  6. Implementar split de pagamento (se aplicável)\n";
+echo "  7. Configurar testes A/B para otimização de conversão\n\n";
+
+echo "🔗 Geração de URLs de Checkout:\n";
+echo "=================================\n\n";
+
+if (isset($offerId)) {
+    try {
+        // Gerar URL de checkout para a oferta com UTM parameters e opções avançadas
+        echo "Gerando URL de checkout com tracking...\n";
+
+        // Opções disponíveis para geração de URL:
+        // - customDomain: Domínio customizado para a URL
+        // - slug: Slug customizado (auto-gerado se não fornecido)
+        // - utmParams: Parâmetros UTM para tracking (source, medium, campaign, term, content)
+        // - expirationType: 'never' | 'date' | 'usage'
+        // - expirationDate: Data de expiração (se expirationType = 'date')
+        // - maxUsage: Número máximo de usos (se expirationType = 'usage')
+        // - passwordProtected: true/false
+        // - password: Senha para URLs protegidas
+
+        $urlData = $sdk->offer()->offers()->generateCheckoutUrl($offerId, [
+            'utmParams' => [
+                'source' => 'sdk-example',
+                'medium' => 'api',
+                'campaign' => 'black-friday-2024',
+                'content' => 'demo-workflow'
+            ],
+            // Exemplo: URL com expiração por uso
+            // 'expirationType' => 'usage',
+            // 'maxUsage' => 100,
+
+            // Exemplo: URL com expiração por data
+            // 'expirationType' => 'date',
+            // 'expirationDate' => '2024-12-31T23:59:59Z',
+
+            // Exemplo: URL protegida por senha
+            // 'passwordProtected' => true,
+            // 'password' => 'black-friday-2024',
+        ]);
+
+        echo "  ✅ Checkout URL: " . $urlData['checkoutUrl'] . "\n";
+        echo "  ✅ Short URL: " . $urlData['shortUrl'] . "\n";
+        echo "  ✅ QR Code: " . (isset($urlData['qrCode']) ? 'Gerado ✓' : 'N/A') . "\n";
+
+        if (isset($urlData['metadata'])) {
+            echo "  Metadata:\n";
+            echo "    - Slug: " . ($urlData['metadata']['slug'] ?? 'N/A') . "\n";
+            echo "    - Criado em: " . ($urlData['metadata']['createdAt'] ?? 'N/A') . "\n";
+        }
+
+        // Listar todas as URLs geradas para a oferta
+        $allUrls = $sdk->offer()->offers()->getOfferUrls($offerId);
+        if (!empty($allUrls)) {
+            echo "\n  📋 Total de URLs geradas: " . count($allUrls) . "\n";
+        }
+
+    } catch (Exception $e) {
+        echo "  ⚠️  Erro ao gerar URL: " . $e->getMessage() . "\n";
+        // Fallback para URL genérica
+        if (isset($offer['slug'])) {
+            echo "  - Oferta (público): https://checkout.seudominio.com/offer/" . $offer['slug'] . "\n";
+        }
+    }
+}
+echo "\n";
 
 ?>

@@ -4,86 +4,92 @@ declare(strict_types=1);
 
 namespace Clubify\Checkout\Modules\Checkout\Services;
 
-use ClubifyCheckout\Services\BaseService;
-use Clubify\Checkout\Modules\Checkout\Contracts\SessionRepositoryInterface;
-use Psr\Log\LoggerInterface;
-use Psr\Cache\CacheItemPoolInterface;
+use Clubify\Checkout\Services\BaseService;
+use Clubify\Checkout\Contracts\ServiceInterface;
+use Clubify\Checkout\Exceptions\ValidationException;
+use Clubify\Checkout\Exceptions\HttpException;
 
 /**
  * Serviço de Flow de Checkout
  *
- * Gerencia navegação e validação de flows durante
- * o processo de checkout.
+ * Gerencia criação e navegação de flows de checkout.
  *
  * Segue os princípios SOLID:
- * - S: Single Responsibility - Apenas navegação de flows
+ * - S: Single Responsibility - Apenas gestão de flows
  * - O: Open/Closed - Extensível via herança
  * - L: Liskov Substitution - Pode substituir BaseService
  * - I: Interface Segregation - Usa interfaces específicas
  * - D: Dependency Inversion - Depende de abstrações
  */
-class FlowService extends BaseService
+class FlowService extends BaseService implements ServiceInterface
 {
-    private const CACHE_TTL = 600; // 10 minutos
-    private const STEP_TTL = 1800; // 30 minutos
+    /**
+     * Obtém o nome do serviço
+     */
+    protected function getServiceName(): string
+    {
+        return 'flow';
+    }
 
-    // Steps padrão de checkout
-    private const DEFAULT_STEPS = [
-        'product_selection',
-        'customer_info',
-        'shipping_info',
-        'payment_info',
-        'order_review',
-        'order_confirmation'
-    ];
-
-    // Validações por step
-    private const STEP_VALIDATIONS = [
-        'product_selection' => ['products'],
-        'customer_info' => ['customer.email', 'customer.name'],
-        'shipping_info' => ['shipping.address', 'shipping.method'],
-        'payment_info' => ['payment.method', 'payment.data'],
-        'order_review' => ['order.items', 'order.totals'],
-        'order_confirmation' => ['order.id']
-    ];
-
-    public function __construct(
-        private SessionRepositoryInterface $sessionRepository,
-        LoggerInterface $logger,
-        CacheItemPoolInterface $cache,
-        array $config = []
-    ) {
-        parent::__construct($logger, $cache, $config);
+    /**
+     * Obtém a versão do serviço
+     */
+    protected function getServiceVersion(): string
+    {
+        return '1.0.0';
     }
 
     /**
      * Cria novo flow de checkout
+     * Endpoint: POST /navigation/flow/:offerId
      */
-    public function create(string $organizationId, array $flowConfig): array
+    public function create(string $offerId, array $flowData): array
     {
-        return $this->executeWithMetrics('flow_create', function () use ($organizationId, $flowConfig) {
-            // Valida configuração do flow
-            $validatedConfig = $this->validateFlowConfig($flowConfig);
+        return $this->executeWithMetrics('create_flow', function () use ($offerId, $flowData) {
+            $this->validateFlowData($flowData);
 
-            $flow = [
-                'id' => uniqid('flow_'),
-                'organization_id' => $organizationId,
-                'name' => $flowConfig['name'] ?? 'Checkout Flow',
-                'type' => $flowConfig['type'] ?? 'standard',
-                'steps' => $validatedConfig['steps'],
-                'config' => $validatedConfig['config'] ?? [],
-                'status' => 'active',
-                'created_at' => date('Y-m-d H:i:s')
-            ];
+            // Log do payload para debug
+            $this->logger->debug('Creating flow with payload', [
+                'offer_id' => $offerId,
+                'payload' => $flowData
+            ]);
+
+            // Criar flow via API do cart-service
+            $result = $this->makeHttpRequest('POST', "/navigation/flow/{$offerId}", [
+                'json' => $flowData
+            ]);
+
+            // A API retorna { success, flowId, message }
+            $flow = array_merge($flowData, [
+                '_id' => $result['flowId'] ?? null,
+                'id' => $result['flowId'] ?? null,
+                'offerId' => $offerId,
+                'success' => $result['success'] ?? false,
+                'message' => $result['message'] ?? ''
+            ]);
+
+            // Normalizar ID (API retorna _id, mas SDK usa id)
+            $flowId = $flow['_id'] ?? $flow['id'] ?? null;
+            if ($flowId && !isset($flow['id'])) {
+                $flow['id'] = $flowId;
+            }
 
             // Cache do flow
-            $this->setCacheItem("flow_{$flow['id']}", $flow, self::CACHE_TTL);
+            if ($flowId) {
+                $this->cache->set($this->getCacheKey("flow:{$flowId}"), $flow, 3600);
+            }
 
-            $this->logger->info('Flow de checkout criado', [
-                'flow_id' => $flow['id'],
-                'organization_id' => $organizationId,
-                'type' => $flow['type'],
-                'steps_count' => count($flow['steps'])
+            // Dispatch evento
+            $this->dispatch('flow.created', [
+                'flow_id' => $flowId,
+                'name' => $flow['name'] ?? 'unknown',
+                'offer_id' => $offerId
+            ]);
+
+            $this->logger->info('Flow created successfully', [
+                'flow_id' => $flowId,
+                'name' => $flow['name'] ?? 'unknown',
+                'offer_id' => $offerId
             ]);
 
             return $flow;
@@ -91,467 +97,253 @@ class FlowService extends BaseService
     }
 
     /**
-     * Navega para próximo passo do flow
+     * Obtém flow de uma oferta
+     * Endpoint: GET /navigation/flow/:offerId
      */
-    public function navigate(string $sessionId, string $currentStep, array $data = []): array
+    public function get(string $offerId, array $query = []): ?array
     {
-        return $this->executeWithMetrics('flow_navigate', function () use ($sessionId, $currentStep, $data) {
-            // Busca sessão
-            $session = $this->sessionRepository->find($sessionId);
-            if (!$session) {
-                throw new \InvalidArgumentException('Sessão não encontrada');
+        return $this->executeWithMetrics('get_flow', function () use ($offerId, $query) {
+            try {
+                return $this->makeHttpRequest('GET', "/navigation/flow/{$offerId}", [
+                    'query' => $query
+                ]);
+            } catch (HttpException $e) {
+                if ($e->getStatusCode() === 404) {
+                    return null;
+                }
+                throw $e;
             }
-
-            // Obtém configuração do flow
-            $flowConfig = $this->getFlowConfig($sessionId);
-            if (!$flowConfig) {
-                throw new \InvalidArgumentException('Flow não configurado para esta sessão');
-            }
-
-            // Valida step atual
-            $this->validateCurrentStep($sessionId, $currentStep, $data);
-
-            // Determina próximo step
-            $nextStep = $this->getNextStep($flowConfig, $currentStep);
-
-            // Atualiza sessão com dados do step
-            $sessionData = [
-                'current_step' => $nextStep,
-                'step_data' => array_merge($session['step_data'] ?? [], [$currentStep => $data]),
-                'completed_steps' => $this->getCompletedSteps($session, $currentStep)
-            ];
-
-            $session = $this->sessionRepository->update($sessionId, $sessionData);
-
-            // Adiciona evento de navegação
-            $this->sessionRepository->addEvent($sessionId, [
-                'type' => 'flow_navigation',
-                'data' => [
-                    'from_step' => $currentStep,
-                    'to_step' => $nextStep,
-                    'flow_id' => $flowConfig['id'] ?? null
-                ],
-                'timestamp' => time()
-            ]);
-
-            $this->logger->info('Navegação de flow realizada', [
-                'session_id' => $sessionId,
-                'from_step' => $currentStep,
-                'to_step' => $nextStep,
-                'flow_id' => $flowConfig['id'] ?? null
-            ]);
-
-            return [
-                'session_id' => $sessionId,
-                'current_step' => $nextStep,
-                'previous_step' => $currentStep,
-                'step_config' => $this->getStepConfig($flowConfig, $nextStep),
-                'progress' => $this->calculateProgress($flowConfig, $nextStep),
-                'session' => $session
-            ];
         });
     }
 
     /**
-     * Obtém configuração do flow
+     * Lista flows com filtros
+     * Endpoint: GET /navigation/flows
      */
-    public function getConfig(string $sessionId): ?array
+    public function list(array $filters = []): array
     {
-        return $this->getCachedOrExecute("flow_config_{$sessionId}", function () use ($sessionId) {
-            $session = $this->sessionRepository->find($sessionId);
-            if (!$session || empty($session['flow_id'])) {
-                return $this->getDefaultFlowConfig();
-            }
-
-            return $this->getFlowById($session['flow_id']);
-        }, self::CACHE_TTL);
-    }
-
-    /**
-     * Valida dados do step
-     */
-    public function validate(string $sessionId, string $step, array $data): array
-    {
-        return $this->executeWithMetrics('flow_validate', function () use ($sessionId, $step, $data) {
-            $errors = [];
-            $warnings = [];
-
-            // Obtém validações do step
-            $validations = self::STEP_VALIDATIONS[$step] ?? [];
-
-            foreach ($validations as $field) {
-                $value = $this->getNestedValue($data, $field);
-
-                if ($this->isRequired($field) && empty($value)) {
-                    $errors[] = "Campo obrigatório '{$field}' não preenchido";
-                }
-
-                // Validações específicas por campo
-                $fieldErrors = $this->validateField($field, $value);
-                $errors = array_merge($errors, $fieldErrors);
-            }
-
-            // Validações customizadas por step
-            $customValidations = $this->getCustomValidations($sessionId, $step, $data);
-            $errors = array_merge($errors, $customValidations['errors'] ?? []);
-            $warnings = array_merge($warnings, $customValidations['warnings'] ?? []);
-
-            $isValid = empty($errors);
-
-            $this->logger->info('Validação de step realizada', [
-                'session_id' => $sessionId,
-                'step' => $step,
-                'is_valid' => $isValid,
-                'errors_count' => count($errors),
-                'warnings_count' => count($warnings)
-            ]);
-
-            return [
-                'valid' => $isValid,
-                'errors' => $errors,
-                'warnings' => $warnings,
-                'validated_fields' => array_keys($data)
-            ];
+        return $this->executeWithMetrics('list_flows', function () use ($filters) {
+            return $this->makeHttpRequest('GET', '/navigation/flows', [
+                'query' => $filters
+            ]) ?? [];
         });
     }
 
     /**
-     * Volta para step anterior
+     * Obtém flows ativos
+     * Endpoint: GET /navigation/flows/active
      */
-    public function goBack(string $sessionId): array
+    public function listActive(): array
     {
-        return $this->executeWithMetrics('flow_go_back', function () use ($sessionId) {
-            $session = $this->sessionRepository->find($sessionId);
-            if (!$session) {
-                throw new \InvalidArgumentException('Sessão não encontrada');
-            }
-
-            $flowConfig = $this->getFlowConfig($sessionId);
-            $currentStep = $session['current_step'] ?? null;
-
-            $previousStep = $this->getPreviousStep($flowConfig, $currentStep);
-
-            if (!$previousStep) {
-                throw new \InvalidArgumentException('Não há step anterior disponível');
-            }
-
-            // Atualiza sessão
-            $session = $this->sessionRepository->update($sessionId, [
-                'current_step' => $previousStep
-            ]);
-
-            $this->logger->info('Retorno de step realizado', [
-                'session_id' => $sessionId,
-                'from_step' => $currentStep,
-                'to_step' => $previousStep
-            ]);
-
-            return [
-                'session_id' => $sessionId,
-                'current_step' => $previousStep,
-                'previous_step' => $currentStep,
-                'step_config' => $this->getStepConfig($flowConfig, $previousStep),
-                'progress' => $this->calculateProgress($flowConfig, $previousStep),
-                'session' => $session
-            ];
+        return $this->executeWithMetrics('list_active_flows', function () {
+            return $this->makeHttpRequest('GET', '/navigation/flows/active') ?? [];
         });
     }
 
     /**
-     * Pula step (se permitido)
+     * Atualiza flow
+     * Endpoint: PUT /navigation/flow/:flowId
      */
-    public function skipStep(string $sessionId, string $step, string $reason = ''): array
+    public function update(string $flowId, array $data): array
     {
-        return $this->executeWithMetrics('flow_skip_step', function () use ($sessionId, $step, $reason) {
-            $flowConfig = $this->getFlowConfig($sessionId);
+        return $this->executeWithMetrics('update_flow', function () use ($flowId, $data) {
+            $result = $this->makeHttpRequest('PUT', "/navigation/flow/{$flowId}", ['json' => $data]);
 
-            // Verifica se step pode ser pulado
-            if (!$this->canSkipStep($flowConfig, $step)) {
-                throw new \InvalidArgumentException("Step '{$step}' não pode ser pulado");
-            }
+            // Invalidar cache
+            $this->cache->delete($this->getCacheKey("flow:{$flowId}"));
 
-            // Registra evento de skip
-            $this->sessionRepository->addEvent($sessionId, [
-                'type' => 'step_skipped',
-                'data' => [
-                    'step' => $step,
-                    'reason' => $reason
-                ],
-                'timestamp' => time()
+            // Dispatch evento
+            $this->dispatch('flow.updated', [
+                'flow_id' => $flowId,
+                'updated_fields' => array_keys($data)
             ]);
 
-            $this->logger->info('Step pulado', [
-                'session_id' => $sessionId,
-                'step' => $step,
-                'reason' => $reason
-            ]);
-
-            // Navega para próximo step
-            return $this->navigate($sessionId, $step, []);
+            return $result;
         });
     }
 
     /**
-     * Obtém progresso do flow
+     * Exclui flow
+     * Endpoint: DELETE /navigation/flow/:flowId
      */
-    public function getProgress(string $sessionId): array
+    public function delete(string $flowId): bool
     {
-        $session = $this->sessionRepository->find($sessionId);
-        $flowConfig = $this->getFlowConfig($sessionId);
+        return $this->executeWithMetrics('delete_flow', function () use ($flowId) {
+            try {
+                $response = $this->httpClient->request('DELETE', "/navigation/flow/{$flowId}");
 
-        if (!$session || !$flowConfig) {
-            return ['percentage' => 0, 'current_step' => null, 'total_steps' => 0];
-        }
+                // Invalidar cache
+                $this->cache->delete($this->getCacheKey("flow:{$flowId}"));
 
-        $currentStep = $session['current_step'] ?? null;
-        $progress = $this->calculateProgress($flowConfig, $currentStep);
+                // Dispatch evento
+                $this->dispatch('flow.deleted', [
+                    'flow_id' => $flowId
+                ]);
 
-        return [
-            'percentage' => $progress,
-            'current_step' => $currentStep,
-            'total_steps' => count($flowConfig['steps']),
-            'completed_steps' => count($session['completed_steps'] ?? [])
-        ];
+                return $response->getStatusCode() === 204;
+            } catch (HttpException $e) {
+                $this->logger->error('Failed to delete flow', [
+                    'flow_id' => $flowId,
+                    'error' => $e->getMessage()
+                ]);
+                return false;
+            }
+        });
     }
 
     /**
-     * Obtém configuração padrão de flow
+     * Publica flow (ativa)
+     * Endpoint: POST /navigation/flow/:flowId/publish
      */
-    private function getDefaultFlowConfig(): array
+    public function publish(string $flowId): array
     {
-        return [
-            'id' => 'default',
-            'name' => 'Standard Checkout Flow',
-            'type' => 'standard',
-            'steps' => self::DEFAULT_STEPS,
-            'config' => [
-                'allow_skip' => ['shipping_info'],
-                'conditional_steps' => [
-                    'shipping_info' => 'requires_shipping'
-                ]
-            ]
-        ];
+        return $this->executeWithMetrics('publish_flow', function () use ($flowId) {
+            $result = $this->makeHttpRequest('POST', "/navigation/flow/{$flowId}/publish");
+
+            // Invalidar cache
+            $this->cache->delete($this->getCacheKey("flow:{$flowId}"));
+
+            // Dispatch evento
+            $this->dispatch('flow.published', [
+                'flow_id' => $flowId,
+                'published_at' => $result['publishedAt'] ?? null
+            ]);
+
+            $this->logger->info('Flow published successfully', [
+                'flow_id' => $flowId,
+                'published_at' => $result['publishedAt'] ?? null
+            ]);
+
+            return $result;
+        });
     }
 
     /**
-     * Valida configuração do flow
+     * Despublica flow (desativa)
+     * Endpoint: POST /navigation/flow/:flowId/unpublish
      */
-    private function validateFlowConfig(array $config): array
+    public function unpublish(string $flowId): array
     {
-        if (empty($config['steps']) || !is_array($config['steps'])) {
-            throw new \InvalidArgumentException('Steps do flow são obrigatórios');
-        }
+        return $this->executeWithMetrics('unpublish_flow', function () use ($flowId) {
+            $result = $this->makeHttpRequest('POST', "/navigation/flow/{$flowId}/unpublish");
 
-        // Valida steps obrigatórios
-        $requiredSteps = ['customer_info', 'payment_info', 'order_confirmation'];
-        foreach ($requiredSteps as $required) {
-            if (!in_array($required, $config['steps'])) {
-                throw new \InvalidArgumentException("Step obrigatório '{$required}' não encontrado");
+            // Invalidar cache
+            $this->cache->delete($this->getCacheKey("flow:{$flowId}"));
+
+            // Dispatch evento
+            $this->dispatch('flow.unpublished', [
+                'flow_id' => $flowId
+            ]);
+
+            $this->logger->info('Flow unpublished successfully', [
+                'flow_id' => $flowId
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * Ativa flow (alias para publish)
+     */
+    public function activate(string $flowId): array
+    {
+        return $this->publish($flowId);
+    }
+
+    /**
+     * Desativa flow (alias para unpublish)
+     */
+    public function deactivate(string $flowId): array
+    {
+        return $this->unpublish($flowId);
+    }
+
+    /**
+     * Clona flow
+     * Endpoint: POST /navigation/flow/:flowId/clone
+     */
+    public function clone(string $flowId, array $cloneData): array
+    {
+        return $this->executeWithMetrics('clone_flow', function () use ($flowId, $cloneData) {
+            return $this->makeHttpRequest('POST', "/navigation/flow/{$flowId}/clone", [
+                'json' => $cloneData
+            ]);
+        });
+    }
+
+    /**
+     * Obtém detalhes do flow
+     * Endpoint: GET /navigation/flow/:flowId/details
+     */
+    public function getDetails(string $flowId): ?array
+    {
+        return $this->executeWithMetrics('get_flow_details', function () use ($flowId) {
+            try {
+                return $this->makeHttpRequest('GET', "/navigation/flow/{$flowId}/details");
+            } catch (HttpException $e) {
+                if ($e->getStatusCode() === 404) {
+                    return null;
+                }
+                throw $e;
+            }
+        });
+    }
+
+    /**
+     * Obtém analytics do flow
+     * Endpoint: GET /navigation/analytics/:flowId
+     */
+    public function getAnalytics(string $flowId): array
+    {
+        return $this->executeWithMetrics('get_flow_analytics', function () use ($flowId) {
+            return $this->makeHttpRequest('GET', "/navigation/analytics/{$flowId}") ?? [];
+        });
+    }
+
+    /**
+     * Valida dados do flow
+     */
+    private function validateFlowData(array $data): void
+    {
+        $required = ['name'];
+        foreach ($required as $field) {
+            if (empty($data[$field])) {
+                throw new ValidationException("Field '{$field}' is required for flow creation");
             }
         }
 
-        return $config;
-    }
-
-    /**
-     * Valida step atual
-     */
-    private function validateCurrentStep(string $sessionId, string $step, array $data): void
-    {
-        $validation = $this->validate($sessionId, $step, $data);
-
-        if (!$validation['valid']) {
-            $errors = implode(', ', $validation['errors']);
-            throw new \InvalidArgumentException("Dados inválidos para o step '{$step}': {$errors}");
-        }
-    }
-
-    /**
-     * Obtém próximo step
-     */
-    private function getNextStep(array $flowConfig, string $currentStep): ?string
-    {
-        $steps = $flowConfig['steps'];
-        $currentIndex = array_search($currentStep, $steps);
-
-        if ($currentIndex === false) {
-            return $steps[0] ?? null; // Primeiro step se não encontrou atual
-        }
-
-        return $steps[$currentIndex + 1] ?? null; // Próximo step ou null se for o último
-    }
-
-    /**
-     * Obtém step anterior
-     */
-    private function getPreviousStep(array $flowConfig, string $currentStep): ?string
-    {
-        $steps = $flowConfig['steps'];
-        $currentIndex = array_search($currentStep, $steps);
-
-        if ($currentIndex === false || $currentIndex === 0) {
-            return null;
-        }
-
-        return $steps[$currentIndex - 1];
-    }
-
-    /**
-     * Obtém configuração do step
-     */
-    private function getStepConfig(array $flowConfig, string $step): array
-    {
-        $config = $flowConfig['config'] ?? [];
-        $stepConfig = $config['steps'][$step] ?? [];
-
-        return array_merge([
-            'name' => $step,
-            'title' => ucwords(str_replace('_', ' ', $step)),
-            'validations' => self::STEP_VALIDATIONS[$step] ?? [],
-            'required' => true,
-            'skippable' => $this->canSkipStep($flowConfig, $step)
-        ], $stepConfig);
-    }
-
-    /**
-     * Calcula progresso
-     */
-    private function calculateProgress(array $flowConfig, ?string $currentStep): float
-    {
-        if (!$currentStep) {
-            return 0.0;
-        }
-
-        $steps = $flowConfig['steps'];
-        $currentIndex = array_search($currentStep, $steps);
-
-        if ($currentIndex === false) {
-            return 0.0;
-        }
-
-        return round(($currentIndex / count($steps)) * 100, 2);
-    }
-
-    /**
-     * Verifica se step pode ser pulado
-     */
-    private function canSkipStep(array $flowConfig, string $step): bool
-    {
-        $allowSkip = $flowConfig['config']['allow_skip'] ?? [];
-        return in_array($step, $allowSkip);
-    }
-
-    /**
-     * Obtém steps completados
-     */
-    private function getCompletedSteps(array $session, string $currentStep): array
-    {
-        $completed = $session['completed_steps'] ?? [];
-
-        if (!in_array($currentStep, $completed)) {
-            $completed[] = $currentStep;
-        }
-
-        return $completed;
-    }
-
-    /**
-     * Obtém valor aninhado do array
-     */
-    private function getNestedValue(array $data, string $path): mixed
-    {
-        $keys = explode('.', $path);
-        $value = $data;
-
-        foreach ($keys as $key) {
-            if (!is_array($value) || !isset($value[$key])) {
-                return null;
+        if (isset($data['type'])) {
+            $allowedTypes = ['standard', 'express', 'custom'];
+            if (!in_array($data['type'], $allowedTypes)) {
+                throw new ValidationException("Invalid flow type: {$data['type']}. Allowed types: " . implode(', ', $allowedTypes));
             }
-            $value = $value[$key];
         }
-
-        return $value;
     }
 
     /**
-     * Verifica se campo é obrigatório
+     * Método centralizado para fazer chamadas HTTP
      */
-    private function isRequired(string $field): bool
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
     {
-        $optional = ['shipping.method', 'customer.phone'];
-        return !in_array($field, $optional);
-    }
+        try {
+            $response = $this->httpClient->request($method, $uri, $options);
+            $data = json_decode($response->getBody()->getContents(), true);
 
-    /**
-     * Valida campo específico
-     */
-    private function validateField(string $field, mixed $value): array
-    {
-        $errors = [];
-
-        switch ($field) {
-            case 'customer.email':
-                if ($value && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                    $errors[] = 'Email inválido';
-                }
-                break;
-
-            case 'payment.method':
-                $validMethods = ['credit_card', 'debit_card', 'pix', 'boleto'];
-                if ($value && !in_array($value, $validMethods)) {
-                    $errors[] = 'Método de pagamento inválido';
-                }
-                break;
-
-            case 'shipping.address':
-                if (is_array($value)) {
-                    $required = ['street', 'city', 'state', 'zip_code'];
-                    foreach ($required as $req) {
-                        if (empty($value[$req])) {
-                            $errors[] = "Campo de endereço '{$req}' obrigatório";
-                        }
-                    }
-                }
-                break;
-        }
-
-        return $errors;
-    }
-
-    /**
-     * Obtém validações customizadas
-     */
-    private function getCustomValidations(string $sessionId, string $step, array $data): array
-    {
-        // Implementação de validações customizadas
-        // Em produção seria extensível via plugins/hooks
-
-        return ['errors' => [], 'warnings' => []];
-    }
-
-    /**
-     * Obtém flow por ID
-     */
-    private function getFlowById(string $flowId): ?array
-    {
-        return $this->getCachedOrExecute("flow_{$flowId}", function () use ($flowId) {
-            // Em produção seria consulta ao banco
-            if ($flowId === 'default') {
-                return $this->getDefaultFlowConfig();
+            if ($data === null) {
+                throw new HttpException("Failed to decode response data from {$uri}");
             }
-            return null;
-        }, self::CACHE_TTL);
-    }
 
-    /**
-     * Obtém métricas do serviço
-     */
-    public function getMetrics(): array
-    {
-        return array_merge(parent::getMetrics(), [
-            'default_steps_count' => count(self::DEFAULT_STEPS),
-            'step_ttl' => self::STEP_TTL,
-            'cache_ttl' => self::CACHE_TTL
-        ]);
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error("HTTP request failed", [
+                'method' => $method,
+                'uri' => $uri,
+                'error' => $e->getMessage(),
+                'service' => static::class
+            ]);
+            throw $e;
+        }
     }
 }

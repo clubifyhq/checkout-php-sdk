@@ -1000,7 +1000,7 @@ class ClubifyCheckoutSDK
     /**
      * Obter HTTP Client (Lazy Loading)
      */
-    private function getHttpClient(): Client
+    public function getHttpClient(): Client
     {
         if ($this->httpClient === null) {
             // Criar Client sem AuthManager primeiro para evitar dependência circular
@@ -1026,7 +1026,7 @@ class ClubifyCheckoutSDK
     /**
      * Obter Event Dispatcher (Lazy Loading)
      */
-    private function getEventDispatcher(): EventDispatcher
+    public function getEventDispatcher(): EventDispatcher
     {
         if ($this->eventDispatcher === null) {
             $this->eventDispatcher = new EventDispatcher();
@@ -1064,7 +1064,7 @@ class ClubifyCheckoutSDK
     /**
      * Obter Cache Manager (Lazy Loading)
      */
-    private function getCache(): CacheManagerInterface
+    public function getCache(): CacheManagerInterface
     {
         if ($this->cache === null) {
             $this->cache = new CacheManager($this->config);

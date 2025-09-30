@@ -65,34 +65,46 @@ class OfferService extends BaseService implements ServiceInterface
                 $offerData['slug'] = $this->generateUniqueSlug($offerData['slug']);
             }
 
-            // Preparar dados da oferta
-            $data = array_merge($offerData, [
-                'status' => $offerData['status'] ?? 'draft',
-                'created_at' => date('Y-m-d H:i:s'),
-                'configuration' => $this->buildOfferConfiguration($offerData),
-                'metadata' => $this->generateOfferMetadata($offerData)
-            ]);
+            // Preparar dados da oferta - remover campos que não são aceitos pela API
+            $data = $offerData;
+
+            // Remover campos internos do SDK que não devem ser enviados para a API
+            unset($data['status']); // A API usa 'isActive' ao invés de 'status'
+            unset($data['created_at']); // A API gera automaticamente
+            unset($data['configuration']); // Não usado pela API
+
+            // Log do payload para debug
+            $this->logger->debug('Creating offer with payload', ['payload' => $data]);
 
             // Criar oferta via API
-            $response = $this->makeHttpRequest('POST', '/offers', $data);
-            $offer = ResponseHelper::getData($response);
+            $offer = $this->makeHttpRequest('POST', '/offers', ['json' => $data]);
+
+            // Normalizar ID (API retorna _id, mas SDK usa id)
+            $offerId = $offer['_id'] ?? $offer['id'] ?? null;
+            if ($offerId && !isset($offer['id'])) {
+                $offer['id'] = $offerId;
+            }
 
             // Cache da oferta
-            $this->cache->set($this->getCacheKey("offer:{$offer['id']}"), $offer, 3600);
-            $this->cache->set($this->getCacheKey("offer_slug:{$offer['slug']}"), $offer, 3600);
+            if ($offerId) {
+                $this->cache->set($this->getCacheKey("offer:{$offerId}"), $offer, 3600);
+                if (isset($offer['slug'])) {
+                    $this->cache->set($this->getCacheKey("offer_slug:{$offer['slug']}"), $offer, 3600);
+                }
+            }
 
             // Dispatch evento
             $this->dispatch('offer.created', [
-                'offer_id' => $offer['id'],
-                'name' => $offer['name'],
-                'type' => $offer['type'] ?? 'single_product',
-                'slug' => $offer['slug']
+                'offer_id' => $offerId,
+                'name' => $offer['name'] ?? 'unknown',
+                'type' => $offer['type'] ?? 'single',
+                'slug' => $offer['slug'] ?? 'unknown'
             ]);
 
             $this->logger->info('Offer created successfully', [
-                'offer_id' => $offer['id'],
-                'name' => $offer['name'],
-                'slug' => $offer['slug']
+                'offer_id' => $offerId,
+                'name' => $offer['name'] ?? 'unknown',
+                'slug' => $offer['slug'] ?? 'unknown'
             ]);
 
             return $offer;
@@ -141,7 +153,7 @@ class OfferService extends BaseService implements ServiceInterface
                 'query' => $queryParams
             ]);
 
-            return ResponseHelper::getData($response) ?? [];
+            return $response ?? [];
         });
     }
 
@@ -169,8 +181,7 @@ class OfferService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $response = $this->makeHttpRequest('PUT', "/offers/{$offerId}", $data);
-            $offer = ResponseHelper::getData($response);
+            $offer = $this->makeHttpRequest('PUT', "/offers/{$offerId}", ['json' => $data]);
 
             // Invalidar cache
             $this->invalidateOfferCache($offerId);
@@ -223,11 +234,9 @@ class OfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('update_offer_theme', function () use ($offerId, $themeConfig) {
             $this->validateThemeConfig($themeConfig);
 
-            $response = $this->makeHttpRequest('PUT', "/offers/{$offerId}/config/theme", [
-                'theme' => $themeConfig
+            $offer = $this->makeHttpRequest('PUT', "/offers/{$offerId}/config/theme", [
+                'json' => ['theme' => $themeConfig]
             ]);
-
-            $offer = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOfferCache($offerId);
@@ -251,11 +260,9 @@ class OfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('update_offer_layout', function () use ($offerId, $layoutConfig) {
             $this->validateLayoutConfig($layoutConfig);
 
-            $response = $this->makeHttpRequest('PUT', "/offers/{$offerId}/config/layout", [
-                'layout' => $layoutConfig
+            $offer = $this->makeHttpRequest('PUT', "/offers/{$offerId}/config/layout", [
+                'json' => ['layout' => $layoutConfig]
             ]);
-
-            $offer = ResponseHelper::getData($response);
 
             // Invalidar cache
             $this->invalidateOfferCache($offerId);
@@ -291,8 +298,7 @@ class OfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('add_offer_upsell', function () use ($offerId, $upsellData) {
             $this->validateUpsellData($upsellData);
 
-            $response = $this->makeHttpRequest('POST', "/offers/{$offerId}/upsells", $upsellData);
-            $upsell = ResponseHelper::getData($response);
+            $upsell = $this->makeHttpRequest('POST', "/offers/{$offerId}/upsells", ['json' => $upsellData]);
 
             // Invalidar cache da oferta
             $this->invalidateOfferCache($offerId);
@@ -329,8 +335,7 @@ class OfferService extends BaseService implements ServiceInterface
         return $this->executeWithMetrics('add_offer_subscription_plan', function () use ($offerId, $planData) {
             $this->validateSubscriptionPlanData($planData);
 
-            $response = $this->makeHttpRequest('POST', "/offers/{$offerId}/subscription/plans", $planData);
-            $plan = ResponseHelper::getData($response);
+            $plan = $this->makeHttpRequest('POST', "/offers/{$offerId}/subscription/plans", ['json' => $planData]);
 
             // Invalidar cache da oferta
             $this->invalidateOfferCache($offerId);
@@ -366,27 +371,91 @@ class OfferService extends BaseService implements ServiceInterface
     }
 
     /**
-     * Ativa oferta
+     * Ativa/Publica oferta
+     * Endpoint: POST /offers/:id/publish
      */
     public function activate(string $offerId): bool
     {
-        return $this->updateStatus($offerId, 'active');
+        return $this->publish($offerId);
     }
 
     /**
-     * Desativa oferta
+     * Desativa/Despublica oferta
+     * Endpoint: POST /offers/:id/unpublish
      */
     public function deactivate(string $offerId): bool
     {
-        return $this->updateStatus($offerId, 'inactive');
+        return $this->unpublish($offerId);
     }
 
     /**
-     * Pausa oferta
+     * Pausa oferta (alias para desativar)
      */
     public function pause(string $offerId): bool
     {
-        return $this->updateStatus($offerId, 'paused');
+        return $this->unpublish($offerId);
+    }
+
+    /**
+     * Publica oferta
+     * Endpoint: POST /offers/:id/publish
+     */
+    public function publish(string $offerId): bool
+    {
+        return $this->executeWithMetrics('publish_offer', function () use ($offerId) {
+            try {
+                $this->makeHttpRequest('POST', "/offers/{$offerId}/publish");
+
+                // Invalidar cache
+                $this->invalidateOfferCache($offerId);
+
+                // Dispatch evento
+                $this->dispatch('offer.published', [
+                    'offer_id' => $offerId
+                ]);
+
+                $this->logger->info('Offer published', ['offer_id' => $offerId]);
+
+                return true;
+            } catch (\Exception $e) {
+                $this->logger->error('Failed to publish offer', [
+                    'offer_id' => $offerId,
+                    'error' => $e->getMessage()
+                ]);
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Despublica oferta
+     * Endpoint: POST /offers/:id/unpublish
+     */
+    public function unpublish(string $offerId): bool
+    {
+        return $this->executeWithMetrics('unpublish_offer', function () use ($offerId) {
+            try {
+                $this->makeHttpRequest('POST', "/offers/{$offerId}/unpublish");
+
+                // Invalidar cache
+                $this->invalidateOfferCache($offerId);
+
+                // Dispatch evento
+                $this->dispatch('offer.unpublished', [
+                    'offer_id' => $offerId
+                ]);
+
+                $this->logger->info('Offer unpublished', ['offer_id' => $offerId]);
+
+                return true;
+            } catch (\Exception $e) {
+                $this->logger->error('Failed to unpublish offer', [
+                    'offer_id' => $offerId,
+                    'error' => $e->getMessage()
+                ]);
+                return false;
+            }
+        });
     }
 
     /**
@@ -406,8 +475,7 @@ class OfferService extends BaseService implements ServiceInterface
     public function duplicate(string $offerId, array $overrideData = []): array
     {
         return $this->executeWithMetrics('duplicate_offer', function () use ($offerId, $overrideData) {
-            $response = $this->makeHttpRequest('POST', "/offers/{$offerId}/duplicate", $overrideData);
-            $offer = ResponseHelper::getData($response);
+            $offer = $this->makeHttpRequest('POST', "/offers/{$offerId}/duplicate", ['json' => $overrideData]);
 
             // Dispatch evento
             $this->dispatch('offer.duplicated', [
@@ -601,16 +669,17 @@ class OfferService extends BaseService implements ServiceInterface
     public function listByType(string $type): array
     {
         return $this->executeWithMetrics('list_offers_by_type', function () use ($type) {
-            $allowedTypes = ['single_product', 'bundle', 'subscription', 'funnel'];
+            // Tipos aceitos pela API: single, combo, subscription, bundle
+            $allowedTypes = ['single', 'combo', 'subscription', 'bundle'];
             if (!in_array($type, $allowedTypes)) {
-                throw new ValidationException("Invalid offer type: {$type}");
+                throw new ValidationException("Invalid offer type: {$type}. Allowed types: " . implode(', ', $allowedTypes));
             }
 
             $response = $this->makeHttpRequest('GET', '/offers', [
                 'query' => ['type' => $type]
             ]);
 
-            return ResponseHelper::getData($response) ?? [];
+            return $response ?? [];
         });
     }
 
@@ -663,6 +732,51 @@ class OfferService extends BaseService implements ServiceInterface
     }
 
     /**
+     * Gera URL de checkout para a oferta
+     * Endpoint: POST /offers/:id/generate-url
+     *
+     * @param string $offerId ID da oferta
+     * @param array $options Opções de geração (customDomain, slug, utmParams, expirationType, etc)
+     * @return array Retorna checkoutUrl, shortUrl, qrCode e metadata
+     */
+    public function generateCheckoutUrl(string $offerId, array $options = []): array
+    {
+        return $this->executeWithMetrics('generate_offer_url', function () use ($offerId, $options) {
+            $this->logger->info('Generating checkout URL for offer', [
+                'offer_id' => $offerId,
+                'options' => $options
+            ]);
+
+            $response = $this->makeHttpRequest('POST', "/offers/{$offerId}/generate-url", [
+                'json' => $options
+            ]);
+
+            // Dispatch evento
+            $this->dispatch('offer.url_generated', [
+                'offer_id' => $offerId,
+                'checkout_url' => $response['checkoutUrl'] ?? null,
+                'short_url' => $response['shortUrl'] ?? null
+            ]);
+
+            return $response;
+        });
+    }
+
+    /**
+     * Obtém todas as URLs geradas para a oferta
+     * Endpoint: GET /offers/:id/urls
+     *
+     * @param string $offerId ID da oferta
+     * @return array Lista de URLs geradas com metadata
+     */
+    public function getOfferUrls(string $offerId): array
+    {
+        return $this->executeWithMetrics('get_offer_urls', function () use ($offerId) {
+            return $this->makeHttpRequest('GET', "/offers/{$offerId}/urls");
+        });
+    }
+
+    /**
      * Lista ofertas por faixa de preço
      */
     public function listByPriceRange(float $minPrice, float $maxPrice): array
@@ -700,7 +814,7 @@ class OfferService extends BaseService implements ServiceInterface
     private function fetchOfferById(string $offerId): ?array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/offers/{$offerId}");
+            $response = $this->httpClient->request('GET', "/offers/{$offerId}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -716,7 +830,7 @@ class OfferService extends BaseService implements ServiceInterface
     private function fetchOfferBySlug(string $slug): ?array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/offers/slug/{$slug}");
+            $response = $this->httpClient->request('GET', "/offers/slug/{$slug}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -724,37 +838,6 @@ class OfferService extends BaseService implements ServiceInterface
             }
             throw $e;
         }
-    }
-
-    /**
-     * Atualiza status da oferta
-     */
-    private function updateStatus(string $offerId, string $status): bool
-    {
-        return $this->executeWithMetrics("update_offer_status_{$status}", function () use ($offerId, $status) {
-            try {
-                $response = $this->makeHttpRequest('PUT', "/offers/{$offerId}/status", [
-                    'status' => $status
-                ]);
-
-                // Invalidar cache
-                $this->invalidateOfferCache($offerId);
-
-                // Dispatch evento
-                $this->dispatch('offer.status_changed', [
-                    'offer_id' => $offerId,
-                    'new_status' => $status
-                ]);
-
-                return $response->getStatusCode() === 200;
-            } catch (HttpException $e) {
-                $this->logger->error("Failed to update offer status to {$status}", [
-                    'offer_id' => $offerId,
-                    'error' => $e->getMessage()
-                ]);
-                return false;
-            }
-        });
     }
 
     /**
@@ -784,9 +867,10 @@ class OfferService extends BaseService implements ServiceInterface
         }
 
         if (isset($data['type'])) {
-            $allowedTypes = ['single_product', 'bundle', 'subscription', 'funnel'];
+            // Tipos aceitos pela API: single, combo, subscription, bundle
+            $allowedTypes = ['single', 'combo', 'subscription', 'bundle'];
             if (!in_array($data['type'], $allowedTypes)) {
-                throw new ValidationException("Invalid offer type: {$data['type']}");
+                throw new ValidationException("Invalid offer type: {$data['type']}. Allowed types: " . implode(', ', $allowedTypes));
             }
         }
     }
@@ -797,9 +881,10 @@ class OfferService extends BaseService implements ServiceInterface
     private function validateOfferUpdateData(array $data): void
     {
         if (isset($data['type'])) {
-            $allowedTypes = ['single_product', 'bundle', 'subscription', 'funnel'];
+            // Tipos aceitos pela API: single, combo, subscription, bundle
+            $allowedTypes = ['single', 'combo', 'subscription', 'bundle'];
             if (!in_array($data['type'], $allowedTypes)) {
-                throw new ValidationException("Invalid offer type: {$data['type']}");
+                throw new ValidationException("Invalid offer type: {$data['type']}. Allowed types: " . implode(', ', $allowedTypes));
             }
         }
     }
@@ -894,7 +979,19 @@ class OfferService extends BaseService implements ServiceInterface
      */
     private function generateSlug(string $name): string
     {
-        return strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
+        // Converter para minúsculas
+        $slug = strtolower($name);
+
+        // Substituir caracteres especiais e espaços por hífens
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+
+        // Remover múltiplos hífens consecutivos
+        $slug = preg_replace('/-+/', '-', $slug);
+
+        // Remover hífens no início e fim
+        $slug = trim($slug, '-');
+
+        return $slug;
     }
 
     /**

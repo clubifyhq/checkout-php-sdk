@@ -255,16 +255,25 @@ class Client
             } catch (RequestException $e) {
                 $lastException = $e;
 
+                $statusCode = $e->getResponse() ? $e->getResponse()->getStatusCode() : null;
+
                 // Log detalhes do erro para debugging
                 $errorDetails = [
                     'attempt' => $attempt,
                     'uri' => (string) $request->getUri(),
                     'method' => $request->getMethod(),
                     'error' => $e->getMessage(),
-                    'response_code' => $e->getResponse() ? $e->getResponse()->getStatusCode() : null,
+                    'response_code' => $statusCode,
                     'response_body' => $e->getResponse() ? substr($e->getResponse()->getBody()->getContents(), 0, 500) : null
                 ];
-                error_log('HTTP Request Error: ' . json_encode($errorDetails));
+
+                // 404 não é erro crítico em muitos casos (verificação de existência)
+                // Log apenas como debug para não poluir logs com "erros" esperados
+                if ($statusCode === 404) {
+                    $this->logger->debug('Resource not found (404)', $errorDetails);
+                } else {
+                    error_log('HTTP Request Error: ' . json_encode($errorDetails));
+                }
 
                 // Verificar se deve tentar novamente
                 if (!$this->retryStrategy->shouldRetry(

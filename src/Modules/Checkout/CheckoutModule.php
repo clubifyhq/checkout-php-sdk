@@ -8,6 +8,7 @@ use Clubify\Checkout\Contracts\ModuleInterface;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Logger\Logger;
 use Clubify\Checkout\ClubifyCheckoutSDK;
+use Clubify\Checkout\Modules\Checkout\Services\FlowService;
 
 /**
  * Módulo de Checkout
@@ -27,6 +28,7 @@ class CheckoutModule implements ModuleInterface
     private Configuration $config;
     private Logger $logger;
     private bool $initialized = false;
+    private ?FlowService $flowService = null;
 
     public function __construct(
         private ClubifyCheckoutSDK $sdk
@@ -202,5 +204,23 @@ class CheckoutModule implements ModuleInterface
             'payment_data' => $paymentData,
             'processed_at' => time()
         ];
+    }
+
+    /**
+     * Obtém serviço de Flow
+     */
+    public function flow(): FlowService
+    {
+        if ($this->flowService === null) {
+            $this->flowService = new FlowService(
+                $this->config,
+                $this->logger,
+                $this->sdk->getHttpClient(),
+                $this->sdk->getCache(),
+                $this->sdk->getEventDispatcher()
+            );
+        }
+
+        return $this->flowService;
     }
 }

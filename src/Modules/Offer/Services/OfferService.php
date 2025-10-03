@@ -777,6 +777,39 @@ class OfferService extends BaseService implements ServiceInterface
     }
 
     /**
+     * Adiciona produto à oferta
+     * Endpoint: POST /offers/:id/products
+     *
+     * @param string $offerId ID da oferta
+     * @param array $productData Dados do produto a ser adicionado
+     * @return array Oferta atualizada com o produto
+     */
+    public function addProductToOffer(string $offerId, array $productData): array
+    {
+        return $this->executeWithMetrics('add_product_to_offer', function () use ($offerId, $productData) {
+            $this->logger->info('Adding product to offer', [
+                'offer_id' => $offerId,
+                'product_id' => $productData['productId'] ?? null
+            ]);
+
+            $response = $this->makeHttpRequest('POST', "/offers/{$offerId}/products", [
+                'json' => $productData
+            ]);
+
+            // Invalidar cache da oferta
+            $this->invalidateOfferCache($offerId);
+
+            // Dispatch evento
+            $this->dispatch('offer.product_added', [
+                'offer_id' => $offerId,
+                'product_id' => $productData['productId'] ?? null
+            ]);
+
+            return $response;
+        });
+    }
+
+    /**
      * Lista ofertas por faixa de preço
      */
     public function listByPriceRange(float $minPrice, float $maxPrice): array

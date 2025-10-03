@@ -257,6 +257,17 @@ class Client
 
                 $statusCode = $e->getResponse() ? $e->getResponse()->getStatusCode() : null;
 
+                // Capturar body do response antes de ser consumido
+                $responseBody = null;
+                if ($e->getResponse()) {
+                    $body = $e->getResponse()->getBody();
+                    // Ler conteúdo e rebobinar para poder ler novamente
+                    $responseBody = $body->getContents();
+                    if ($body->isSeekable()) {
+                        $body->rewind();
+                    }
+                }
+
                 // Log detalhes do erro para debugging
                 $errorDetails = [
                     'attempt' => $attempt,
@@ -264,7 +275,7 @@ class Client
                     'method' => $request->getMethod(),
                     'error' => $e->getMessage(),
                     'response_code' => $statusCode,
-                    'response_body' => $e->getResponse() ? substr($e->getResponse()->getBody()->getContents(), 0, 500) : null
+                    'response_body' => $responseBody ? substr($responseBody, 0, 500) : null
                 ];
 
                 // 404 não é erro crítico em muitos casos (verificação de existência)

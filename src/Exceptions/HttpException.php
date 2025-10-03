@@ -123,4 +123,39 @@ class HttpException extends SDKException
     {
         return $this->getStatusCode() === 422;
     }
+
+    /**
+     * Check if this is a bad request error (HTTP 400)
+     */
+    public function isBadRequest(): bool
+    {
+        return $this->getStatusCode() === 400;
+    }
+
+    /**
+     * Get parsed response body as array
+     */
+    public function getResponseData(): ?array
+    {
+        $body = $this->getResponseBody();
+        if (!$body) {
+            return null;
+        }
+
+        try {
+            $data = json_decode($body, true);
+            return is_array($data) ? $data : null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Get error message from response body
+     */
+    public function getApiErrorMessage(): ?string
+    {
+        $data = $this->getResponseData();
+        return $data['message'] ?? $data['error'] ?? null;
+    }
 }

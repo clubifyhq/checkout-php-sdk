@@ -28,7 +28,7 @@ return [
     */
 
     'environment' => env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'sandbox'),
-    'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', 'https://checkout.svelve.com/api/v1'),
+    'base_url' => env('CLUBIFY_CHECKOUT_BASE_URL', env('CLUBIFY_CHECKOUT_ENVIRONMENT', 'sandbox') === 'sandbox' ? 'https://sandbox.svelve.com/api/v1' : 'https://checkout.svelve.com/api/v1'),
     'debug' => env('CLUBIFY_CHECKOUT_DEBUG', false),
 
     /*

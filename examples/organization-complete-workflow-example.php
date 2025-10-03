@@ -137,11 +137,20 @@ echo "📦 PASSO 3: Criar Produto\n";
 echo "--------------------------\n";
 
 $productData = [
-    'name' => 'Curso Completo de Marketing Digital',
+    'name' => 'Curso Completo de Marketing Digital Novinho',
     'description' => 'Aprenda marketing digital do zero ao avançado',
     'type' => 'digital',
     'price' => 29790, // R$ 297,90 em centavos
-    'currency' => 'BRL'
+    'currency' => 'BRL',
+    'prices' => [
+        [
+            'amount' => 29790,        // R$ 297,90 em centavos
+            'currency' => 'BRL',
+            'type' => 'one_time',     // one_time, recurring, usage_based
+            'interval' => null,       // null para one_time, ou 'month', 'year' para recurring
+            'intervalCount' => null
+        ]
+    ]
 ];
 
 try {
@@ -187,19 +196,9 @@ echo "🎯 PASSO 4: Criar Oferta\n";
 echo "-------------------------\n";
 
 $offerData = [
-    'name' => 'Oferta Especial - Marketing Digital',
+    'name' => 'Oferta Especial - Marketing Digital Novinha',
     'description' => 'Aproveite nossa oferta especial com bônus exclusivos',
     'type' => 'single', // Tipos: single, combo, subscription, bundle
-    'products' => [
-        [
-            'productId' => $productId,
-            'quantity' => 1,
-            'position' => 0,
-            'isOptional' => false,
-            'discountType' => 'percentage',
-            'discountValue' => 10 // 10% de desconto
-        ]
-    ],
     'settings' => [
         'allowQuantityChange' => true,
         'maxQuantity' => 10,
@@ -269,7 +268,12 @@ $offerData = [
     'metadata' => [
         'campaign' => 'black-friday-2024',
         'source' => 'sdk-example',
-        'version' => '1.0'
+        'version' => '1.0',
+        'pricing' => [
+            'originalPrice' => 29790, // R$ 297,90 em centavos
+            'salePrice' => 19990,     // R$ 199,90 em centavos (33% desconto)
+            'currency' => 'BRL'
+        ]
     ],
     'isActive' => true
 ];
@@ -331,12 +335,71 @@ try {
 
 echo "\n";
 
+// ===== PASSO 4.1: Adicionar Produto à Oferta =====
+echo "➕ PASSO 4.1: Adicionar Produto à Oferta\n";
+echo "------------------------------------------\n";
+
+$productToOfferData = [
+    'productId' => $productId,
+    'quantity' => 1,
+    'position' => 0,
+    'isOptional' => false,
+    'customPrice' => 19990, // R$ 199,90 em centavos (preço especial da oferta)
+    'discountType' => 'percentage',
+    'discountValue' => 33 // 33% de desconto sobre o preço original
+];
+
+try {
+    echo "Adicionando produto à oferta...\n";
+
+    $updatedOffer = $sdk->offer()->offers()->addProductToOffer($offerId, $productToOfferData);
+
+    echo "✅ Produto adicionado à oferta com sucesso!\n";
+    echo "   Oferta ID: " . $offerId . "\n";
+    echo "   Produto ID: " . $productId . "\n";
+    echo "   Preço Personalizado: R$ " . number_format($productToOfferData['customPrice'] / 100, 2, ',', '.') . "\n";
+    echo "   Desconto: " . $productToOfferData['discountValue'] . "% de desconto\n";
+    echo "   Posição: " . $productToOfferData['position'] . "\n";
+
+} catch (Exception $e) {
+    // Verificar se o erro é porque o produto já existe na oferta
+    $isDuplicateError = false;
+
+    // Verificar se é HttpException com erro 400 de duplicação
+    if ($e instanceof \Clubify\Checkout\Exceptions\HttpException) {
+        // Verificar se é erro 400 (Bad Request)
+        if ($e->isBadRequest()) {
+            // Tentar obter mensagem da API
+            $apiMessage = $e->getApiErrorMessage();
+            if ($apiMessage && strpos($apiMessage, 'Product already exists') !== false) {
+                $isDuplicateError = true;
+            } else {
+                // Se não conseguir pegar mensagem específica, assume que 400 pode ser duplicação
+                $isDuplicateError = true;
+            }
+        }
+    }
+
+    if ($isDuplicateError) {
+        echo "ℹ️  Produto já está vinculado à oferta\n";
+        echo "   Oferta ID: " . $offerId . "\n";
+        echo "   Produto ID: " . $productId . "\n";
+        echo "   Preço Personalizado: R$ " . number_format($productToOfferData['customPrice'] / 100, 2, ',', '.') . "\n";
+        echo "   Status: Vinculação existente mantida\n";
+    } else {
+        echo "❌ Erro ao adicionar produto à oferta: " . $e->getMessage() . "\n";
+        exit(1);
+    }
+}
+
+echo "\n";
+
 // ===== PASSO 5: Criar Flow de Checkout =====
 echo "🔄 PASSO 5: Criar Flow de Checkout\n";
 echo "-----------------------------------\n";
 
 $flowData = [
-    'name' => 'Flow Marketing Digital',
+    'name' => 'Flow Marketing Digital novinho',
     'description' => 'Flow completo para venda de cursos digitais com múltiplas etapas e personalização',
     'version' => '1.0.0',
     'status' => 'draft', // draft, testing, active, paused, archived
@@ -839,7 +902,8 @@ echo "   - Configuração de preços e moeda\n";
 echo "   - Produtos criados no contexto do tenant\n\n";
 
 echo "3. 🎯 CONFIGURAÇÃO DE OFERTAS:\n";
-echo "   - Vinculação de produtos a ofertas\n";
+echo "   - Criação de ofertas\n";
+echo "   - Vinculação de produtos a ofertas via API dedicada\n";
 echo "   - Personalização de tema (cores, fontes)\n";
 echo "   - Configuração de layout e elementos visuais\n";
 echo "   - Garantias e limites de compra\n\n";

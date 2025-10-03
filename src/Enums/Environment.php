@@ -42,7 +42,7 @@ enum Environment: string
     {
         return match ($this) {
             self::DEVELOPMENT => 'https://checkout.svelve.com/api/v1',
-            self::SANDBOX => 'https://checkout.svelve.com/api/v1',
+            self::SANDBOX => 'https://sandbox.svelve.com/api/v1',
             self::STAGING => 'https://checkout.svelve.com/api/v1',
             self::PRODUCTION => 'https://checkout.svelve.com/api/v1',
         };

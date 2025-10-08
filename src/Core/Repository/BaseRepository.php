@@ -124,7 +124,17 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
      */
     public function create(array $data): array
     {
+        $this->logger->info('[BaseRepository] create() called', [
+            'resource' => $this->getResourceName(),
+            'endpoint' => $this->getEndpoint(),
+            'data_keys' => array_keys($data)
+        ]);
+
         return $this->executeWithMetrics("create_{$this->getResourceName()}", function () use ($data) {
+            $this->logger->info('[BaseRepository] About to call makeHttpRequest', [
+                'endpoint' => $this->getEndpoint(),
+                'data_keys' => array_keys($data)
+            ]);
             $response = $this->makeHttpRequest('POST', $this->getEndpoint(), $data);
 
             if (!$this->isSuccessfulResponse($response)) {

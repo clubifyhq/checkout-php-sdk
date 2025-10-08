@@ -48,6 +48,42 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
     }
 
     /**
+     * Sobrescreve o método create para filtrar campos não permitidos pela API
+     */
+    public function create(array $data): array
+    {
+        $this->logger->info('[ApiTenantRepository] create() method called');
+
+        // Remover campos que a API não aceita na criação
+        $filteredData = $data;
+        unset($filteredData['slug']);  // API gera o slug automaticamente
+        unset($filteredData['status']); // API define status inicial
+        unset($filteredData['created_at']); // API gera timestamp
+        unset($filteredData['updated_at']); // API gera timestamp
+        unset($filteredData['organization_id']); // Inferido do contexto de autenticação
+
+        $this->logger->info('Creating tenant with filtered data', [
+            'original_fields' => array_keys($data),
+            'filtered_fields' => array_keys($filteredData),
+            'removed_fields' => array_diff(array_keys($data), array_keys($filteredData)),
+            'payload' => $filteredData
+        ]);
+
+        // Usar makeHttpRequest que retorna array ao invés de parent::create que espera ResponseInterface
+        return $this->executeWithMetrics("create_{$this->getResourceName()}", function () use ($filteredData) {
+            $createdData = $this->makeHttpRequest('POST', $this->getEndpoint(), $filteredData);
+
+            // Dispatch creation event
+            $this->dispatch("{$this->getResourceName()}.created", [
+                'resource_id' => $createdData['id'] ?? null,
+                'data' => $createdData
+            ]);
+
+            return $createdData;
+        });
+    }
+
+    /**
      * Busca tenant por slug
      */
     public function findBySlug(string $slug): ?array
@@ -55,8 +91,16 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
         return $this->getCachedOrExecute(
             $this->getCacheKey("tenant:slug:{$slug}"),
             function () use ($slug) {
-                $data = $this->makeHttpRequest('GET', "tenants/slug/{$slug}");
-                return $data['tenant'] ?? $data;
+                try {
+                    $data = $this->makeHttpRequest('GET', "tenants/slug/{$slug}");
+                    return $data['tenant'] ?? $data;
+                } catch (HttpException $e) {
+                    // 404 significa que não encontrou - retornar null ao invés de lançar exceção
+                    if ($e->getStatusCode() === 404) {
+                        return null;
+                    }
+                    throw $e;
+                }
             },
             300 // 5 minutes cache
         );
@@ -100,20 +144,9 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
     private function tryFindByExactDomain(string $domain): ?array
     {
         try {
-            $this->logger->debug('ApiTenantRepository: Making HTTP request', [
-                'domain' => $domain,
-                'endpoint' => "tenants/domain/{$domain}"
-            ]);
-
+           
             $data = $this->makeHttpRequest('GET', "tenants/domain/{$domain}");
 
-            $this->logger->debug('ApiTenantRepository: HTTP response received', [
-                'domain' => $domain,
-                'response_keys' => array_keys($data),
-                'success' => $data['success'] ?? 'not_set',
-                'has_data' => isset($data['data']) ? 'yes' : 'no',
-                'has_tenant' => isset($data['tenant']) ? 'yes' : 'no'
-            ]);
 
             // Verificar se a resposta indica sucesso
             if (isset($data['success']) && $data['success'] === false) {
@@ -312,7 +345,9 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
      */
     public function isSlugAvailable(string $slug, ?string $excludeTenantId = null): bool
     {
+        $this->logger->info('[ApiTenantRepository] isSlugAvailable called', ['slug' => $slug]);
         $tenant = $this->findBySlug($slug);
+        $this->logger->info('[ApiTenantRepository] findBySlug returned', ['tenant_is_null' => $tenant === null]);
 
         if (!$tenant) {
             return true;
@@ -397,7 +432,21 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
     public function createOrganization(array $organizationData): array
     {
         return $this->executeWithMetrics('create_organization', function () use ($organizationData) {
-            $createdData = $this->makeHttpRequest('POST', 'tenants', $organizationData);
+            // Remover campos que a API não aceita na criação
+            $filteredData = $organizationData;
+            unset($filteredData['slug']);  // API gera o slug automaticamente
+            unset($filteredData['status']); // API define status inicial
+            unset($filteredData['created_at']); // API gera timestamp
+            unset($filteredData['updated_at']); // API gera timestamp
+            unset($filteredData['organization_id']); // Inferido do contexto de autenticação
+
+            $this->logger->info('Creating tenant with filtered data', [
+                'original_fields' => array_keys($organizationData),
+                'filtered_fields' => array_keys($filteredData),
+                'removed_fields' => array_diff(array_keys($organizationData), array_keys($filteredData))
+            ]);
+
+            $createdData = $this->makeHttpRequest('POST', 'tenants', $filteredData);
 
 
             // Extract tenant ID from nested data structure

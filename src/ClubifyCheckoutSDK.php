@@ -325,6 +325,9 @@ class ClubifyCheckoutSDK
                     $storage->storeRefreshToken($result['refresh_token']);
                 }
             }
+
+            // Marcar SDK como inicializado após autenticação bem-sucedida
+            $this->initialized = true;
         }
 
         return $result;
@@ -375,6 +378,36 @@ class ClubifyCheckoutSDK
         );
 
         return $orgAuthManager->getOrganizationContext();
+    }
+
+    /**
+     * ✅ NEW: Setar contexto de tenant/organization para requisições subsequentes
+     *
+     * Este método atualiza a configuração do SDK com tenant_id e organization_id
+     * que serão incluídos nos headers de todas as requisições HTTP subsequentes.
+     *
+     * Use este método após criar um tenant ou quando precisar alternar o contexto
+     * de operações para um tenant específico.
+     *
+     * @param string|null $tenantId ID do tenant (X-Tenant-Id header)
+     * @param string|null $organizationId ID da organization (X-Organization-Id header)
+     */
+    public function setTenantContext(?string $tenantId, ?string $organizationId = null): void
+    {
+        if ($tenantId) {
+            $this->config->set('tenant_id', $tenantId);
+            $this->config->set('credentials.tenant_id', $tenantId);
+        }
+
+        if ($organizationId) {
+            $this->config->set('organization_id', $organizationId);
+            $this->config->set('credentials.organization_id', $organizationId);
+        }
+
+        $this->getLogger()->info('Tenant context updated', [
+            'tenant_id' => $tenantId,
+            'organization_id' => $organizationId
+        ]);
     }
 
     /**
@@ -698,6 +731,19 @@ class ClubifyCheckoutSDK
                 $this->getCache(),
                 $this->getEventDispatcher()
             );
+        }
+
+        // Lazy inject UserManagement services (only once, on first access)
+        if ($this->organization->needsUserManagementInjection()) {
+            try {
+                $this->organization->setUserManagementServices(
+                    $this->userManagement()->getTenantService()
+                );
+            } catch (\Exception $e) {
+                $this->getLogger()->warning('Failed to inject UserManagement services into Organization', [
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
 
         return $this->organization;

@@ -71,6 +71,25 @@ class Configuration implements ConfigurationInterface
         return empty($tenantId) ? null : $tenantId;
     }
 
+    public function getOrganizationId(): ?string
+    {
+        // Primeiro tentar credenciais padrão
+        $organizationId = $this->get('credentials.organization_id');
+
+        // Se não encontrou, tentar como chave direta
+        if (empty($organizationId)) {
+            $organizationId = $this->get('organization_id');
+        }
+
+        // Se não encontrou e há configuração super_admin, usar organization_id do super_admin
+        if (empty($organizationId)) {
+            $organizationId = $this->get('super_admin.organization_id');
+        }
+
+        // Retornar null se for string vazia
+        return empty($organizationId) ? null : $organizationId;
+    }
+
     public function getApiKey(): ?string
     {
         return $this->get('credentials.api_key');
@@ -159,10 +178,15 @@ class Configuration implements ConfigurationInterface
             'X-SDK-Language' => 'php',
         ];
 
-        // Adicionar X-Tenant-Id se disponível
+        // CORREÇÃO: Adicionar headers obrigatórios X-Tenant-Id e X-Organization-Id
         $tenantId = $this->getTenantId();
         if ($tenantId) {
             $headers['X-Tenant-Id'] = $tenantId;
+        }
+
+        $organizationId = $this->getOrganizationId();
+        if ($organizationId) {
+            $headers['X-Organization-Id'] = $organizationId;
         }
 
         // Nota: O Authorization header será adicionado dinamicamente pelo AuthManager

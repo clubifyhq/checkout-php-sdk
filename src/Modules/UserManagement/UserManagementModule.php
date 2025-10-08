@@ -319,8 +319,14 @@ class UserManagementModule implements ModuleInterface
     public function getTenantService(): TenantService
     {
         if ($this->tenantService === null) {
-            // Usar factory interno do SDK que já tem acesso às dependências privadas
-            $this->tenantService = $this->sdk->createTenantService();
+            // Criar usando TenantServiceFactory diretamente
+            $this->tenantService = \Clubify\Checkout\Modules\UserManagement\Factories\TenantServiceFactory::create(
+                $this->config,
+                $this->logger,
+                $this->sdk->getHttpClient(),
+                $this->sdk->getCache(),
+                $this->sdk->getEventDispatcher()
+            );
         }
         return $this->tenantService;
     }

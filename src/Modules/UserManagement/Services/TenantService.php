@@ -35,16 +35,25 @@ class TenantService
     public function createTenant(array $tenantData): array
     {
         try {
+            $this->logger->info('[TenantService] createTenant() called');
+
+            // Transform organization data to tenant format
+            $tenantData = $this->mapOrganizationToTenant($tenantData);
+            $this->logger->info('[TenantService] After mapOrganizationToTenant');
+
             // Validar dados de entrada
             $validatedData = $this->validateTenantData($tenantData);
+            $this->logger->info('[TenantService] After validateTenantData');
 
             // Criar DTO para validações adicionais
             $tenantDto = new TenantData($validatedData);
+            $this->logger->info('[TenantService] After new TenantData');
 
             // Verificar se slug está disponível
             if (!$this->tenantRepository->isSlugAvailable($tenantDto->slug)) {
                 throw new ValidationException('Slug already in use');
             }
+            $this->logger->info('[TenantService] Slug is available');
 
             // Verificar domínios únicos se fornecidos
             if (!empty($tenantDto->domains)) {
@@ -55,50 +64,25 @@ class TenantService
                     }
                 }
             }
+            $this->logger->info('[TenantService] Domain validation passed');
 
             // Criar o tenant
+            $this->logger->info('[TenantService] About to call repository->create()');
             $createdTenant = $this->tenantRepository->create($validatedData);
 
+            // Extrair dados do tenant da resposta
+            $tenantData = $createdTenant['data'] ?? $createdTenant;
+
             $this->logger->info('Tenant created successfully', [
-                'tenant_id' => $createdTenant['id'] ?? 'unknown',
-                'name' => $createdTenant['name'] ?? 'unknown',
-                'slug' => $createdTenant['slug'] ?? 'unknown'
+                'tenant_id' => $tenantData['_id'] ?? $tenantData['id'] ?? 'unknown',
+                'name' => $tenantData['name'] ?? 'unknown',
+                'slug' => $tenantData['slug'] ?? 'unknown'
             ]);
 
             return [
                 'success' => true,
-                'tenant' => $createdTenant,
-                'tenant_id' => $createdTenant['id'] ?? null
-            ];
-
-        } catch (\Exception $e) {
-            $this->logger->error('Failed to create tenant', [
-                'error' => $e->getMessage(),
-                'data' => $tenantData
-            ]);
-
-            throw new SDKException('Failed to create tenant: ' . $e->getMessage(), 0, $e);
-        }
-    }
-
-    /**
-     * Cria um tenant
-     */
-    public function createTenant(array $tenantData): array
-    {
-        try {
-            // Criar tenant
-            $createdTenant = $this->tenantRepository->create($tenantData);
-
-            $this->logger->info('Tenant created successfully', [
-                'tenant_id' => $createdTenant['tenant_id'] ?? $createdTenant['id'] ?? 'unknown',
-                'name' => $createdTenant['name'] ?? 'unknown'
-            ]);
-
-            return [
-                'success' => true,
-                'tenant' => $createdTenant,
-                'tenant_id' => $createdTenant['tenant_id'] ?? $createdTenant['id'] ?? null
+                'tenant' => $tenantData,
+                'tenant_id' => $tenantData['_id'] ?? $tenantData['id'] ?? null
             ];
 
         } catch (\Exception $e) {
@@ -408,8 +392,9 @@ class TenantService
             throw new ValidationException('Invalid status');
         }
 
-        if (isset($data['plan']) && !in_array($data['plan'], ['basic', 'pro', 'enterprise'])) {
-            throw new ValidationException('Invalid plan');
+        // Validar plano conforme enum TENANT_PLAN do backend
+        if (isset($data['plan']) && !in_array($data['plan'], ['starter', 'professional', 'business', 'enterprise'])) {
+            throw new ValidationException('Invalid plan. Valid values: starter, professional, business, enterprise');
         }
 
         // Adicionar timestamps se necessário
@@ -432,10 +417,21 @@ class TenantService
         $tenantData['name'] = $organizationData['name'] ?? '';
         $tenantData['description'] = $organizationData['description'] ?? '';
 
+        // Gerar slug a partir do nome ou subdomain para validação do DTO
+        // (O slug será removido antes de enviar para a API, que gera o seu próprio)
+        if (isset($organizationData['subdomain'])) {
+            $tenantData['slug'] = $organizationData['subdomain'];
+        } elseif (isset($tenantData['name'])) {
+            $tenantData['slug'] = $this->generateSlugFromName($tenantData['name']);
+        }
+
         // Mapear domínio principal (custom_domain -> domain)
         if (isset($organizationData['custom_domain'])) {
             // Usar o domínio completo incluindo subdominios
             $tenantData['domain'] = $organizationData['custom_domain'];
+        } elseif (isset($organizationData['subdomain'])) {
+            // Se não tem custom_domain, gerar domain a partir do subdomain
+            $tenantData['domain'] = $organizationData['subdomain'] . '.clubify.com.br';
         }
 
         // Mapear subdomínio
@@ -447,9 +443,14 @@ class TenantService
         $tenantData['plan'] = $organizationData['plan'] ?? 'starter';
 
         // Criar estrutura de contato necessária para a API
-        $tenantData['contact'] = [
-            'email' => $organizationData['admin_email'] ?? $organizationData['support_email'] ?? '',
-        ];
+        // Usar contact existente ou criar um novo
+        if (!isset($organizationData['contact'])) {
+            $tenantData['contact'] = [
+                'email' => $organizationData['admin_email'] ?? $organizationData['support_email'] ?? '',
+            ];
+        } else {
+            $tenantData['contact'] = $organizationData['contact'];
+        }
 
         // Mapear configurações para a estrutura esperada pela API
         if (isset($organizationData['settings']) && is_array($organizationData['settings'])) {
@@ -468,8 +469,8 @@ class TenantService
             }
         }
 
-        // Não incluir campos proibidos pela API (slug, status)
-        // A API não permite estes campos na criação
+        // Nota: O slug gerado aqui é apenas para validação do DTO
+        // O repositório removerá campos proibidos pela API antes do envio
 
         return $tenantData;
     }

@@ -20,6 +20,8 @@ interface ConfigurationInterface
 
     public function getTenantId(): ?string;
 
+    public function getOrganizationId(): ?string;
+
     public function getApiKey(): ?string;
 
     public function getBaseUrl(): string;

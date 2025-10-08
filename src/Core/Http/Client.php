@@ -57,6 +57,7 @@ class Client
         string $uri,
         array $options = []
     ): ResponseInterface {
+        
         $httpMethod = HttpMethod::from(strtoupper($method));
         $request = $this->buildRequest($httpMethod, $uri, $options);
 
@@ -154,16 +155,8 @@ class Client
             }
         }
 
-        // Adicionar headers de organização se disponíveis na configuração
-        $organizationId = $this->config->get('organization_id');
-        if ($organizationId) {
-            $headers['X-Organization-Id'] = $organizationId;
-        }
-
-        $tenantId = $this->config->get('tenant_id');
-        if ($tenantId) {
-            $headers['X-Tenant-Id'] = $tenantId;
-        }
+        // CORREÇÃO: Headers obrigatórios já estão incluídos em getDefaultHeaders()
+        // mas garantimos que sejam sobrescritos se houver valores mais recentes
 
         return $headers;
     }
@@ -195,7 +188,8 @@ class Client
             'timeout' => $this->config->getTimeout(), // Guzzle espera segundos
             'connect_timeout' => $this->config->getHttpConfig()['connect_timeout'] ?? 10,
             'verify' => $this->config->getHttpConfig()['verify_ssl'] ?? true,
-            'headers' => $this->config->getDefaultHeaders(),
+            // CORREÇÃO: Não definir headers padrão aqui - serão definidos dinamicamente em cada requisição
+            // para garantir que tenant_id e organization_id sejam sempre incluídos
             // Use default Guzzle handler - custom HandlerStack was causing the hang
         ]);
     }
@@ -216,6 +210,19 @@ class Client
             $this->getRequestHeaders(),
             $options['headers'] ?? []
         );
+
+        // CORREÇÃO: Log dos headers obrigatórios para debug
+        $tenantId = $this->config->getTenantId();
+        $organizationId = $this->config->getOrganizationId();
+
+        if (!$tenantId || !$organizationId) {
+            $this->logger->warning('Headers obrigatórios ausentes na requisição', [
+                'uri' => $uri,
+                'tenant_id' => $tenantId ?? 'NOT SET',
+                'organization_id' => $organizationId ?? 'NOT SET',
+                'headers' => array_keys($headers)
+            ]);
+        }
 
         // Preparar body
         $body = null;
@@ -243,6 +250,7 @@ class Client
             try {
                 // Aplicar interceptors de request
                 $processedRequest = $this->applyRequestInterceptors($request);
+
 
                 // Executar requisição
                 $response = $this->client->send($processedRequest);
@@ -283,6 +291,7 @@ class Client
                 if ($statusCode === 404) {
                     $this->logger->debug('Resource not found (404)', $errorDetails);
                 } else {
+                    $this->logger->error('HTTP Request Error', $errorDetails);
                     error_log('HTTP Request Error: ' . json_encode($errorDetails));
                 }
 

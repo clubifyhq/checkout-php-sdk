@@ -19,6 +19,7 @@ use Clubify\Checkout\Modules\Organization\Services\OrganizationSetupRetryService
 use Clubify\Checkout\Modules\Organization\Repositories\OrganizationRepository;
 use Clubify\Checkout\Modules\Organization\Exceptions\OrganizationSetupException;
 use Clubify\Checkout\Exceptions\ConflictException;
+use Clubify\Checkout\Modules\UserManagement\Services\TenantService as UserManagementTenantService;
 
 /**
  * Módulo de Organização
@@ -55,6 +56,8 @@ class OrganizationModule implements ModuleInterface
     private ?Client $httpClient = null;
     private ?CacheManagerInterface $cache = null;
     private ?EventDispatcherInterface $eventDispatcher = null;
+    private ?UserManagementTenantService $userManagementTenantService = null;
+    private ?\Clubify\Checkout\ClubifyCheckoutSDK $sdk = null;
 
     /**
      * Inicializa o módulo com configurações
@@ -82,6 +85,36 @@ class OrganizationModule implements ModuleInterface
         $this->httpClient = $httpClient;
         $this->cache = $cache;
         $this->eventDispatcher = $eventDispatcher;
+    }
+
+    /**
+     * Inject UserManagement services for delegation
+     */
+    public function setUserManagementServices(
+        UserManagementTenantService $tenantService
+    ): void {
+        $this->userManagementTenantService = $tenantService;
+
+        // Inject into existing TenantService if already created
+        if ($this->tenantService !== null) {
+            $this->tenantService->setUserManagementTenantService($tenantService);
+        }
+    }
+
+    /**
+     * Check if UserManagement services need to be injected
+     */
+    public function needsUserManagementInjection(): bool
+    {
+        return $this->userManagementTenantService === null;
+    }
+
+    /**
+     * Inject SDK reference for lazy loading of services
+     */
+    public function setSdk(\Clubify\Checkout\ClubifyCheckoutSDK $sdk): void
+    {
+        $this->sdk = $sdk;
     }
 
     /**
@@ -207,6 +240,13 @@ class OrganizationModule implements ModuleInterface
                 $this->cache,
                 $this->eventDispatcher
             );
+
+            // Inject UserManagement TenantService if available
+            if ($this->userManagementTenantService !== null) {
+                $this->tenantService->setUserManagementTenantService(
+                    $this->userManagementTenantService
+                );
+            }
         }
 
         return $this->tenantService;

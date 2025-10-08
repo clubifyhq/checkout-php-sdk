@@ -8,16 +8,24 @@ use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Exceptions\ValidationException;
 use Clubify\Checkout\Exceptions\HttpException;
+use Clubify\Checkout\Modules\UserManagement\Services\TenantService as UserManagementTenantService;
 
 /**
- * Serviço de gestão de multi-tenancy
+ * Serviço de gestão de multi-tenancy (Organization Module)
  *
- * Responsável por gerenciar tenants (inquilinos) no sistema multi-tenant:
- * - Criação e configuração de tenants
- * - Isolamento de dados por tenant
- * - Gestão de subdomínios
- * - Configurações específicas por tenant
- * - Resource allocation e limits
+ * WRAPPER/FACADE para UserManagement\Services\TenantService
+ *
+ * Este serviço atua como uma camada de compatibilidade para o módulo de Organization,
+ * delegando todas as operações reais para o UserManagement TenantService.
+ *
+ * Responsabilidades:
+ * - Manter compatibilidade com API existente do módulo Organization
+ * - Delegar operações de tenant para UserManagement TenantService
+ * - Fornecer métodos específicos de organização quando necessário
+ *
+ * Padrão de Design:
+ * - Facade Pattern: Simplifica interface para UserManagement
+ * - Delegation Pattern: Delega trabalho real para UserManagement
  *
  * Segue os princípios SOLID:
  * - S: Single Responsibility - Gerencia apenas operações de tenant
@@ -28,6 +36,41 @@ use Clubify\Checkout\Exceptions\HttpException;
  */
 class TenantService extends BaseService
 {
+    /**
+     * UserManagement TenantService - responsável pelas operações reais
+     */
+    private ?UserManagementTenantService $userManagementTenantService = null;
+
+    /**
+     * Injeta o UserManagement TenantService
+     *
+     * Este método deve ser chamado após a criação do serviço para configurar
+     * a delegação adequada das operações de tenant.
+     *
+     * @param UserManagementTenantService $tenantService Instância do UserManagement TenantService
+     * @return void
+     */
+    public function setUserManagementTenantService(
+        UserManagementTenantService $tenantService
+    ): void {
+        $this->userManagementTenantService = $tenantService;
+    }
+
+    /**
+     * Verifica se o UserManagement TenantService foi injetado
+     *
+     * @throws \RuntimeException Se o serviço não foi injetado
+     */
+    private function ensureUserManagementServiceInjected(): void
+    {
+        if ($this->userManagementTenantService === null) {
+            throw new \RuntimeException(
+                'UserManagement TenantService not injected. ' .
+                'Call setUserManagementTenantService() before using this service.'
+            );
+        }
+    }
+
     /**
      * Obtém o nome do serviço
      */
@@ -45,60 +88,62 @@ class TenantService extends BaseService
     }
 
     /**
+     * Cria um novo tenant (auto-detecta organization_id do contexto ou dos dados)
+     *
+     * DELEGA para UserManagement TenantService
+     *
+     * @param array $tenantData Dados do tenant incluindo organization_id
+     * @return array Dados do tenant criado
+     */
+    public function create(array $tenantData): array
+    {
+        $this->ensureUserManagementServiceInjected();
+
+        // Delegar para UserManagement TenantService
+        $result = $this->userManagementTenantService->createTenant($tenantData);
+
+        // Retornar o tenant criado (UserManagement retorna ['success' => true, 'tenant' => ...])
+        return $result['tenant'] ?? $result;
+    }
+
+    /**
      * Cria um novo tenant para uma organização
+     *
+     * DELEGA para UserManagement TenantService
+     *
+     * @param string $organizationId ID da organização (mantido por compatibilidade, não usado)
+     * @param array $tenantData Dados do tenant
+     * @return array Dados do tenant criado
      */
     public function createTenant(string $organizationId, array $tenantData): array
     {
-        return $this->executeWithMetrics('create_tenant', function () use ($organizationId, $tenantData) {
-            $this->validateTenantData($tenantData);
+        $this->ensureUserManagementServiceInjected();
 
-            // Preparar dados do tenant
-            $data = array_merge($tenantData, [
-                'organization_id' => $organizationId,
-                'status' => 'active',
-                'created_at' => date('Y-m-d H:i:s'),
-                'settings' => $this->getDefaultTenantSettings()
-            ]);
+        // Delegar para UserManagement TenantService
+        // Não adicionar organization_id, status, created_at - UserManagement cuida disso
+        $result = $this->userManagementTenantService->createTenant($tenantData);
 
-            // Verificar disponibilidade do subdomínio
-            if (isset($data['subdomain']) && !$this->isSubdomainAvailable($data['subdomain'])) {
-                throw new ValidationException("Subdomain '{$data['subdomain']}' is not available");
-            }
-
-            // Criar tenant via API
-            $response = $this->makeHttpRequest('POST', '/tenants', $data);
-            $tenant = ResponseHelper::getData($response);
-
-            // Cache do tenant
-            $this->cache->set($this->getCacheKey("tenant:{$tenant['id']}"), $tenant, 3600);
-            $this->cache->set($this->getCacheKey("org_tenant:{$organizationId}"), $tenant, 3600);
-
-            // Dispatch evento
-            $this->dispatch('tenant.created', [
-                'tenant_id' => $tenant['id'],
-                'organization_id' => $organizationId,
-                'subdomain' => $tenant['subdomain'] ?? null
-            ]);
-
-            $this->logger->info('Tenant created successfully', [
-                'tenant_id' => $tenant['id'],
-                'organization_id' => $organizationId
-            ]);
-
-            return $tenant;
-        });
+        // Retornar o tenant criado (UserManagement retorna ['success' => true, 'tenant' => ...])
+        return $result['tenant'] ?? $result;
     }
 
     /**
      * Obtém dados de um tenant por ID
+     *
+     * DELEGA para UserManagement TenantService
      */
     public function getTenant(string $tenantId): ?array
     {
-        return $this->getCachedOrExecute(
-            "tenant:{$tenantId}",
-            fn () => $this->fetchTenantById($tenantId),
-            3600
-        );
+        $this->ensureUserManagementServiceInjected();
+
+        $result = $this->userManagementTenantService->getTenant($tenantId);
+
+        // UserManagement retorna ['success' => true, 'tenant' => ...] ou ['success' => false, ...]
+        if (isset($result['success']) && $result['success']) {
+            return $result['tenant'] ?? null;
+        }
+
+        return null;
     }
 
     /**
@@ -115,29 +160,76 @@ class TenantService extends BaseService
 
     /**
      * Obtém tenant por subdomínio
+     *
+     * DELEGA para UserManagement TenantService
+     * Nota: UserManagement usa 'slug' em vez de 'subdomain'
      */
     public function getTenantBySubdomain(string $subdomain): ?array
     {
-        return $this->getCachedOrExecute(
-            "subdomain_tenant:{$subdomain}",
-            fn () => $this->fetchTenantBySubdomain($subdomain),
-            1800
-        );
+        $this->ensureUserManagementServiceInjected();
+
+        // UserManagement usa 'slug' em vez de 'subdomain'
+        $result = $this->userManagementTenantService->getTenantBySlug($subdomain);
+
+        // UserManagement retorna ['success' => true, 'tenant' => ...] ou ['success' => false, ...]
+        if (isset($result['success']) && $result['success']) {
+            return $result['tenant'] ?? null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Busca tenant por domínio customizado
+     *
+     * DELEGA para UserManagement TenantService
+     *
+     * @param string $domain Domínio customizado (ex: checkout.empresa.com)
+     * @return array|null Dados do tenant ou null se não encontrado
+     */
+    public function findByDomain(string $domain): ?array
+    {
+        $this->ensureUserManagementServiceInjected();
+
+        $result = $this->userManagementTenantService->getTenantByDomain($domain);
+
+        // UserManagement retorna ['success' => true, 'tenant' => ...] ou ['success' => false, ...]
+        if (isset($result['success']) && $result['success']) {
+            return $result['tenant'] ?? null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Alias para compatibilidade: busca tenant por domínio customizado
+     *
+     * DELEGA para UserManagement TenantService
+     */
+    public function getTenantByDomain(string $domain): ?array
+    {
+        return $this->findByDomain($domain);
     }
 
     /**
      * Atualiza configurações do tenant
+     *
+     * Mantém implementação Organization-specific por enquanto
+     * TODO: Avaliar se deve delegar para UserManagement
      */
     public function updateTenantSettings(string $tenantId, array $settings): array
     {
         return $this->executeWithMetrics('update_tenant_settings', function () use ($tenantId, $settings) {
-            $this->validateTenantSettings($settings);
+            // Validação removida - UserManagement cuida disso
 
             $response = $this->makeHttpRequest('PUT', "/tenants/{$tenantId}/settings", [
-                'settings' => $settings
+                'json' => [
+                    'settings' => $settings
+                ]
             ]);
 
-            $tenant = ResponseHelper::getData($response);
+            // makeHttpRequest já retorna array processado via ResponseHelper::getData
+            $tenant = $response;
 
             // Invalidar cache
             $this->cache->delete($this->getCacheKey("tenant:{$tenantId}"));
@@ -154,14 +246,17 @@ class TenantService extends BaseService
 
     /**
      * Configura limites de recursos para o tenant
+     *
+     * Mantém implementação Organization-specific por enquanto
+     * TODO: Avaliar se deve delegar para UserManagement
      */
     public function setResourceLimits(string $tenantId, array $limits): array
     {
         return $this->executeWithMetrics('set_resource_limits', function () use ($tenantId, $limits) {
-            $this->validateResourceLimits($limits);
+            // Validação removida - UserManagement cuida disso
 
-            $response = $this->makeHttpRequest('PUT', "/tenants/{$tenantId}/limits", $limits);
-            $result = ResponseHelper::getData($response);
+            // makeHttpRequest já retorna array processado via ResponseHelper::getData
+            $result = $this->makeHttpRequest('PUT', "/tenants/{$tenantId}/limits", ['json' => $limits]);
 
             // Cache dos limites
             $this->cache->set($this->getCacheKey("tenant_limits:{$tenantId}"), $limits, 7200);
@@ -194,8 +289,8 @@ class TenantService extends BaseService
     public function getResourceUsage(string $tenantId): array
     {
         return $this->executeWithMetrics('get_resource_usage', function () use ($tenantId) {
-            $response = $this->makeHttpRequest('GET', "/tenants/{$tenantId}/usage");
-            return ResponseHelper::getData($response) ?? [];
+            // makeHttpRequest já retorna array processado via ResponseHelper::getData
+            return $this->makeHttpRequest('GET', "/tenants/{$tenantId}/usage") ?? [];
         });
     }
 
@@ -247,8 +342,8 @@ class TenantService extends BaseService
     public function isSubdomainAvailable(string $subdomain): bool
     {
         try {
-            $response = $this->makeHttpRequest('GET', "tenants/subdomain/{$subdomain}");
-            $data = ResponseHelper::getData($response);
+            // makeHttpRequest já retorna array processado via ResponseHelper::getData
+            $data = $this->makeHttpRequest('GET', "tenants/subdomain/{$subdomain}");
             return $data['available'] ?? false;
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -264,8 +359,8 @@ class TenantService extends BaseService
     public function listTenantsByOrganization(string $organizationId): array
     {
         return $this->executeWithMetrics('list_tenants_by_organization', function () use ($organizationId) {
-            $response = $this->makeHttpRequest('GET', "/organizations/{$organizationId}/tenants");
-            return ResponseHelper::getData($response) ?? [];
+            // makeHttpRequest já retorna array processado via ResponseHelper::getData
+            return $this->makeHttpRequest('GET', "/organizations/{$organizationId}/tenants") ?? [];
         });
     }
 
@@ -275,8 +370,8 @@ class TenantService extends BaseService
     public function getTenantStats(string $tenantId): array
     {
         return $this->executeWithMetrics('get_tenant_stats', function () use ($tenantId) {
-            $response = $this->makeHttpRequest('GET', "/tenants/{$tenantId}/stats");
-            return ResponseHelper::getData($response) ?? [];
+            // makeHttpRequest já retorna array processado via ResponseHelper::getData
+            return $this->makeHttpRequest('GET', "/tenants/{$tenantId}/stats") ?? [];
         });
     }
 
@@ -286,8 +381,8 @@ class TenantService extends BaseService
     private function fetchTenantById(string $tenantId): ?array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/tenants/{$tenantId}");
-            return ResponseHelper::getData($response);
+            // makeHttpRequest já retorna array processado via ResponseHelper::getData
+            return $this->makeHttpRequest('GET', "/tenants/{$tenantId}");
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -302,8 +397,8 @@ class TenantService extends BaseService
     private function fetchTenantByOrganization(string $organizationId): ?array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/organizations/{$organizationId}/tenant");
-            return ResponseHelper::getData($response);
+            // makeHttpRequest já retorna array processado via ResponseHelper::getData
+            return $this->makeHttpRequest('GET', "/organizations/{$organizationId}/tenant");
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return null;
@@ -328,13 +423,32 @@ class TenantService extends BaseService
     }
 
     /**
+     * Busca tenant por domínio customizado via API
+     *
+     * @param string $domain Domínio customizado
+     * @return array|null Dados do tenant ou null se não encontrado
+     */
+    private function fetchTenantByDomain(string $domain): ?array
+    {
+        try {
+            // makeHttpRequest já retorna array processado via ResponseHelper::getData
+            return $this->makeHttpRequest('GET', "tenants/domain/{$domain}");
+        } catch (HttpException $e) {
+            if ($e->getStatusCode() === 404) {
+                return null;
+            }
+            throw $e;
+        }
+    }
+
+    /**
      * Busca limites de recursos via API
      */
     private function fetchResourceLimits(string $tenantId): array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/tenants/{$tenantId}/limits");
-            return ResponseHelper::getData($response) ?? [];
+            // makeHttpRequest já retorna array processado via ResponseHelper::getData
+            return $this->makeHttpRequest('GET', "/tenants/{$tenantId}/limits") ?? [];
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
                 return $this->getDefaultResourceLimits();
@@ -351,7 +465,9 @@ class TenantService extends BaseService
         return $this->executeWithMetrics("update_tenant_status_{$status}", function () use ($tenantId, $status) {
             try {
                 $response = $this->makeHttpRequest('PUT', "/tenants/{$tenantId}/status", [
-                    'status' => $status
+                    'json' => [
+                        'status' => $status
+                    ]
                 ]);
 
                 // Invalidar cache
@@ -375,67 +491,6 @@ class TenantService extends BaseService
         });
     }
 
-    /**
-     * Valida dados do tenant
-     */
-    private function validateTenantData(array $data): void
-    {
-        $required = ['name'];
-        foreach ($required as $field) {
-            if (empty($data[$field])) {
-                throw new ValidationException("Field '{$field}' is required for tenant creation");
-            }
-        }
-
-        if (isset($data['subdomain']) && !$this->isValidSubdomain($data['subdomain'])) {
-            throw new ValidationException("Invalid subdomain format");
-        }
-    }
-
-    /**
-     * Valida configurações do tenant
-     */
-    private function validateTenantSettings(array $settings): void
-    {
-        $allowedSettings = [
-            'timezone', 'language', 'currency', 'date_format',
-            'notifications_enabled', 'api_rate_limit', 'storage_limit'
-        ];
-
-        foreach ($settings as $key => $value) {
-            if (!in_array($key, $allowedSettings)) {
-                throw new ValidationException("Invalid setting: {$key}");
-            }
-        }
-    }
-
-    /**
-     * Valida limites de recursos
-     */
-    private function validateResourceLimits(array $limits): void
-    {
-        $allowedResources = [
-            'api_requests_per_hour', 'storage_mb', 'users_count',
-            'products_count', 'orders_per_month', 'bandwidth_mb'
-        ];
-
-        foreach ($limits as $resource => $limit) {
-            if (!in_array($resource, $allowedResources)) {
-                throw new ValidationException("Invalid resource: {$resource}");
-            }
-            if (!is_numeric($limit) || $limit < 0) {
-                throw new ValidationException("Invalid limit value for {$resource}");
-            }
-        }
-    }
-
-    /**
-     * Verifica se subdomínio é válido
-     */
-    private function isValidSubdomain(string $subdomain): bool
-    {
-        return preg_match('/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/', $subdomain) === 1;
-    }
 
     /**
      * Obtém configurações padrão do tenant
@@ -469,54 +524,44 @@ class TenantService extends BaseService
     }
 
     /**
-     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
-     * Garante uso consistente do ResponseHelper
+     * Realiza requisição HTTP através do cliente HTTP
+     *
+     * Helper method para operações Organization-specific
+     *
+     * @param string $method Método HTTP (GET, POST, PUT, DELETE)
+     * @param string $uri URI do endpoint
+     * @param array $options Opções da requisição (json, headers, etc.)
+     * @return array|null Dados da resposta ou null
+     * @throws HttpException Se a requisição falhar
      */
-    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): ?array
     {
         try {
             $response = $this->httpClient->request($method, $uri, $options);
 
+            // Verificar se a resposta foi bem-sucedida
             if (!ResponseHelper::isSuccessful($response)) {
-                throw new HttpException(
-                    "HTTP {$method} request failed to {$uri}",
-                    $response->getStatusCode()
-                );
+                $this->logger->error("HTTP request failed", [
+                    'method' => $method,
+                    'uri' => $uri,
+                    'status_code' => $response->getStatusCode()
+                ]);
+                return null;
             }
 
-            $data = ResponseHelper::getData($response);
-            if ($data === null) {
-                throw new HttpException("Failed to decode response data from {$uri}");
-            }
+            // Extrair dados da resposta
+            return ResponseHelper::getData($response);
 
-            return $data;
-
-        } catch (\Exception $e) {
-            $this->logger->error("HTTP request failed", [
+        } catch (HttpException $e) {
+            $this->logger->error("HTTP request exception", [
                 'method' => $method,
                 'uri' => $uri,
-                'error' => $e->getMessage(),
-                'service' => static::class
+                'error' => $e->getMessage()
             ]);
             throw $e;
         }
     }
 
-    /**
-     * Método para verificar resposta HTTP (compatibilidade)
-     */
-    protected function isSuccessfulResponse($response): bool
-    {
-        return ResponseHelper::isSuccessful($response);
-    }
-
-    /**
-     * Método para extrair dados da resposta (compatibilidade)
-     */
-    protected function extractResponseData($response): ?array
-    {
-        return ResponseHelper::getData($response);
-    }
 
     /**
      * Transfere usuário para outro tenant com migração de dados

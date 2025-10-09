@@ -39,7 +39,7 @@ composer require clubify/checkout-sdk
 <?php
 
 use Clubify\Checkout\Modules\Payments\Services\GatewayConfigService;
-use Clubify\Checkout\Core\HttpClient;
+use Clubify\Checkout\Core\Http\Client as HttpClient;
 use Monolog\Logger;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 

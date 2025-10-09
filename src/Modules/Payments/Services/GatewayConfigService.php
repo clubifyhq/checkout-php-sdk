@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Modules\Payments\Services;
 
 use Clubify\Checkout\Core\BaseService;
-use Clubify\Checkout\Core\HttpClient;
+use Clubify\Checkout\Core\Http\Client as HttpClient;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Modules\Payments\Exceptions\GatewayException;
 use Psr\Log\LoggerInterface;

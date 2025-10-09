@@ -810,6 +810,108 @@ class OfferService extends BaseService implements ServiceInterface
     }
 
     /**
+     * Atualiza preço de um produto específico na oferta
+     * Endpoint: PUT /offers/:id/products/:productId
+     *
+     * @param string $offerId ID da oferta
+     * @param string $productId ID do produto na oferta
+     * @param float|int $newPrice Novo preço do produto (em centavos)
+     * @param array $additionalProductData Dados adicionais do produto (quantity, position, discountType, etc)
+     * @return array Oferta atualizada
+     */
+    public function updateProductPrice(
+        string $offerId,
+        string $productId,
+        $newPrice,
+        array $additionalProductData = []
+    ): array {
+        return $this->executeWithMetrics('update_product_price_in_offer', function () use ($offerId, $productId, $newPrice, $additionalProductData) {
+            // Validar preço
+            if (!is_numeric($newPrice) || $newPrice < 0) {
+                throw new ValidationException('Price must be a positive number');
+            }
+
+            $this->logger->info('Updating product price in offer', [
+                'offer_id' => $offerId,
+                'product_id' => $productId,
+                'new_price' => $newPrice
+            ]);
+
+            // Construir payload base com o preço
+            $payload = [
+                'productData' => [
+                    'price' => (int) $newPrice
+                ]
+            ];
+
+            // Adicionar campos adicionais de productData se fornecidos
+            if (isset($additionalProductData['name'])) {
+                $payload['productData']['name'] = $additionalProductData['name'];
+            }
+
+            if (isset($additionalProductData['description'])) {
+                $payload['productData']['description'] = $additionalProductData['description'];
+            }
+
+            if (isset($additionalProductData['currency'])) {
+                $payload['productData']['currency'] = $additionalProductData['currency'];
+            }
+
+            if (isset($additionalProductData['images'])) {
+                $payload['productData']['images'] = $additionalProductData['images'];
+            }
+
+            // Adicionar campos do produto na oferta (não são productData)
+            if (isset($additionalProductData['quantity']) && is_numeric($additionalProductData['quantity'])) {
+                $payload['quantity'] = (int) $additionalProductData['quantity'];
+            }
+
+            if (isset($additionalProductData['position']) && is_numeric($additionalProductData['position'])) {
+                $payload['position'] = (int) $additionalProductData['position'];
+            }
+
+            if (isset($additionalProductData['isOptional'])) {
+                $payload['isOptional'] = (bool) $additionalProductData['isOptional'];
+            }
+
+            if (isset($additionalProductData['discountType'])) {
+                $allowedDiscountTypes = ['percentage', 'fixed'];
+                if (!in_array($additionalProductData['discountType'], $allowedDiscountTypes)) {
+                    throw new ValidationException("Invalid discount type: {$additionalProductData['discountType']}");
+                }
+                $payload['discountType'] = $additionalProductData['discountType'];
+            }
+
+            if (isset($additionalProductData['discountValue']) && is_numeric($additionalProductData['discountValue'])) {
+                $payload['discountValue'] = (float) $additionalProductData['discountValue'];
+            }
+
+            // Fazer requisição para atualizar o produto na oferta
+            $offer = $this->makeHttpRequest('PUT', "/offers/{$offerId}/products/{$productId}", [
+                'json' => $payload
+            ]);
+
+            // Invalidar cache da oferta
+            $this->invalidateOfferCache($offerId);
+
+            // Dispatch evento
+            $this->dispatch('offer.product_price_updated', [
+                'offer_id' => $offerId,
+                'product_id' => $productId,
+                'new_price' => $newPrice
+            ]);
+
+            $this->logger->info('Product price updated successfully in offer', [
+                'offer_id' => $offerId,
+                'product_id' => $productId,
+                'new_price' => $newPrice
+            ]);
+
+            return $offer;
+        });
+    }
+
+    /**
      * Lista ofertas por faixa de preço
      */
     public function listByPriceRange(float $minPrice, float $maxPrice): array

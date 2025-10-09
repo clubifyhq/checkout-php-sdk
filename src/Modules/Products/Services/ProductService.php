@@ -365,6 +365,85 @@ class ProductService extends BaseService implements ServiceInterface
     }
 
     /**
+     * Atualiza preço de produto
+     * Endpoint: PATCH /products/:id
+     *
+     * @param string $productId ID do produto
+     * @param float|int $price Preço em centavos (ex: 2999 = R$ 29,99)
+     * @param string $currency Código da moeda (USD, BRL, etc)
+     * @param array $additionalPricing Dados adicionais de pricing (compareAtPrice, costPerItem, taxInclusive)
+     * @return array Produto atualizado
+     */
+    public function updatePrice(
+        string $productId,
+        $price,
+        string $currency = 'BRL',
+        array $additionalPricing = []
+    ): array {
+        return $this->executeWithMetrics('update_product_price', function () use ($productId, $price, $currency, $additionalPricing) {
+            // Validar preço
+            if (!is_numeric($price) || $price < 0) {
+                throw new ValidationException('Price must be a positive number');
+            }
+
+            // Validar moeda
+            $allowedCurrencies = ['USD', 'BRL', 'EUR', 'GBP'];
+            if (!in_array(strtoupper($currency), $allowedCurrencies)) {
+                throw new ValidationException("Invalid currency: {$currency}. Allowed: " . implode(', ', $allowedCurrencies));
+            }
+
+            // Construir payload de pricing
+            $pricingData = [
+                'price' => (int) $price,
+                'currency' => strtoupper($currency)
+            ];
+
+            // Adicionar campos opcionais se fornecidos
+            if (isset($additionalPricing['compareAtPrice']) && is_numeric($additionalPricing['compareAtPrice'])) {
+                $pricingData['compareAtPrice'] = (int) $additionalPricing['compareAtPrice'];
+            }
+
+            if (isset($additionalPricing['costPerItem']) && is_numeric($additionalPricing['costPerItem'])) {
+                $pricingData['costPerItem'] = (int) $additionalPricing['costPerItem'];
+            }
+
+            if (isset($additionalPricing['taxInclusive'])) {
+                $pricingData['taxInclusive'] = (bool) $additionalPricing['taxInclusive'];
+            }
+
+            $this->logger->info('Updating product price', [
+                'product_id' => $productId,
+                'new_price' => $price,
+                'currency' => $currency
+            ]);
+
+            // Atualizar produto com novo pricing
+            $product = $this->makeHttpRequest('PATCH', "/products/{$productId}", [
+                'json' => ['pricing' => $pricingData]
+            ]);
+
+            // Invalidar cache do produto
+            $this->invalidateProductCache($productId);
+
+            // Dispatch evento
+            $this->dispatch('product.price_updated', [
+                'product_id' => $productId,
+                'old_price' => null, // Poderia buscar do cache se necessário
+                'new_price' => $price,
+                'currency' => $currency
+            ]);
+
+            $this->logger->info('Product price updated successfully', [
+                'product_id' => $productId,
+                'price' => $price,
+                'currency' => $currency
+            ]);
+
+            return $product;
+        });
+    }
+
+    /**
      * Atualiza estoque de produto
      */
     public function updateStock(string $productId, int $quantity, string $operation = 'set'): bool

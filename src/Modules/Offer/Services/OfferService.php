@@ -810,80 +810,85 @@ class OfferService extends BaseService implements ServiceInterface
     }
 
     /**
-     * Atualiza preço de um produto específico na oferta
+     * Atualiza configuração de preço de um produto na oferta
+     * Permite definir preço base e/ou aplicar desconto customizado
      * Endpoint: PUT /offers/:id/products/:productId
      *
      * @param string $offerId ID da oferta
      * @param string $productId ID do produto na oferta
-     * @param float|int $newPrice Novo preço do produto (em centavos)
-     * @param array $additionalProductData Dados adicionais do produto (quantity, position, discountType, etc)
+     * @param array $priceConfig Configuração de preço com opções:
+     *   - 'basePrice': Preço base do produto em centavos (atualiza productData.price)
+     *   - 'discountType': Tipo de desconto ('percentage' ou 'fixed')
+     *   - 'discountValue': Valor do desconto (percentual ou valor fixo em centavos)
+     *   - Outros campos opcionais: quantity, position, isOptional, etc.
      * @return array Oferta atualizada
      */
-    public function updateProductPrice(
-        string $offerId,
-        string $productId,
-        $newPrice,
-        array $additionalProductData = []
-    ): array {
-        return $this->executeWithMetrics('update_product_price_in_offer', function () use ($offerId, $productId, $newPrice, $additionalProductData) {
-            // Validar preço
-            if (!is_numeric($newPrice) || $newPrice < 0) {
-                throw new ValidationException('Price must be a positive number');
-            }
-
-            $this->logger->info('Updating product price in offer', [
+    public function updateOfferProductPrice(string $offerId, string $productId, array $priceConfig): array
+    {
+        return $this->executeWithMetrics('update_offer_product_price', function () use ($offerId, $productId, $priceConfig) {
+            $this->logger->info('Updating product price configuration in offer', [
                 'offer_id' => $offerId,
                 'product_id' => $productId,
-                'new_price' => $newPrice
+                'config' => $priceConfig
             ]);
 
-            // Construir payload base com o preço
-            $payload = [
-                'productData' => [
-                    'price' => (int) $newPrice
-                ]
-            ];
+            $payload = [];
 
-            // Adicionar campos adicionais de productData se fornecidos
-            if (isset($additionalProductData['name'])) {
-                $payload['productData']['name'] = $additionalProductData['name'];
-            }
-
-            if (isset($additionalProductData['description'])) {
-                $payload['productData']['description'] = $additionalProductData['description'];
-            }
-
-            if (isset($additionalProductData['currency'])) {
-                $payload['productData']['currency'] = $additionalProductData['currency'];
-            }
-
-            if (isset($additionalProductData['images'])) {
-                $payload['productData']['images'] = $additionalProductData['images'];
-            }
-
-            // Adicionar campos do produto na oferta (não são productData)
-            if (isset($additionalProductData['quantity']) && is_numeric($additionalProductData['quantity'])) {
-                $payload['quantity'] = (int) $additionalProductData['quantity'];
-            }
-
-            if (isset($additionalProductData['position']) && is_numeric($additionalProductData['position'])) {
-                $payload['position'] = (int) $additionalProductData['position'];
-            }
-
-            if (isset($additionalProductData['isOptional'])) {
-                $payload['isOptional'] = (bool) $additionalProductData['isOptional'];
-            }
-
-            if (isset($additionalProductData['discountType'])) {
-                $allowedDiscountTypes = ['percentage', 'fixed'];
-                if (!in_array($additionalProductData['discountType'], $allowedDiscountTypes)) {
-                    throw new ValidationException("Invalid discount type: {$additionalProductData['discountType']}");
+            // 1. Atualizar preço base do produto (se fornecido)
+            if (isset($priceConfig['basePrice'])) {
+                if (!is_numeric($priceConfig['basePrice']) || $priceConfig['basePrice'] < 0) {
+                    throw new ValidationException('Base price must be a positive number');
                 }
-                $payload['discountType'] = $additionalProductData['discountType'];
+
+                $payload['productData'] = $payload['productData'] ?? [];
+                $payload['productData']['price'] = (int) $priceConfig['basePrice'];
+
+                // Campos adicionais de productData
+                if (isset($priceConfig['currency'])) {
+                    $payload['productData']['currency'] = $priceConfig['currency'];
+                }
+                if (isset($priceConfig['productName'])) {
+                    $payload['productData']['name'] = $priceConfig['productName'];
+                }
+                if (isset($priceConfig['productDescription'])) {
+                    $payload['productData']['description'] = $priceConfig['productDescription'];
+                }
             }
 
-            if (isset($additionalProductData['discountValue']) && is_numeric($additionalProductData['discountValue'])) {
-                $payload['discountValue'] = (float) $additionalProductData['discountValue'];
+            // 2. Configurar desconto customizado (se fornecido)
+            if (isset($priceConfig['discountType'])) {
+                $allowedDiscountTypes = ['percentage', 'fixed'];
+                if (!in_array($priceConfig['discountType'], $allowedDiscountTypes)) {
+                    throw new ValidationException("Invalid discount type: {$priceConfig['discountType']}. Allowed: percentage, fixed");
+                }
+                $payload['discountType'] = $priceConfig['discountType'];
+
+                // discountValue é obrigatório quando há discountType
+                if (!isset($priceConfig['discountValue'])) {
+                    throw new ValidationException('discountValue is required when discountType is provided');
+                }
+                if (!is_numeric($priceConfig['discountValue']) || $priceConfig['discountValue'] < 0) {
+                    throw new ValidationException('Discount value must be a positive number');
+                }
+                $payload['discountValue'] = $priceConfig['discountType'] === 'percentage'
+                    ? (float) $priceConfig['discountValue']
+                    : (int) $priceConfig['discountValue'];
+            }
+
+            // 3. Outros campos opcionais da oferta
+            if (isset($priceConfig['quantity']) && is_numeric($priceConfig['quantity'])) {
+                $payload['quantity'] = (int) $priceConfig['quantity'];
+            }
+            if (isset($priceConfig['position']) && is_numeric($priceConfig['position'])) {
+                $payload['position'] = (int) $priceConfig['position'];
+            }
+            if (isset($priceConfig['isOptional'])) {
+                $payload['isOptional'] = (bool) $priceConfig['isOptional'];
+            }
+
+            // Validar que pelo menos uma configuração foi fornecida
+            if (empty($payload)) {
+                throw new ValidationException('No price configuration provided. Use basePrice and/or discountType+discountValue');
             }
 
             // Fazer requisição para atualizar o produto na oferta
@@ -898,13 +903,73 @@ class OfferService extends BaseService implements ServiceInterface
             $this->dispatch('offer.product_price_updated', [
                 'offer_id' => $offerId,
                 'product_id' => $productId,
-                'new_price' => $newPrice
+                'base_price' => $priceConfig['basePrice'] ?? null,
+                'discount_type' => $priceConfig['discountType'] ?? null,
+                'discount_value' => $priceConfig['discountValue'] ?? null
             ]);
 
-            $this->logger->info('Product price updated successfully in offer', [
+            $this->logger->info('Product price configuration updated successfully in offer', [
                 'offer_id' => $offerId,
                 'product_id' => $productId,
-                'new_price' => $newPrice
+                'payload' => $payload
+            ]);
+
+            return $offer;
+        });
+    }
+
+    /**
+     * Aplica desconto customizado a um produto na oferta
+     * Atalho para updateOfferProductPrice() focado apenas em desconto
+     * Endpoint: PUT /offers/:id/products/:productId
+     *
+     * @param string $offerId ID da oferta
+     * @param string $productId ID do produto na oferta
+     * @param string $discountType Tipo de desconto ('percentage' ou 'fixed')
+     * @param float $discountValue Valor do desconto (percentual ou valor fixo em centavos)
+     * @return array Oferta atualizada
+     */
+    public function applyProductDiscount(
+        string $offerId,
+        string $productId,
+        string $discountType,
+        float $discountValue
+    ): array {
+        return $this->updateOfferProductPrice($offerId, $productId, [
+            'discountType' => $discountType,
+            'discountValue' => $discountValue
+        ]);
+    }
+
+    /**
+     * Remove desconto de um produto na oferta
+     * Endpoint: PUT /offers/:id/products/:productId
+     *
+     * @param string $offerId ID da oferta
+     * @param string $productId ID do produto na oferta
+     * @return array Oferta atualizada
+     */
+    public function removeProductDiscount(string $offerId, string $productId): array
+    {
+        return $this->executeWithMetrics('remove_offer_product_discount', function () use ($offerId, $productId) {
+            $this->logger->info('Removing product discount in offer', [
+                'offer_id' => $offerId,
+                'product_id' => $productId
+            ]);
+
+            // Remover desconto setando valores nulos
+            $offer = $this->makeHttpRequest('PUT', "/offers/{$offerId}/products/{$productId}", [
+                'json' => [
+                    'discountType' => null,
+                    'discountValue' => null
+                ]
+            ]);
+
+            $this->invalidateOfferCache($offerId);
+
+            $this->dispatch('offer.product_discount_removed', [
+                'offer_id' => $offerId,
+                'product_id' => $productId
             ]);
 
             return $offer;

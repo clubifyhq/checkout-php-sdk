@@ -891,6 +891,16 @@ class OfferService extends BaseService implements ServiceInterface
                 throw new ValidationException('No price configuration provided. Use basePrice and/or discountType+discountValue');
             }
 
+            // CRÍTICO: Remover campos que não devem ser enviados
+            // O productId é extraído da URL, nunca deve estar no payload
+            $protectedFields = ['productId', '_id', 'id'];
+            foreach ($protectedFields as $field) {
+                unset($payload[$field]);
+            }
+
+            // Filtrar valores null/undefined para evitar sobrescrever dados existentes
+            $payload = $this->filterNullValues($payload);
+
             // Fazer requisição para atualizar o produto na oferta
             $offer = $this->makeHttpRequest('PUT', "/offers/{$offerId}/products/{$productId}", [
                 'json' => $payload
@@ -1325,6 +1335,35 @@ class OfferService extends BaseService implements ServiceInterface
     protected function extractResponseData($response): ?array
     {
         return ResponseHelper::getData($response);
+    }
+
+    /**
+     * Filtra recursivamente valores null de um array
+     * Previne sobrescrever dados existentes no banco com valores nulos
+     *
+     * @param array $data Array a ser filtrado
+     * @return array Array sem valores null
+     */
+    private function filterNullValues(array $data): array
+    {
+        $filtered = [];
+
+        foreach ($data as $key => $value) {
+            // Se for array, filtrar recursivamente
+            if (is_array($value)) {
+                $filteredValue = $this->filterNullValues($value);
+                // Só adicionar se o array não ficou vazio
+                if (!empty($filteredValue)) {
+                    $filtered[$key] = $filteredValue;
+                }
+            }
+            // Adicionar apenas se não for null
+            elseif ($value !== null) {
+                $filtered[$key] = $value;
+            }
+        }
+
+        return $filtered;
     }
 
 }

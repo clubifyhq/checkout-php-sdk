@@ -6,10 +6,10 @@ namespace Clubify\Checkout\Modules\Payments\Services;
 
 use Clubify\Checkout\Core\BaseService;
 use Clubify\Checkout\Core\Http\Client as HttpClient;
+use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Modules\Payments\Exceptions\GatewayException;
 use Psr\Log\LoggerInterface;
-use Psr\Cache\CacheItemPoolInterface;
 
 /**
  * Gateway Configuration Service
@@ -33,7 +33,7 @@ class GatewayConfigService extends BaseService implements ServiceInterface
 
     public function __construct(
         LoggerInterface $logger,
-        CacheItemPoolInterface $cache,
+        CacheManagerInterface $cache,
         HttpClient $httpClient,
         string $baseUrl,
         string $tenantId,

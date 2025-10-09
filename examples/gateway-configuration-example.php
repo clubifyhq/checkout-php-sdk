@@ -12,9 +12,10 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Clubify\Checkout\Modules\Payments\Services\GatewayConfigService;
 use Clubify\Checkout\Core\Http\Client as HttpClient;
+use Clubify\Checkout\Core\Cache\CacheManager;
+use Clubify\Checkout\Core\Config\Configuration;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 // ============================================
 // CONFIGURAÇÃO
@@ -35,8 +36,14 @@ $config = [
 $logger = new Logger('gateway-config');
 $logger->pushHandler(new StreamHandler('php://stdout', Logger::DEBUG));
 
+// Configuration
+$configuration = new Configuration([
+    'cache.compression.enabled' => false,
+    'cache.encryption.enabled' => false,
+]);
+
 // Cache
-$cache = new FilesystemAdapter('gateway', 300, __DIR__ . '/../cache');
+$cache = new CacheManager($configuration);
 
 // HTTP Client
 $httpClient = new HttpClient(

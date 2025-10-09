@@ -40,14 +40,19 @@ composer require clubify/checkout-sdk
 
 use Clubify\Checkout\Modules\Payments\Services\GatewayConfigService;
 use Clubify\Checkout\Core\Http\Client as HttpClient;
+use Clubify\Checkout\Core\Cache\CacheManager;
+use Clubify\Checkout\Core\Config\Configuration;
 use Monolog\Logger;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 // 1. Configurar logger
 $logger = new Logger('gateway-config');
 
 // 2. Configurar cache
-$cache = new FilesystemAdapter('gateway', 300);
+$configuration = new Configuration([
+    'cache.compression.enabled' => false,
+    'cache.encryption.enabled' => false,
+]);
+$cache = new CacheManager($configuration);
 
 // 3. Configurar HTTP client
 $httpClient = new HttpClient(
@@ -412,20 +417,22 @@ $config = $gatewayService->configureStripe([
 **Solução:** Verifique se o cache está configurado corretamente:
 
 ```php
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Clubify\Checkout\Core\Cache\CacheManager;
+use Clubify\Checkout\Core\Config\Configuration;
 
-$cache = new FilesystemAdapter(
-    'gateway',           // namespace
-    300,                 // TTL em segundos
-    __DIR__ . '/cache'   // diretório de cache
-);
+$configuration = new Configuration([
+    'cache.compression.enabled' => false,
+    'cache.encryption.enabled' => false,
+]);
+
+$cache = new CacheManager($configuration);
 ```
 
 ### Limpar cache manualmente
 
 ```php
 // Limpar cache de um gateway específico
-$cache->deleteItem("gateway_config:{$tenantId}:stripe");
+$cache->delete("gateway_config:{$tenantId}:stripe");
 
 // Limpar todo o cache de gateway
 $cache->clear();

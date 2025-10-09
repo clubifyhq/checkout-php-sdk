@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace Clubify\Checkout\Core;
 
 use Psr\Log\LoggerInterface;
-use Psr\Cache\CacheItemPoolInterface;
-use Psr\Cache\InvalidArgumentException;
+use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 
 /**
  * Base Service Class
@@ -16,11 +15,11 @@ use Psr\Cache\InvalidArgumentException;
 abstract class BaseService
 {
     protected LoggerInterface $logger;
-    protected CacheItemPoolInterface $cache;
+    protected CacheManagerInterface $cache;
 
     public function __construct(
         LoggerInterface $logger,
-        CacheItemPoolInterface $cache
+        CacheManagerInterface $cache
     ) {
         $this->logger = $logger;
         $this->cache = $cache;
@@ -32,14 +31,8 @@ abstract class BaseService
     protected function getFromCache(string $key): mixed
     {
         try {
-            $item = $this->cache->getItem($key);
-
-            if ($item->isHit()) {
-                return $item->get();
-            }
-
-            return null;
-        } catch (InvalidArgumentException $e) {
+            return $this->cache->get($key);
+        } catch (\Throwable $e) {
             $this->logger->error('Cache get error', [
                 'key' => $key,
                 'error' => $e->getMessage(),
@@ -55,12 +48,8 @@ abstract class BaseService
     protected function setCache(string $key, mixed $value, int $ttl = 300): bool
     {
         try {
-            $item = $this->cache->getItem($key);
-            $item->set($value);
-            $item->expiresAfter($ttl);
-
-            return $this->cache->save($item);
-        } catch (InvalidArgumentException $e) {
+            return $this->cache->set($key, $value, $ttl);
+        } catch (\Throwable $e) {
             $this->logger->error('Cache set error', [
                 'key' => $key,
                 'error' => $e->getMessage(),
@@ -76,8 +65,8 @@ abstract class BaseService
     protected function deleteFromCache(string $key): bool
     {
         try {
-            return $this->cache->deleteItem($key);
-        } catch (InvalidArgumentException $e) {
+            return $this->cache->delete($key);
+        } catch (\Throwable $e) {
             $this->logger->error('Cache delete error', [
                 'key' => $key,
                 'error' => $e->getMessage(),
@@ -93,14 +82,11 @@ abstract class BaseService
     protected function clearCachePattern(string $pattern): void
     {
         try {
-            // Nota: PSR-6 não suporta pattern matching nativamente
-            // Implementações específicas de cache podem precisar de métodos customizados
             $this->logger->debug('Clearing cache pattern', ['pattern' => $pattern]);
 
-            // Para FilesystemAdapter e similares, pode funcionar:
-            if (method_exists($this->cache, 'deleteItems')) {
-                // Tenta limpar itens relacionados
-                // Isso pode variar dependendo da implementação do cache
+            // Se o cache manager suporta deleteByPattern, use-o
+            if (method_exists($this->cache, 'deleteByPattern')) {
+                $this->cache->deleteByPattern($pattern);
             }
         } catch (\Throwable $e) {
             $this->logger->error('Cache clear pattern error', [
@@ -115,6 +101,14 @@ abstract class BaseService
      */
     protected function clearCache(): bool
     {
-        return $this->cache->clear();
+        try {
+            return $this->cache->clear();
+        } catch (\Throwable $e) {
+            $this->logger->error('Cache clear error', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 }

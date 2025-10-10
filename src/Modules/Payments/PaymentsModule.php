@@ -304,6 +304,15 @@ class PaymentsModule implements ModuleInterface
     }
 
     /**
+     * Obtém serviço de configuração de gateway
+     */
+    public function gatewayConfig(): object
+    {
+        $this->ensureInitialized();
+        return $this->serviceFactory->create('gateway-config');
+    }
+
+    /**
      * Obtém factory de serviços
      */
     public function getServiceFactory(): PaymentsServiceFactory

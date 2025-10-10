@@ -13,6 +13,7 @@ use Clubify\Checkout\Modules\Payments\Services\PaymentService;
 use Clubify\Checkout\Modules\Payments\Services\CardService;
 use Clubify\Checkout\Modules\Payments\Services\GatewayService;
 use Clubify\Checkout\Modules\Payments\Services\TokenizationService;
+use Clubify\Checkout\Modules\Payments\Services\GatewayConfigService;
 // Repositories
 use Clubify\Checkout\Modules\Payments\Repositories\ApiPaymentRepository;
 use Clubify\Checkout\Modules\Payments\Repositories\ApiCardRepository;
@@ -39,6 +40,7 @@ use Clubify\Checkout\Utils\Crypto\HMACSignature;
  * - 'card': Card management and tokenization service
  * - 'gateway': Gateway management and load balancing service
  * - 'tokenization': Advanced tokenization and security service
+ * - 'gateway-config': Gateway configuration and management service
  *
  * Repository types automatically created:
  * - 'payment': ApiPaymentRepository
@@ -154,7 +156,8 @@ class PaymentsServiceFactory implements FactoryInterface
             'payment',
             'card',
             'gateway',
-            'tokenization'
+            'tokenization',
+            'gateway-config'
         ];
     }
 
@@ -250,6 +253,9 @@ class PaymentsServiceFactory implements FactoryInterface
             case 'tokenization':
                 return $this->createTokenizationService($config);
 
+            case 'gateway-config':
+                return $this->createGatewayConfigService($config);
+
             default:
                 throw new \InvalidArgumentException("Service type '{$type}' is not supported");
         }
@@ -331,6 +337,31 @@ class PaymentsServiceFactory implements FactoryInterface
             $cardValidator,
             $encryption,
             $hmacSignature
+        );
+    }
+
+    /**
+     * Create Gateway Config service with dependencies
+     *
+     * @param array $config Service configuration (unused, for interface compatibility)
+     * @return GatewayConfigService Configured service instance
+     */
+    private function createGatewayConfigService(array $config): GatewayConfigService
+    {
+        // Suppress unused parameter warning - needed for interface compatibility
+        unset($config);
+
+        $baseUrl = $this->config->get('base_url', '');
+        $tenantId = $this->config->get('tenant_id', '');
+        $organizationId = $this->config->get('organization_id', '');
+
+        return new GatewayConfigService(
+            $this->logger,
+            $this->cache,
+            $this->httpClient,
+            $baseUrl,
+            $tenantId,
+            $organizationId
         );
     }
 

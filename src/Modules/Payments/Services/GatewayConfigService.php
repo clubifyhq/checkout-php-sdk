@@ -143,7 +143,7 @@ class GatewayConfigService extends BaseService implements ServiceInterface
                 return $cached;
             }
 
-            $url = "{$this->baseUrl}/api/v1/public/gateway/config";
+            $url = "{$this->baseUrl}/api/v1/gateway/config";
             if ($provider) {
                 $url .= "/{$provider}";
             }

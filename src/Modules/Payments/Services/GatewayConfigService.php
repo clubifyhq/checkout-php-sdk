@@ -56,7 +56,7 @@ class GatewayConfigService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get(
-                "{$this->baseUrl}/api/v1/gateway/list",
+                "{$this->baseUrl}/gateway/list",
                 [
                     'headers' => $this->getHeaders(),
                 ]
@@ -95,7 +95,7 @@ class GatewayConfigService extends BaseService implements ServiceInterface
             $this->validateGatewayConfig($config);
 
             $response = $this->httpClient->post(
-                "{$this->baseUrl}/api/v1/gateway/configure/{$gateway}",
+                "{$this->baseUrl}/gateway/configure/{$gateway}",
                 [
                     'headers' => $this->getHeaders(),
                     'json' => $config,
@@ -143,7 +143,7 @@ class GatewayConfigService extends BaseService implements ServiceInterface
                 return $cached;
             }
 
-            $url = "{$this->baseUrl}/api/v1/gateway/config";
+            $url = "{$this->baseUrl}/gateway/config";
             if ($provider) {
                 $url .= "/{$provider}";
             }
@@ -190,7 +190,7 @@ class GatewayConfigService extends BaseService implements ServiceInterface
     {
         try {
             $response = $this->httpClient->get(
-                "{$this->baseUrl}/api/v1/gateway/status/{$gateway}",
+                "{$this->baseUrl}/gateway/status/{$gateway}",
                 [
                     'headers' => $this->getHeaders(),
                 ]

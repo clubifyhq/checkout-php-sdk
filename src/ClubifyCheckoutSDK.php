@@ -1045,26 +1045,45 @@ class ClubifyCheckoutSDK
 
     /**
      * Obter HTTP Client (Lazy Loading)
+     *
+     * CORREÇÃO: Agora garante que AuthManager seja criado junto com Client
+     * para evitar race condition onde requests HTTP não incluem Authorization header
      */
     public function getHttpClient(): Client
     {
         if ($this->httpClient === null) {
             // Criar Client sem AuthManager primeiro para evitar dependência circular
             $this->httpClient = new Client($this->config, $this->getLogger());
+
+            // CORREÇÃO CRÍTICA: Se AuthManager ainda não existe, criar agora
+            // e injetar no Client imediatamente. Isso garante que qualquer
+            // request HTTP subsequente terá acesso ao AuthManager.
+            if ($this->authManager === null) {
+                $this->authManager = new AuthManager($this->httpClient, $this->config);
+                $this->httpClient->setAuthManager($this->authManager);
+            }
         }
         return $this->httpClient;
     }
 
     /**
      * Obter Auth Manager (Lazy Loading)
+     *
+     * CORREÇÃO: Agora garante que HttpClient exista primeiro e que
+     * AuthManager seja injetado imediatamente após criação
      */
     private function getAuthManager(): AuthManager
     {
         if ($this->authManager === null) {
-            $this->authManager = new AuthManager($this->getHttpClient(), $this->config);
-            // Configurar AuthManager no Client para resolver dependência circular
-            $this->getHttpClient()->setAuthManager($this->authManager);
+            // CORREÇÃO: Garantir que HttpClient existe primeiro
+            // getHttpClient() agora cria o AuthManager automaticamente
+            $client = $this->getHttpClient();
 
+            // Se por algum motivo AuthManager ainda não foi criado, criar agora
+            if ($this->authManager === null) {
+                $this->authManager = new AuthManager($client, $this->config);
+                $client->setAuthManager($this->authManager);
+            }
         }
         return $this->authManager;
     }

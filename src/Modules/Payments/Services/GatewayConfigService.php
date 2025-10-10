@@ -6,6 +6,7 @@ namespace Clubify\Checkout\Modules\Payments\Services;
 
 use Clubify\Checkout\Core\BaseService;
 use Clubify\Checkout\Core\Http\Client as HttpClient;
+use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Modules\Payments\Exceptions\GatewayException;
@@ -62,11 +63,17 @@ class GatewayConfigService extends BaseService implements ServiceInterface
                 ]
             );
 
+            // Decodificar resposta HTTP para array
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new GatewayException('Falha ao decodificar resposta do servidor');
+            }
+
             $this->logger->info('Gateways listados com sucesso', [
-                'total' => count($response['gateways'] ?? []),
+                'total' => count($data['gateways'] ?? []),
             ]);
 
-            return $response;
+            return $data;
         } catch (\Throwable $e) {
             $this->logger->error('Falha ao listar gateways', [
                 'error' => $e->getMessage(),
@@ -102,16 +109,22 @@ class GatewayConfigService extends BaseService implements ServiceInterface
                 ]
             );
 
+            // Decodificar resposta HTTP para array
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new GatewayException('Falha ao decodificar resposta do servidor');
+            }
+
             // Limpa cache de configuração
             $this->clearCachePattern("gateway_config:{$this->tenantId}:*");
 
             $this->logger->info('Gateway configurado com sucesso', [
                 'gateway' => $gateway,
                 'tenant_id' => $this->tenantId,
-                'config_id' => $response['config']['id'] ?? null,
+                'config_id' => $data['config']['id'] ?? null,
             ]);
 
-            return $response;
+            return $data;
         } catch (\Throwable $e) {
             $this->logger->error('Falha ao configurar gateway', [
                 'gateway' => $gateway,
@@ -155,15 +168,21 @@ class GatewayConfigService extends BaseService implements ServiceInterface
                 ]
             );
 
+            // Decodificar resposta HTTP para array
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new GatewayException('Falha ao decodificar resposta do servidor');
+            }
+
             // Cache por 5 minutos
-            $this->setCache($cacheKey, $response, 300);
+            $this->setCache($cacheKey, $data, 300);
 
             $this->logger->info('Configuração do gateway obtida', [
                 'tenant_id' => $this->tenantId,
                 'provider' => $provider ?? 'all',
             ]);
 
-            return $response;
+            return $data;
         } catch (\Throwable $e) {
             $this->logger->error('Falha ao obter configuração do gateway', [
                 'tenant_id' => $this->tenantId,
@@ -196,12 +215,18 @@ class GatewayConfigService extends BaseService implements ServiceInterface
                 ]
             );
 
+            // Decodificar resposta HTTP para array
+            $data = ResponseHelper::getData($response);
+            if ($data === null) {
+                throw new GatewayException('Falha ao decodificar resposta do servidor');
+            }
+
             $this->logger->info('Status do gateway obtido', [
                 'gateway' => $gateway,
-                'status' => $response['status'] ?? 'unknown',
+                'status' => $data['status'] ?? 'unknown',
             ]);
 
-            return $response;
+            return $data;
         } catch (\Throwable $e) {
             $this->logger->error('Falha ao obter status do gateway', [
                 'gateway' => $gateway,

@@ -523,7 +523,20 @@ class AdminService extends BaseService
     private function validatePermissions(array $permissions): void
     {
         $allowedPermissions = [
-            '*', 'organization.read', 'organization.write', 'organization.delete',
+            // Wildcards
+            '*', '*:*',
+            // Colon-separated permissions (preferred format)
+            'organization:read', 'organization:write', 'organization:delete', 'organization:*',
+            'products:read', 'products:write', 'products:delete', 'products:*',
+            'orders:read', 'orders:write', 'orders:refund', 'orders:*',
+            'customers:read', 'customers:write', 'customers:delete', 'customers:*',
+            'payments:read', 'payments:write', 'payments:refund', 'payments:*',
+            'webhooks:read', 'webhooks:write', 'webhooks:delete', 'webhooks:*',
+            'analytics:read', 'analytics:*',
+            'reports:read', 'reports:*',
+            'settings:write', 'settings:*',
+            // Dot-separated permissions (backward compatibility)
+            'organization.read', 'organization.write', 'organization.delete',
             'products.read', 'products.write', 'products.delete',
             'orders.read', 'orders.write', 'orders.refund',
             'customers.read', 'customers.write', 'customers.delete',
@@ -533,10 +546,38 @@ class AdminService extends BaseService
         ];
 
         foreach ($permissions as $permission) {
+            // Check if it's a wildcard permission
+            if ($this->isWildcardPermission($permission)) {
+                continue;
+            }
+
             if (!in_array($permission, $allowedPermissions)) {
                 throw new ValidationException("Invalid permission: {$permission}");
             }
         }
+    }
+
+    /**
+     * Verifica se a permissão é um padrão wildcard válido
+     */
+    private function isWildcardPermission(string $permission): bool
+    {
+        // Aceita '*' ou '*:*'
+        if ($permission === '*' || $permission === '*:*') {
+            return true;
+        }
+
+        // Aceita 'resource:*' (ex: 'checkout:*')
+        if (preg_match('/^[a-z_]+:\*$/', $permission)) {
+            return true;
+        }
+
+        // Aceita '*:action' (ex: '*:read')
+        if (preg_match('/^\*:[a-z_]+$/', $permission)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

@@ -571,17 +571,57 @@ class ApiKeyService extends BaseService
     private function validatePermissions(array $permissions): void
     {
         $allowedPermissions = [
-            '*', 'checkout.read', 'checkout.write', 'products.read', 'products.write',
+            // Wildcards
+            '*', '*:*',
+            // Colon-separated permissions (preferred format)
+            'checkout:read', 'checkout:write', 'checkout:*',
+            'products:read', 'products:write', 'products:*',
+            'orders:read', 'orders:write', 'orders:*',
+            'payments:read', 'payments:write', 'payments:*',
+            'customers:read', 'customers:write', 'customers:*',
+            'webhooks:read', 'webhooks:write', 'webhooks:*',
+            'analytics:read', 'analytics:*',
+            'reports:read', 'reports:*',
+            // Dot-separated permissions (backward compatibility)
+            'checkout.read', 'checkout.write', 'products.read', 'products.write',
             'orders.read', 'orders.write', 'payments.read', 'payments.write',
             'customers.read', 'customers.write', 'webhooks.read', 'webhooks.write',
             'analytics.read', 'reports.read'
         ];
 
         foreach ($permissions as $permission) {
+            // Check if it's a wildcard permission
+            if ($this->isWildcardPermission($permission)) {
+                continue;
+            }
+
             if (!in_array($permission, $allowedPermissions)) {
                 throw new ValidationException("Invalid permission: {$permission}");
             }
         }
+    }
+
+    /**
+     * Verifica se a permissão é um padrão wildcard válido
+     */
+    private function isWildcardPermission(string $permission): bool
+    {
+        // Aceita '*' ou '*:*'
+        if ($permission === '*' || $permission === '*:*') {
+            return true;
+        }
+
+        // Aceita 'resource:*' (ex: 'checkout:*')
+        if (preg_match('/^[a-z_]+:\*$/', $permission)) {
+            return true;
+        }
+
+        // Aceita '*:action' (ex: '*:read')
+        if (preg_match('/^\*:[a-z_]+$/', $permission)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

@@ -124,7 +124,8 @@ class ThemeService extends BaseService implements ServiceInterface
                 throw new ValidationException("Theme not found: {$themeId}");
             }
 
-            $data['updated_at'] = date('Y-m-d H:i:s');
+            // CORREÇÃO: Não adicionar updated_at - a API gerencia timestamps automaticamente
+            // $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->makeHttpRequest('PUT', "/themes/{$themeId}", $data);
             $theme = ResponseHelper::getData($response);

@@ -206,7 +206,8 @@ class ProductService extends BaseService implements ServiceInterface
                 }
             }
 
-            $data['updated_at'] = date('Y-m-d H:i:s');
+            // CORREÇÃO: Não adicionar updated_at - a API gerencia timestamps automaticamente
+            // $data['updated_at'] = date('Y-m-d H:i:s');
 
             $product = $this->makeHttpRequest('PATCH', "/products/{$productId}", ['json' => $data]);
 

@@ -144,7 +144,8 @@ class SubscriptionPlanService extends BaseService implements ServiceInterface
                 throw new ValidationException("Subscription plan not found: {$planId}");
             }
 
-            $data['updated_at'] = date('Y-m-d H:i:s');
+            // CORREÇÃO: Não adicionar updated_at - a API gerencia timestamps automaticamente
+            // $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->makeHttpRequest('PUT', "/subscription-plans/{$planId}", $data);
             $plan = ResponseHelper::getData($response);

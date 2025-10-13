@@ -140,7 +140,8 @@ class OrderBumpService extends BaseService implements ServiceInterface
                 throw new ValidationException("Order bump not found: {$bumpId}");
             }
 
-            $data['updated_at'] = date('Y-m-d H:i:s');
+            // CORREÇÃO: Não adicionar updated_at - a API gerencia timestamps automaticamente
+            // $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->makeHttpRequest('PUT', "/order-bumps/{$bumpId}", $data);
             $bump = ResponseHelper::getData($response);

@@ -141,7 +141,8 @@ class UpsellService extends BaseService implements ServiceInterface
                 throw new ValidationException("Upsell not found: {$upsellId}");
             }
 
-            $data['updated_at'] = date('Y-m-d H:i:s');
+            // CORREÇÃO: Não adicionar updated_at - a API gerencia timestamps automaticamente
+            // $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->makeHttpRequest('PUT', "/upsells/{$upsellId}", $data);
             $upsell = ResponseHelper::getData($response);

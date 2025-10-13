@@ -149,7 +149,8 @@ class FlowService extends BaseService implements ServiceInterface
                 $data['steps'] = $this->processFlowSteps($data['steps']);
             }
 
-            $data['updated_at'] = date('Y-m-d H:i:s');
+            // CORREÇÃO: Não adicionar updated_at - a API gerencia timestamps automaticamente
+            // $data['updated_at'] = date('Y-m-d H:i:s');
 
             $response = $this->makeHttpRequest('PUT', "/sales-flows/{$flowId}", $data);
             $flow = ResponseHelper::getData($response);

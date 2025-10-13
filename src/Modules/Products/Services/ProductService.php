@@ -208,7 +208,7 @@ class ProductService extends BaseService implements ServiceInterface
 
             $data['updated_at'] = date('Y-m-d H:i:s');
 
-            $product = $this->makeHttpRequest('PUT', "/products/{$productId}", ['json' => $data]);
+            $product = $this->makeHttpRequest('PATCH', "/products/{$productId}", ['json' => $data]);
 
             // Invalidar cache
             $this->invalidateProductCache($productId);
@@ -445,6 +445,12 @@ class ProductService extends BaseService implements ServiceInterface
 
     /**
      * Atualiza estoque de produto
+     * Endpoint: PATCH /products/:id/inventory
+     *
+     * @param string $productId ID do produto
+     * @param int $quantity Quantidade para ajustar
+     * @param string $operation Operação: 'set' (define), 'add' (adiciona), 'subtract' (subtrai)
+     * @return bool Sucesso da operação
      */
     public function updateStock(string $productId, int $quantity, string $operation = 'set'): bool
     {
@@ -454,9 +460,17 @@ class ProductService extends BaseService implements ServiceInterface
                 throw new ValidationException("Invalid stock operation: {$operation}");
             }
 
-            $data = $this->makeHttpRequest('PUT', "/products/{$productId}/stock", ['json' => [
-                'quantity' => $quantity,
-                'operation' => $operation
+            // Calcular quantityChange baseado na operação
+            // A API espera quantityChange: número positivo para adicionar, negativo para subtrair
+            $quantityChange = match ($operation) {
+                'set' => $quantity, // Para 'set', a API deve receber a quantidade absoluta
+                'add' => $quantity,
+                'subtract' => -$quantity,
+                default => $quantity
+            };
+
+            $data = $this->makeHttpRequest('PATCH', "/products/{$productId}/inventory", ['json' => [
+                'quantityChange' => $quantityChange
             ]]);
 
             // Invalidar cache do produto
@@ -466,7 +480,8 @@ class ProductService extends BaseService implements ServiceInterface
             $this->dispatch('product.stock_updated', [
                 'product_id' => $productId,
                 'quantity' => $quantity,
-                'operation' => $operation
+                'operation' => $operation,
+                'quantityChange' => $quantityChange
             ]);
 
             return $data['success'] ?? true; // Assumir sucesso se não há indicação contrária
@@ -691,13 +706,24 @@ class ProductService extends BaseService implements ServiceInterface
 
     /**
      * Atualiza status do produto
+     * Endpoint: PATCH /products/:id
+     *
+     * @param string $productId ID do produto
+     * @param string $status Status: 'active' (ativo), 'inactive' (inativo), 'archived' (arquivado)
+     * @return bool Sucesso da operação
      */
     private function updateStatus(string $productId, string $status): bool
     {
         return $this->executeWithMetrics("update_product_status_{$status}", function () use ($productId, $status) {
             try {
-                $data = $this->makeHttpRequest('PUT', "/products/{$productId}/status", ['json' => [
-                    'status' => $status
+                // Mapear status para isActive (a API usa isActive: boolean)
+                // active -> isActive: true
+                // inactive -> isActive: false
+                // archived -> isActive: false
+                $isActive = ($status === 'active');
+
+                $data = $this->makeHttpRequest('PATCH', "/products/{$productId}", ['json' => [
+                    'isActive' => $isActive
                 ]]);
 
                 // Invalidar cache
@@ -706,7 +732,8 @@ class ProductService extends BaseService implements ServiceInterface
                 // Dispatch evento
                 $this->dispatch('product.status_changed', [
                     'product_id' => $productId,
-                    'new_status' => $status
+                    'new_status' => $status,
+                    'isActive' => $isActive
                 ]);
 
                 return $data['success'] ?? true; // Assumir sucesso se não há erro

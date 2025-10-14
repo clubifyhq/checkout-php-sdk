@@ -243,8 +243,16 @@ class ApiNotificationRepository extends BaseRepository implements NotificationRe
     /**
      * Search notifications with advanced criteria
      */
-    public function search(array $criteria, array $options = []): array
+    public function search(array $filters, array $sort = [], int $limit = 100, int $offset = 0): array
     {
+        // Adapt parameters to API format
+        $criteria = $filters;
+        $options = [
+            'sort' => $sort,
+            'limit' => $limit,
+            'offset' => $offset
+        ];
+
         $cacheKey = $this->getCacheKey("notification:search:" . md5(serialize($criteria + $options)));
 
         return $this->getCachedOrExecute(

@@ -91,22 +91,11 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
         return $this->getCachedOrExecute(
             $this->getCacheKey("subscription:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
+                $result = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
                     'email' => $fieldValue
                 ]);
 
-                if (!ResponseHelper::isSuccessful($response)) {
-                    if ($response->getStatusCode() === 404) {
-                        return null;
-                    }
-                    throw new HttpException(
-                        "Failed to find subscription by email: " . "HTTP request failed",
-                        $response->getStatusCode()
-                    );
-                }
-
-                $data = ResponseHelper::getData($response);
-                return $data['subscriptions'][0] ?? null;
+                return $result['subscriptions'][0] ?? null;
             },
             300 // 5 minutes cache
         );
@@ -127,25 +116,21 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function updateStatus(string $subscriptionId, string $status): bool
     {
         return $this->executeWithMetrics('update_subscription_status', function () use ($subscriptionId, $status) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/status", [
+            $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/status", [
                 'status' => $status
             ]);
 
-            if (ResponseHelper::isSuccessful($response)) {
-                // Invalidate cache
-                $this->invalidateCache($subscriptionId);
+            // Invalidate cache
+            $this->invalidateCache($subscriptionId);
 
-                // Dispatch event
-                $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.StatusUpdated', [
-                    'subscription_id' => $subscriptionId,
-                    'status' => $status,
-                    'timestamp' => time()
-                ]);
+            // Dispatch event
+            $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.StatusUpdated', [
+                'subscription_id' => $subscriptionId,
+                'status' => $status,
+                'timestamp' => time()
+            ]);
 
-                return true;
-            }
-
-            return false;
+            return true;
         });
     }
 
@@ -162,14 +147,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
-                    throw new HttpException(
-                        "Failed to get subscription stats: " . "HTTP request failed",
-                        $response->getStatusCode()
-                    );
-                }
-
-                return ResponseHelper::getData($response);
+                return $this->makeHttpRequest('GET', $endpoint);
             },
             600 // 10 minutes cache for stats
         );
@@ -181,18 +159,9 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function bulkCreate(array $subscriptionsData): array
     {
         return $this->executeWithMetrics('bulk_create_subscriptions', function () use ($subscriptionsData) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
+            $result = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
                 'subscriptions' => $subscriptionsData
             ]);
-
-            if (!ResponseHelper::isSuccessful($response)) {
-                throw new HttpException(
-                    "Failed to bulk create subscriptions: " . "HTTP request failed",
-                    $response->getStatusCode()
-                );
-            }
-
-            $result = ResponseHelper::getData($response);
 
             // Dispatch event
             $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.BulkCreated', [
@@ -211,18 +180,9 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_subscriptions', function () use ($updates) {
-            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
+            $result = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
-
-            if (!ResponseHelper::isSuccessful($response)) {
-                throw new HttpException(
-                    "Failed to bulk update subscriptions: " . "HTTP request failed",
-                    $response->getStatusCode()
-                );
-            }
-
-            $result = ResponseHelper::getData($response);
 
             // Clear cache for updated subscriptions
             foreach (array_keys($updates) as $subscriptionId) {
@@ -242,25 +202,25 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
 
     /**
      * Search subscriptions with advanced criteria
+     * Implements RepositoryInterface::search with standard signature
      */
-    public function search(array $criteria, array $options = []): array
+    public function search(array $filters, array $sort = [], int $limit = 100, int $offset = 0): array
     {
+        // Adapt parameters to API format
+        $criteria = $filters;
+        $options = [
+            'sort' => $sort,
+            'limit' => $limit,
+            'offset' => $offset
+        ];
+
         $cacheKey = $this->getCacheKey("subscription:search:" . md5(serialize($criteria + $options)));
 
         return $this->getCachedOrExecute(
             $cacheKey,
             function () use ($criteria, $options) {
                 $payload = array_merge(['criteria' => $criteria], $options);
-                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
-
-                if (!ResponseHelper::isSuccessful($response)) {
-                    throw new HttpException(
-                        "Failed to search subscriptions: " . "HTTP request failed",
-                        $response->getStatusCode()
-                    );
-                }
-
-                return ResponseHelper::getData($response);
+                return $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
             },
             180 // 3 minutes cache for search results
         );
@@ -272,22 +232,18 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function archive(string $subscriptionId): bool
     {
         return $this->executeWithMetrics('archive_subscription', function () use ($subscriptionId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/archive");
+            $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/archive");
 
-            if (ResponseHelper::isSuccessful($response)) {
-                // Invalidate cache
-                $this->invalidateCache($subscriptionId);
+            // Invalidate cache
+            $this->invalidateCache($subscriptionId);
 
-                // Dispatch event
-                $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.Archived', [
-                    'subscription_id' => $subscriptionId,
-                    'timestamp' => time()
-                ]);
+            // Dispatch event
+            $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.Archived', [
+                'subscription_id' => $subscriptionId,
+                'timestamp' => time()
+            ]);
 
-                return true;
-            }
-
-            return false;
+            return true;
         });
     }
 
@@ -297,22 +253,18 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function restore(string $subscriptionId): bool
     {
         return $this->executeWithMetrics('restore_subscription', function () use ($subscriptionId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/restore");
+            $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/restore");
 
-            if (ResponseHelper::isSuccessful($response)) {
-                // Invalidate cache
-                $this->invalidateCache($subscriptionId);
+            // Invalidate cache
+            $this->invalidateCache($subscriptionId);
 
-                // Dispatch event
-                $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.Restored', [
-                    'subscription_id' => $subscriptionId,
-                    'timestamp' => time()
-                ]);
+            // Dispatch event
+            $this->eventDispatcher?->emit('Clubify.Checkout.Subscription.Restored', [
+                'subscription_id' => $subscriptionId,
+                'timestamp' => time()
+            ]);
 
-                return true;
-            }
-
-            return false;
+            return true;
         });
     }
 
@@ -331,17 +283,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
-                    if ($response->getStatusCode() === 404) {
-                        throw new SubscriptionNotFoundException("No history found for subscription ID: {$subscriptionId}");
-                    }
-                    throw new HttpException(
-                        "Failed to get subscription history: " . "HTTP request failed",
-                        $response->getStatusCode()
-                    );
-                }
-
-                return ResponseHelper::getData($response);
+                return $this->makeHttpRequest('GET', $endpoint);
             },
             900 // 15 minutes cache for history
         );
@@ -366,14 +308,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
-                    throw new HttpException(
-                        "Failed to get related {$relationType}: " . "HTTP request failed",
-                        $response->getStatusCode()
-                    );
-                }
-
-                return ResponseHelper::getData($response);
+                return $this->makeHttpRequest('GET', $endpoint);
             },
             300 // 5 minutes cache for relationships
         );
@@ -385,19 +320,15 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function addRelationship(string $subscriptionId, string $relatedId, string $relationType, array $metadata = []): bool
     {
         return $this->executeWithMetrics('add_relationship', function () use ($subscriptionId, $relatedId, $relationType, $metadata) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$subscriptionId}/{$relationType}", [
+            $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$subscriptionId}/{$relationType}", [
                 'related_id' => $relatedId,
                 'metadata' => $metadata
             ]);
 
-            if (ResponseHelper::isSuccessful($response)) {
-                // Invalidate relationship cache
-                $this->cache?->delete($this->getCacheKey("subscription:related:{$subscriptionId}:{$relationType}:*"));
+            // Invalidate relationship cache
+            $this->cache?->delete($this->getCacheKey("subscription:related:{$subscriptionId}:{$relationType}:*"));
 
-                return true;
-            }
-
-            return false;
+            return true;
         });
     }
 
@@ -407,16 +338,12 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function removeRelationship(string $subscriptionId, string $relatedId, string $relationType): bool
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($subscriptionId, $relatedId, $relationType) {
-            $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$subscriptionId}/{$relationType}/{$relatedId}");
+            $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$subscriptionId}/{$relationType}/{$relatedId}");
 
-            if (ResponseHelper::isSuccessful($response)) {
-                // Invalidate relationship cache
-                $this->cache?->delete($this->getCacheKey("subscription:related:{$subscriptionId}:{$relationType}:*"));
+            // Invalidate relationship cache
+            $this->cache?->delete($this->getCacheKey("subscription:related:{$subscriptionId}:{$relationType}:*"));
 
-                return true;
-            }
-
-            return false;
+            return true;
         });
     }
 
@@ -520,6 +447,192 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     protected function extractResponseData($response): ?array
     {
         return ResponseHelper::getData($response);
+    }
+
+    // ==============================================
+    // SUBSCRIPTION PLANS METHODS
+    // ==============================================
+
+    /**
+     * Create subscription plan
+     *
+     * @param array $data Plan data (SDK format)
+     * @return array API response
+     * @throws HttpException
+     */
+    public function createPlan(array $data): array
+    {
+        return $this->executeWithMetrics('create_subscription_plan', function () use ($data) {
+            $result = $this->makeHttpRequest('POST', 'subscription-plans', [
+                'json' => $data
+            ]);
+
+            // Dispatch event
+            $this->eventDispatcher?->emit('Clubify.Checkout.SubscriptionPlan.Created', [
+                'plan_id' => $result['_id'] ?? $result['id'] ?? null,
+                'name' => $data['name'] ?? null,
+                'timestamp' => time()
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * Get subscription plan by ID
+     *
+     * @param string $id Plan ID
+     * @return array Plan data
+     * @throws HttpException
+     */
+    public function findPlan(string $id): array
+    {
+        $cacheKey = $this->getCacheKey("subscription_plan:{$id}");
+
+        return $this->getCachedOrExecute(
+            $cacheKey,
+            function () use ($id) {
+                return $this->makeHttpRequest('GET', "subscription-plans/{$id}");
+            },
+            600 // 10 minutes cache
+        );
+    }
+
+    /**
+     * Update subscription plan
+     *
+     * @param string $id Plan ID
+     * @param array $data Plan data to update
+     * @return array Updated plan data
+     * @throws HttpException
+     */
+    public function updatePlan(string $id, array $data): array
+    {
+        return $this->executeWithMetrics('update_subscription_plan', function () use ($id, $data) {
+            $result = $this->makeHttpRequest('PUT', "subscription-plans/{$id}", [
+                'json' => $data
+            ]);
+
+            // Invalidate cache
+            $this->cache?->delete($this->getCacheKey("subscription_plan:{$id}"));
+            $this->cache?->delete($this->getCacheKey("subscription_plans:list:*"));
+
+            // Dispatch event
+            $this->eventDispatcher?->emit('Clubify.Checkout.SubscriptionPlan.Updated', [
+                'plan_id' => $id,
+                'timestamp' => time()
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * Delete (deactivate) subscription plan
+     *
+     * @param string $id Plan ID
+     * @return array Result
+     * @throws HttpException
+     */
+    public function deletePlan(string $id): array
+    {
+        return $this->executeWithMetrics('delete_subscription_plan', function () use ($id) {
+            $result = $this->makeHttpRequest('DELETE', "subscription-plans/{$id}");
+
+            // Invalidate cache
+            $this->cache?->delete($this->getCacheKey("subscription_plan:{$id}"));
+            $this->cache?->delete($this->getCacheKey("subscription_plans:list:*"));
+
+            // Dispatch event
+            $this->eventDispatcher?->emit('Clubify.Checkout.SubscriptionPlan.Deleted', [
+                'plan_id' => $id,
+                'timestamp' => time()
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * List subscription plans with filters
+     *
+     * @param array $filters Filter parameters
+     * @return array List of plans
+     * @throws HttpException
+     */
+    public function listPlans(array $filters = []): array
+    {
+        $cacheKey = $this->getCacheKey("subscription_plans:list:" . md5(serialize($filters)));
+
+        return $this->getCachedOrExecute(
+            $cacheKey,
+            function () use ($filters) {
+                $endpoint = 'subscription-plans';
+                if (!empty($filters)) {
+                    $endpoint .= '?' . http_build_query($filters);
+                }
+
+                // makeHttpRequest já retorna array e valida a resposta
+                return $this->makeHttpRequest('GET', $endpoint);
+            },
+            300 // 5 minutes cache
+        );
+    }
+
+    /**
+     * Activate subscription plan
+     *
+     * @param string $id Plan ID
+     * @return array Result
+     * @throws HttpException
+     */
+    public function activatePlan(string $id): array
+    {
+        return $this->executeWithMetrics('activate_subscription_plan', function () use ($id) {
+            $result = $this->makeHttpRequest('PATCH', "subscription-plans/{$id}", [
+                'json' => ['isActive' => true]
+            ]);
+
+            // Invalidate cache
+            $this->cache?->delete($this->getCacheKey("subscription_plan:{$id}"));
+            $this->cache?->delete($this->getCacheKey("subscription_plans:list:*"));
+
+            // Dispatch event
+            $this->eventDispatcher?->emit('Clubify.Checkout.SubscriptionPlan.Activated', [
+                'plan_id' => $id,
+                'timestamp' => time()
+            ]);
+
+            return $result;
+        });
+    }
+
+    /**
+     * Deactivate subscription plan
+     *
+     * @param string $id Plan ID
+     * @return array Result
+     * @throws HttpException
+     */
+    public function deactivatePlan(string $id): array
+    {
+        return $this->executeWithMetrics('deactivate_subscription_plan', function () use ($id) {
+            $result = $this->makeHttpRequest('PATCH', "subscription-plans/{$id}", [
+                'json' => ['isActive' => false]
+            ]);
+
+            // Invalidate cache
+            $this->cache?->delete($this->getCacheKey("subscription_plan:{$id}"));
+            $this->cache?->delete($this->getCacheKey("subscription_plans:list:*"));
+
+            // Dispatch event
+            $this->eventDispatcher?->emit('Clubify.Checkout.SubscriptionPlan.Deactivated', [
+                'plan_id' => $id,
+                'timestamp' => time()
+            ]);
+
+            return $result;
+        });
     }
 
 }

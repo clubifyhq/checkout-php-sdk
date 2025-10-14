@@ -270,10 +270,14 @@ class SubscriptionsServiceFactory implements FactoryInterface
      */
     private function createSubscriptionPlanService(array $config): SubscriptionPlanService
     {
+        // Create repository instance
+        $repository = $this->createRepository('subscription');
+
         return new SubscriptionPlanService(
             $this->sdk,
             $this->config,
-            $this->logger
+            $this->logger,
+            $repository
         );
     }
 

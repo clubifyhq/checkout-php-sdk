@@ -78,6 +78,11 @@ class ProductService extends BaseService implements ServiceInterface
                 $data['description'] = (string) $productData['description'];
             }
 
+            // Adicionar metadata se fornecido (obrigatório para produtos do tipo subscription)
+            if (isset($productData['metadata'])) {
+                $data['metadata'] = $productData['metadata'];
+            }
+
             // Campos rejeitados pela API: price, status, slug, sku
             // Vamos armazenar esses dados no cache para uso posterior
             $rejectedFields = [];

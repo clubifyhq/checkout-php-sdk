@@ -54,7 +54,9 @@ class Configuration implements ConfigurationInterface
 
     public function getEnvironment(): string
     {
-        return $this->get('credentials.environment', Environment::PRODUCTION->value);
+        $env = $this->get('credentials.environment', Environment::LIVE->value);
+        // Normalizar aliases (development, sandbox, production) para valores da API (test, live)
+        return Environment::normalize($env);
     }
 
     public function getTenantId(): ?string
@@ -113,6 +115,7 @@ class Configuration implements ConfigurationInterface
             return $normalizedUrl;
         }
 
+        // getEnvironment() já retorna valor normalizado (test ou live)
         $environment = Environment::from($this->getEnvironment());
         return $environment->getBaseUrl();
     }
@@ -130,7 +133,7 @@ class Configuration implements ConfigurationInterface
     public function isDebugEnabled(): bool
     {
         return $this->get('debug', false) ||
-               $this->getEnvironment() === Environment::DEVELOPMENT->value;
+               $this->getEnvironment() === Environment::TEST->value;
     }
 
     /**
@@ -196,19 +199,19 @@ class Configuration implements ConfigurationInterface
     }
 
     /**
-     * Verificar se está em ambiente de produção
+     * Verificar se está em ambiente de produção (live)
      */
     public function isProduction(): bool
     {
-        return $this->getEnvironment() === Environment::PRODUCTION->value;
+        return $this->getEnvironment() === Environment::LIVE->value;
     }
 
     /**
-     * Verificar se está em ambiente de desenvolvimento
+     * Verificar se está em ambiente de desenvolvimento (test)
      */
     public function isDevelopment(): bool
     {
-        return $this->getEnvironment() === Environment::DEVELOPMENT->value;
+        return $this->getEnvironment() === Environment::TEST->value;
     }
 
     /**
@@ -278,7 +281,7 @@ class Configuration implements ConfigurationInterface
     {
         $this->defaults = [
             'credentials' => [
-                'environment' => Environment::PRODUCTION->value,
+                'environment' => Environment::LIVE->value,
             ],
             'http' => [
                 'timeout' => 30000,
@@ -320,19 +323,27 @@ class Configuration implements ConfigurationInterface
      */
     private function validate(): void
     {
-        // Validar ambiente
+        // Validar ambiente - normaliza aliases antes de validar
         $environment = $this->getEnvironment();
-        if (!in_array($environment, [
-            Environment::DEVELOPMENT->value,
-            Environment::SANDBOX->value,
-            Environment::STAGING->value,
-            Environment::PRODUCTION->value
-        ])) {
+        $normalizedEnv = Environment::normalize($environment);
+
+        $validEnvironments = [
+            Environment::TEST->value,
+            Environment::LIVE->value,
+        ];
+
+        if (!in_array($normalizedEnv, $validEnvironments)) {
             throw new ConfigurationException(
                 "Invalid environment: {$environment}",
                 0,
                 null,
-                ['valid_environments' => ['development', 'sandbox', 'staging', 'production']]
+                [
+                    'valid_environments' => ['test', 'live'],
+                    'accepted_aliases' => [
+                        'test' => ['test', 'dev', 'development', 'sandbox'],
+                        'live' => ['live', 'prod', 'production']
+                    ]
+                ]
             );
         }
 

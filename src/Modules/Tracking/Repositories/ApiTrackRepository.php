@@ -243,8 +243,16 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     /**
      * Search tracks with advanced criteria
      */
-    public function search(array $criteria, array $options = []): array
+    public function search(array $filters, array $sort = [], int $limit = 100, int $offset = 0): array
     {
+        // Adapt parameters to API format
+        $criteria = $filters;
+        $options = [
+            'sort' => $sort,
+            'limit' => $limit,
+            'offset' => $offset
+        ];
+
         $cacheKey = $this->getCacheKey("track:search:" . md5(serialize($criteria + $options)));
 
         return $this->getCachedOrExecute(

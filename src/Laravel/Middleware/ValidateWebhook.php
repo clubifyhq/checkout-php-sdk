@@ -7,8 +7,8 @@ namespace Clubify\Checkout\Laravel\Middleware;
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Utils\Crypto\HMACSignature;
 use Closure;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
@@ -194,8 +194,8 @@ final class ValidateWebhook
     private function getWebhookSecret(): string
     {
         try {
-            $config = $this->sdk->getConfiguration();
-            $webhookSecret = $config['webhook_secret'] ?? null;
+            $config = $this->sdk->getConfig();
+            $webhookSecret = $config->get('webhook.secret');
 
             if (!$webhookSecret) {
                 throw new \InvalidArgumentException('Webhook secret não configurado');
@@ -235,7 +235,7 @@ final class ValidateWebhook
     /**
      * Resposta para webhook inválido
      */
-    private function invalidWebhookResponse(string $message): Response
+    private function invalidWebhookResponse(string $message): JsonResponse
     {
         $data = [
             'error' => 'Invalid Webhook',

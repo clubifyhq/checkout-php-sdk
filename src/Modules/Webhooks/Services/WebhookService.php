@@ -7,7 +7,6 @@ namespace Clubify\Checkout\Modules\Webhooks\Services;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Modules\Webhooks\Repositories\ApiWebhookRepository;
-use Clubify\Checkout\Modules\Webhooks\DTOs\WebhookData;
 use Clubify\Checkout\Modules\Webhooks\Exceptions\WebhookException;
 use InvalidArgumentException;
 
@@ -150,6 +149,9 @@ class WebhookService extends BaseService implements ServiceInterface
         'api-key.updated',
         'api-key.revoked',
         'api-key.rotated',
+
+        // Test events
+        'test',
     ];
 
     public function __construct(
@@ -412,7 +414,7 @@ class WebhookService extends BaseService implements ServiceInterface
     /**
      * Desativa webhook
      */
-    public function deactivate(string $webhookId, string $reason = null): bool
+    public function deactivate(string $webhookId, ?string $reason = null): bool
     {
         return $this->executeWithMetrics('deactivate', function () use ($webhookId, $reason) {
             $webhook = $this->repository->findById($webhookId);
@@ -593,7 +595,7 @@ class WebhookService extends BaseService implements ServiceInterface
     /**
      * Valida URL única
      */
-    private function validateUniqueUrl(string $url, string $excludeId = null): void
+    private function validateUniqueUrl(string $url, ?string $excludeId = null): void
     {
         $existing = $this->repository->findByUrl($url);
 
@@ -673,7 +675,7 @@ class WebhookService extends BaseService implements ServiceInterface
                 CURLOPT_SSL_VERIFYHOST => 2,
                 CURLOPT_USERAGENT => 'Clubify-Checkout-SDK/1.0 (+https://clubify.com.br)',
                 CURLOPT_HEADER => true,
-                CURLOPT_HEADERFUNCTION => function($curl, $header) use (&$result) {
+                CURLOPT_HEADERFUNCTION => function($_, $header) use (&$result) {
                     $len = strlen($header);
                     $header = explode(':', $header, 2);
                     if (count($header) < 2) return $len;
@@ -686,7 +688,7 @@ class WebhookService extends BaseService implements ServiceInterface
                 },
             ]);
 
-            $response = curl_exec($ch);
+            curl_exec($ch);
             $result['response_code'] = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $result['response_time'] = round((microtime(true) - $startTime) * 1000, 2);
             $result['redirect_count'] = curl_getinfo($ch, CURLINFO_REDIRECT_COUNT);
@@ -745,7 +747,7 @@ class WebhookService extends BaseService implements ServiceInterface
     /**
      * Valida limite por organização
      */
-    private function validateOrganizationLimit(string $organizationId = null): void
+    private function validateOrganizationLimit(?string $organizationId = null): void
     {
         if (!$organizationId) {
             return;
@@ -761,7 +763,7 @@ class WebhookService extends BaseService implements ServiceInterface
     /**
      * Sanitiza dados do webhook
      */
-    private function sanitizeWebhookData(array $data, bool $isUpdate = false): array
+    private function sanitizeWebhookData(array $data, bool $_isUpdate = false): array
     {
         $sanitized = [];
 
@@ -912,7 +914,7 @@ class WebhookService extends BaseService implements ServiceInterface
     /**
      * Invalida cache relacionado aos webhooks
      */
-    private function invalidateWebhookCache(string $organizationId = null, string $webhookId = null, string $tenantId = null): void
+    private function invalidateWebhookCache(?string $organizationId = null, ?string $webhookId = null, ?string $tenantId = null): void
     {
         $patterns = [
             "webhooks:*",
@@ -1141,7 +1143,7 @@ class WebhookService extends BaseService implements ServiceInterface
      * @return array Updated configuration
      */
     private function addEndpointsToConfig(
-        string $configId,
+        string $_configId,
         string $organizationId,
         string $configName,
         array $newEndpoints
@@ -1247,7 +1249,7 @@ class WebhookService extends BaseService implements ServiceInterface
      * @param string $configName Configuration name (optional, defaults to first config)
      * @return array List of endpoints
      */
-    public function listEndpoints(string $organizationId, string $configName = null): array
+    public function listEndpoints(string $organizationId, ?string $configName = null): array
     {
         if (!$configName) {
             // Get first configuration for organization

@@ -186,6 +186,63 @@ Disparado quando uma assinatura é cancelada.
 #### `subscription.payment_failed` - Falha no Pagamento da Assinatura
 **CRÍTICO** - Disparado quando o pagamento recorrente falha.
 
+### 🧪 Eventos de Teste (Test Events)
+
+#### `test` - Evento de Teste
+**IMPORTANTE** - Evento especial usado para testar a configuração de webhooks.
+
+**Casos de uso:**
+- Validar configuração de webhook antes de produção
+- Testar conectividade e processamento de eventos
+- Verificar assinatura HMAC e validação
+- Troubleshooting de problemas de integração
+
+**Exemplo de payload:**
+```json
+{
+  "event": "test",
+  "data": {
+    "message": "This is a test webhook event",
+    "timestamp": "2025-10-16T10:30:00Z",
+    "webhookId": "webhook_test_123"
+  }
+}
+```
+
+**Exemplo de teste:**
+```php
+<?php
+
+use Clubify\Checkout\ClubifyCheckoutSDK;
+
+$sdk = new ClubifyCheckoutSDK([
+    'api_key' => 'sua_api_key',
+    'environment' => 'sandbox'
+]);
+
+// Criar webhook com evento de teste
+$webhook = $sdk->webhooks()->create([
+    'url' => 'https://seu-site.com/webhooks/test',
+    'events' => ['test'],
+    'secret' => 'webhook_secret_super_seguro_32_chars',
+    'active' => true,
+    'description' => 'Webhook de teste'
+]);
+
+// Simular evento de teste
+$testResult = $sdk->webhooks()->testing()->simulateEvent(
+    $webhook['id'],
+    'test',
+    ['message' => 'Testing webhook configuration']
+);
+
+if ($testResult['success']) {
+    echo "Webhook configurado corretamente!";
+} else {
+    echo "Erro: " . $testResult['error'];
+}
+```
+
 ## Configuração de Webhooks
 
 ### Exemplo de Criação
@@ -209,7 +266,8 @@ $webhook = $sdk->webhooks()->create([
         'order.cancelled',
         'payment.failed',    // Para tratamento de erros
         'cart.abandoned',    // Para recuperação
-        'customer.created'
+        'customer.created',
+        'test'               // Para testes e validação
     ],
     'secret' => 'webhook_secret_super_seguro_32_chars',
     'active' => true,
@@ -274,6 +332,10 @@ function processWebhookEvent($event) {
 
         case 'cart.abandoned':
             scheduleCartRecoveryEmail($event['data']);
+            break;
+
+        case 'test':
+            handleTestEvent($event['data']);
             break;
 
         default:

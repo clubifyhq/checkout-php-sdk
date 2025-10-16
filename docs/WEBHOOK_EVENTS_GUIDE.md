@@ -300,6 +300,159 @@ $event = json_decode($payload, true);
 // Processar evento...
 ```
 
+## Suporte Multi-Tenant (Multi-Tenancy)
+
+O SDK agora suporta webhooks em ambientes multi-tenant, permitindo que cada organização tenha seu próprio webhook secret. Há três formas de configurar:
+
+### 1. Callback Customizado (Recomendado)
+
+Configure um callback para resolver o secret dinamicamente:
+
+```php
+<?php
+
+// config/clubify-checkout.php
+return [
+    'webhook' => [
+        'secret_resolver' => function(\Illuminate\Http\Request $request) {
+            // Obter organization_id do header
+            $orgId = $request->header('X-Organization-ID');
+
+            // Buscar secret da organização
+            $org = \App\Models\Organization::find($orgId);
+            return $org?->clubify_checkout_webhook_secret;
+        },
+    ],
+];
+```
+
+### 2. Model Automático (Laravel)
+
+Configure o model Organization para resolução automática:
+
+```php
+<?php
+
+// config/clubify-checkout.php
+return [
+    'webhook' => [
+        // Model da organização
+        'organization_model' => '\\App\\Models\\Organization',
+
+        // Campo onde está o secret (busca em 3 locais)
+        'organization_secret_key' => 'clubify_checkout_webhook_secret',
+    ],
+];
+```
+
+O SDK buscará o secret em:
+1. `$organization->settings['clubify_checkout_webhook_secret']` (array settings)
+2. `$organization->webhook_secret` (campo direto)
+3. `$organization->clubify_checkout_webhook_secret` (campo customizado)
+
+### 3. Secret Global (Fallback)
+
+Para aplicações single-tenant:
+
+```php
+<?php
+
+// config/clubify-checkout.php
+return [
+    'webhook' => [
+        'secret' => env('CLUBIFY_CHECKOUT_WEBHOOK_SECRET'),
+    ],
+];
+```
+
+### Headers Multi-Tenant
+
+O webhook deve enviar o `X-Organization-ID` header:
+
+```
+X-Organization-ID: org_123456789
+X-Clubify-Signature: abc123...
+X-Clubify-Timestamp: 1234567890
+```
+
+Se não houver header, o SDK tentará extrair do payload:
+- `data.organization_id`
+- `organization_id`
+- `data.organizationId`
+
+### Exemplo Completo Multi-Tenant
+
+```php
+<?php
+
+// Model Organization
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Organization extends Model
+{
+    protected $casts = [
+        'settings' => 'array',
+    ];
+
+    // Opção 1: Settings array
+    public function getWebhookSecret(): ?string
+    {
+        return $this->settings['clubify_checkout_webhook_secret'] ?? null;
+    }
+
+    // Opção 2: Campo direto no banco
+    // protected $fillable = ['webhook_secret'];
+}
+
+// Configuração
+// config/clubify-checkout.php
+return [
+    'webhook' => [
+        // Callback customizado (prioridade 1)
+        'secret_resolver' => function($request) {
+            $orgId = $request->header('X-Organization-ID');
+            $org = \App\Models\Organization::find($orgId);
+            return $org?->getWebhookSecret();
+        },
+
+        // Model automático (fallback)
+        'organization_model' => '\\App\\Models\\Organization',
+        'organization_secret_key' => 'clubify_checkout_webhook_secret',
+
+        // Secret global (fallback final)
+        'secret' => env('CLUBIFY_CHECKOUT_WEBHOOK_SECRET'),
+    ],
+];
+
+// Uso do Middleware Laravel
+Route::post('/webhooks/clubify', function (Request $request) {
+    // O middleware ValidateWebhook já validou a assinatura
+    // usando o secret da organização correta
+
+    $event = $request->attributes->get('webhook_event');
+    $data = $request->attributes->get('webhook_data');
+    $orgId = $request->header('X-Organization-ID');
+
+    // Processar evento para a organização específica
+    event(new WebhookReceived($event, $data, $orgId));
+
+    return response('OK', 200);
+})->middleware('clubify.webhook');
+```
+
+### Variáveis de Ambiente Multi-Tenant
+
+```env
+# Single-tenant (fallback)
+CLUBIFY_CHECKOUT_WEBHOOK_SECRET=webhook_secret_32_chars
+
+# Multi-tenant
+CLUBIFY_ORGANIZATION_MODEL=\\App\\Models\\Organization
+CLUBIFY_WEBHOOK_SECRET_KEY=clubify_checkout_webhook_secret
+```
+
 ## Melhores Práticas
 
 ### ✅ Implementação Segura

@@ -189,21 +189,121 @@ final class ValidateWebhook
     }
 
     /**
-     * Obtém secret do webhook
+     * Obtém o webhook secret da organização (suporte multi-tenant)
+     *
+     * Tenta obter o organization_id de múltiplas fontes:
+     * 1. Header X-Organization-ID (prioridade)
+     * 2. Payload JSON (fallback)
+     *
+     * Em seguida, permite que a aplicação customize como buscar o secret:
+     * - Via callback configurado
+     * - Via Model Organization (se existir)
+     * - Via config global (fallback para single-tenant)
+     *
+     * @return string
+     * @throws \InvalidArgumentException
      */
     private function getWebhookSecret(): string
     {
-        try {
-            $config = $this->sdk->getConfig();
-            $webhookSecret = $config->get('webhook.secret');
+        // Primeiro: verificar se há callback customizado configurado
+        $callback = $this->sdk->getConfig()->get('webhook.secret_resolver');
+        if (is_callable($callback)) {
+            try {
+                $secret = $callback(request());
+                if ($secret && is_string($secret)) {
+                    return $secret;
+                }
+            } catch (\Exception $e) {
+                throw new \InvalidArgumentException('Erro ao executar webhook.secret_resolver: ' . $e->getMessage());
+            }
+        }
 
-            if (!$webhookSecret) {
-                throw new \InvalidArgumentException('Webhook secret não configurado');
+        // Segundo: tentar obter organization_id e buscar secret da organização
+        $organizationId = $this->getOrganizationId();
+        if ($organizationId) {
+            $secret = $this->getOrganizationSecret($organizationId);
+            if ($secret) {
+                return $secret;
+            }
+        }
+
+        // Terceiro: fallback para config global (single-tenant)
+        $webhookSecret = $this->sdk->getConfig()->get('webhook.secret');
+        if ($webhookSecret) {
+            return $webhookSecret;
+        }
+
+        throw new \InvalidArgumentException('Webhook secret não configurado. Configure via webhook.secret_resolver, model Organization, ou webhook.secret');
+    }
+
+    /**
+     * Obtém organization_id da requisição
+     *
+     * @return string|null
+     */
+    private function getOrganizationId(): ?string
+    {
+        // Prioridade 1: Header
+        $organizationId = request()->header('X-Organization-ID');
+        if ($organizationId) {
+            return $organizationId;
+        }
+
+        // Prioridade 2: Payload JSON
+        try {
+            $payload = json_decode(request()->getContent(), true);
+            return $payload['data']['organization_id']
+                ?? $payload['organization_id']
+                ?? $payload['data']['organizationId']
+                ?? null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Obtém webhook secret da organização usando Model
+     *
+     * @param string $organizationId
+     * @return string|null
+     */
+    private function getOrganizationSecret(string $organizationId): ?string
+    {
+        // Verificar se Model Organization existe (Laravel)
+        $organizationClass = $this->sdk->getConfig()->get('webhook.organization_model', '\\App\\Models\\Organization');
+
+        if (!class_exists($organizationClass)) {
+            return null;
+        }
+
+        try {
+            $organization = $organizationClass::find($organizationId);
+            if (!$organization) {
+                return null;
             }
 
-            return $webhookSecret;
+            // Tentar múltiplos locais onde o secret pode estar
+            $secretKey = $this->sdk->getConfig()->get('webhook.organization_secret_key', 'clubify_checkout_webhook_secret');
+
+            // Opção 1: $organization->settings['clubify_checkout_webhook_secret']
+            if (isset($organization->settings) && is_array($organization->settings)) {
+                return $organization->settings[$secretKey] ?? null;
+            }
+
+            // Opção 2: $organization->webhook_secret (campo direto)
+            if (isset($organization->webhook_secret)) {
+                return $organization->webhook_secret;
+            }
+
+            // Opção 3: $organization->clubify_checkout_webhook_secret
+            if (isset($organization->{$secretKey})) {
+                return $organization->{$secretKey};
+            }
+
+            return null;
         } catch (\Exception $e) {
-            throw new \InvalidArgumentException('Falha ao obter webhook secret: ' . $e->getMessage());
+            // Se falhar ao buscar organização, retorna null para tentar fallback
+            return null;
         }
     }
 

@@ -98,6 +98,10 @@ CLUBIFY_CHECKOUT_LOGGER_CHANNEL=single
 CLUBIFY_CHECKOUT_WEBHOOKS_ENABLED=true
 CLUBIFY_CHECKOUT_WEBHOOK_SECRET=your-webhook-secret
 CLUBIFY_CHECKOUT_WEBHOOK_TOLERANCE=300
+
+# OPCIONAL - Webhooks Multi-Tenant (requer config adicional no arquivo de config)
+CLUBIFY_ORGANIZATION_MODEL=\\App\\Models\\Organization
+CLUBIFY_WEBHOOK_SECRET_KEY=clubify_checkout_webhook_secret
 ```
 
 ### Configuração para PHP Vanilla
@@ -1229,6 +1233,12 @@ $sdk->webhooks()->listWebhooks(array $filters = []): array
 $sdk->webhooks()->updateWebhook(string $webhookId, array $data): array
 $sdk->webhooks()->deleteWebhook(string $webhookId): bool
 ```
+
+**Suporte Multi-Tenant:** O SDK suporta nativamente webhooks em ambientes multi-tenant. Veja a [documentação completa de webhooks multi-tenant](docs/webhooks/multi-tenant-setup.md) para detalhes sobre:
+- Configuração de callback customizado
+- Resolução automática via Model Organization
+- Envio de organization_id via header ou payload
+- Troubleshooting e exemplos completos
 
 #### Módulo Customers
 ```php

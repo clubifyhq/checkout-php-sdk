@@ -144,7 +144,7 @@ return [
 
     'webhooks' => [
         'enabled' => env('CLUBIFY_CHECKOUT_WEBHOOKS_ENABLED', true),
-        'secret' => env('CLUBIFY_CHECKOUT_WEBHOOK_SECRET'),
+        'secret' => env('CLUBIFY_CHECKOUT_WEBHOOK_SECRET'), // Fallback para single-tenant
         'tolerance' => env('CLUBIFY_CHECKOUT_WEBHOOK_TOLERANCE', 300), // seconds
         'verify_ssl' => env('CLUBIFY_CHECKOUT_WEBHOOK_VERIFY_SSL', true),
 
@@ -152,6 +152,31 @@ return [
             'prefix' => 'clubify/webhooks',
             'middleware' => ['api', 'clubify.webhook'],
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Configurações de Webhook (Multi-tenant)
+    |--------------------------------------------------------------------------
+    |
+    | Configurações para suporte multi-tenant de webhooks.
+    | Permite que cada organização tenha seu próprio webhook secret.
+    |
+    */
+
+    'webhook' => [
+        // Secret global para single-tenant (fallback)
+        'secret' => env('CLUBIFY_CHECKOUT_WEBHOOK_SECRET'),
+
+        // Callback customizado para obter secret (multi-tenant)
+        // Exemplo: function(Request $request): ?string { return Organization::find($request->header('X-Organization-ID'))->webhook_secret; }
+        'secret_resolver' => null,
+
+        // Model da organização (para multi-tenant automático)
+        'organization_model' => env('CLUBIFY_ORGANIZATION_MODEL', '\\App\\Models\\Organization'),
+
+        // Nome do campo onde está o secret no model Organization
+        'organization_secret_key' => env('CLUBIFY_WEBHOOK_SECRET_KEY', 'clubify_checkout_webhook_secret'),
     ],
 
     /*

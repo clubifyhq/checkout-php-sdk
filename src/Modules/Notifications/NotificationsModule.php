@@ -202,7 +202,7 @@ class NotificationsModule implements ModuleInterface
     }
 
     /**
-     * Configuração de webhooks
+     * Configuração de webhooks - API v1 endpoints
      */
     public function createWebhookConfig(array $configData): array
     {
@@ -210,6 +210,61 @@ class NotificationsModule implements ModuleInterface
         return $this->getWebhookConfigService()->create($configData);
     }
 
+    public function getWebhookConfigById(string $id): ?array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->getById($id);
+    }
+
+    public function updateWebhookConfigById(string $id, array $updateData): array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->updateById($id, $updateData);
+    }
+
+    public function deleteWebhookConfigById(string $id): bool
+    {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->deleteById($id);
+    }
+
+    public function getWebhookConfigByPartnerId(string $partnerId): ?array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->getByPartnerId($partnerId);
+    }
+
+    public function getWebhookConfigForEvent(string $partnerId, string $eventType): ?array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->getWebhookConfig($partnerId, $eventType);
+    }
+
+    public function testWebhookConfig(string $partnerId, array $testData): array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->testWebhook($partnerId, $testData);
+    }
+
+    public function listAllWebhookConfigs(int $page = 1, int $limit = 50): array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->findAll($page, $limit);
+    }
+
+    public function getWebhookMetrics(string $partnerId): array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->getWebhookMetrics($partnerId);
+    }
+
+    public function validateWebhookConfig(string $partnerId, array $configData): array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->validateConfiguration($partnerId, $configData);
+    }
+
+    // Legacy methods for backward compatibility
     public function getWebhookConfig(string $configId): ?array
     {
         $this->requireInitialized();
@@ -240,21 +295,28 @@ class NotificationsModule implements ModuleInterface
         return $this->getWebhookConfigService()->test($configId, $testData);
     }
 
-    public function validateWebhookConfig(array $configData): array
-    {
-        $this->requireInitialized();
-        return $this->getWebhookConfigService()->validate($configData);
-    }
-
     /**
-     * Logs de notificações
+     * Logs de notificações - API v1 endpoints
      */
-    public function getNotificationLogs(array $filters = [], int $page = 1, int $limit = 20): array
+    public function getNotificationLogs(array $filters = [], int $limit = 10): array
     {
         $this->requireInitialized();
-        return $this->getNotificationLogService()->getLogs($filters, $page, $limit);
+        return $this->getNotificationLogService()->getLogs($filters, $limit);
     }
 
+    public function getLogByCorrelation(string $correlationId): ?array
+    {
+        $this->requireInitialized();
+        return $this->getNotificationLogService()->getLogByCorrelation($correlationId);
+    }
+
+    public function getWebhookAttempts(string $correlationId): ?array
+    {
+        $this->requireInitialized();
+        return $this->getNotificationLogService()->getWebhookAttempts($correlationId);
+    }
+
+    // Legacy methods for backward compatibility
     public function getNotificationLog(string $logId): ?array
     {
         $this->requireInitialized();
@@ -330,6 +392,12 @@ class NotificationsModule implements ModuleInterface
     /**
      * Testes e validação
      */
+    public function testNotificationWebhook(string $url, array $payload): array
+    {
+        $this->requireInitialized();
+        return $this->getNotificationService()->testWebhook($url, $payload);
+    }
+
     public function testNotificationDelivery(array $testData): array
     {
         $this->requireInitialized();
@@ -401,6 +469,119 @@ class NotificationsModule implements ModuleInterface
     private function getNotificationStatsService(): NotificationStatsService
     {
         return $this->getServiceFactory()->create('notification_stats');
+    }
+
+    /**
+     * Get webhook configuration by tenant ID
+     *
+     * @param string $tenantId Tenant ID
+     * @return array|null
+     */
+    public function getWebhookConfigByTenantId(string $tenantId): ?array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->getByTenantId($tenantId);
+    }
+
+    /**
+     * @deprecated Use getWebhookConfigByTenantId() instead
+     */
+    public function getWebhookConfigByPartnerId(string $partnerId): ?array
+    {
+        error_log("[DEPRECATED] NotificationsModule::getWebhookConfigByPartnerId() is deprecated. Use getWebhookConfigByTenantId() instead.");
+        return $this->getWebhookConfigByTenantId($partnerId);
+    }
+
+    /**
+     * Add endpoint to webhook configuration
+     *
+     * @param string $tenantId Tenant ID
+     * @param string $configName Configuration name
+     * @param string $eventType Event type
+     * @param string $url Webhook URL
+     * @param array $options Additional options (headers, timeout, etc.)
+     * @return array Updated configuration
+     */
+    public function addWebhookEndpoint(
+        string $tenantId,
+        string $configName,
+        string $eventType,
+        string $url,
+        array $options = []
+    ): array {
+        $this->requireInitialized();
+
+        // Build endpoint data
+        $endpointData = array_merge([
+            'eventType' => $eventType,
+            'url' => $url
+        ], $options);
+
+        // Get webhook repository through SDK
+        $webhookRepository = $this->sdk->getModule('webhooks')->getRepository();
+
+        return $webhookRepository->addEndpoint($tenantId, $configName, $endpointData);
+    }
+
+    /**
+     * Remove endpoint from webhook configuration
+     *
+     * @param string $tenantId Tenant ID
+     * @param string $configName Configuration name
+     * @param string $eventType Event type
+     * @return bool Success
+     */
+    public function removeWebhookEndpoint(
+        string $tenantId,
+        string $configName,
+        string $eventType
+    ): bool {
+        $this->requireInitialized();
+
+        // Get webhook repository through SDK
+        $webhookRepository = $this->sdk->getModule('webhooks')->getRepository();
+
+        return $webhookRepository->removeEndpoint($tenantId, $configName, $eventType);
+    }
+
+    /**
+     * List webhook endpoints
+     *
+     * @param string $tenantId Tenant ID
+     * @param string $configName Configuration name
+     * @return array List of endpoints
+     */
+    public function listWebhookEndpoints(string $tenantId, string $configName = 'Default Configuration'): array
+    {
+        $this->requireInitialized();
+
+        // Get webhook repository through SDK
+        $webhookRepository = $this->sdk->getModule('webhooks')->getRepository();
+
+        return $webhookRepository->listEndpoints($tenantId, $configName);
+    }
+
+    /**
+     * Update webhook endpoint
+     *
+     * @param string $tenantId Tenant ID
+     * @param string $configName Configuration name
+     * @param string $eventType Event type
+     * @param array $updates Fields to update
+     * @return array Updated configuration
+     */
+    public function updateWebhookEndpoint(
+        string $tenantId,
+        string $configName,
+        string $eventType,
+        array $updates
+    ): array {
+        $this->requireInitialized();
+
+        // Get webhook repository through SDK
+        $webhookRepository = $this->sdk->getModule('webhooks')->getRepository();
+
+        return $webhookRepository->updateEndpoint($tenantId, $configName, $eventType, $updates);
     }
 
     /**

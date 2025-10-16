@@ -226,10 +226,10 @@ class WebhooksModule implements ModuleInterface
     public function listWebhooks(array $filters = []): array
     {
         $this->requireInitialized();
-        if (isset($filters['organization_id'])) {
+        if (isset($filters['organization_id']) && is_string($filters['organization_id']) && !empty($filters['organization_id'])) {
             return $this->getWebhookService()->findByOrganization($filters['organization_id']);
         }
-        if (isset($filters['event'])) {
+        if (isset($filters['event']) && is_string($filters['event']) && !empty($filters['event'])) {
             return $this->getWebhookService()->findByEvent($filters['event']);
         }
         return ['webhooks' => [], 'total' => 0];
@@ -330,6 +330,52 @@ class WebhooksModule implements ModuleInterface
     {
         $this->requireInitialized();
         return $this->getWebhookService()->getSupportedEvents();
+    }
+
+    /**
+     * Create or update webhook configuration
+     * Automatically creates new config or adds events to existing config
+     */
+    public function createOrUpdateWebhook(array $webhookData): array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookService()->createOrUpdateWebhook($webhookData);
+    }
+
+    /**
+     * Add endpoint to webhook configuration
+     */
+    public function addEndpoint(string $organizationId, string $configName, string $eventType, string $url, array $options = []): array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookService()->addEndpoint($organizationId, $configName, $eventType, $url, $options);
+    }
+
+    /**
+     * Remove endpoint from webhook configuration
+     */
+    public function removeEndpoint(string $organizationId, string $configName, string $eventType): bool
+    {
+        $this->requireInitialized();
+        return $this->getWebhookService()->removeEndpoint($organizationId, $configName, $eventType);
+    }
+
+    /**
+     * List all endpoints for a webhook configuration
+     */
+    public function listEndpoints(string $organizationId, string $configName = null): array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookService()->listEndpoints($organizationId, $configName);
+    }
+
+    /**
+     * Update an existing endpoint
+     */
+    public function updateEndpoint(string $organizationId, string $configName, string $eventType, array $updates): array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookService()->updateEndpoint($organizationId, $configName, $eventType, $updates);
     }
 
     // ==============================================

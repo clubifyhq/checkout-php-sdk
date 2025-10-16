@@ -119,7 +119,8 @@ abstract class BaseRepository implements RepositoryInterface
     public function create(array $data): array
     {
         $url = $this->buildUrl();
-        $response = $this->makeHttpRequest('POST', $url, $data);
+        // FIX: Wrap data in 'json' option for POST request body
+        $response = $this->makeHttpRequest('POST', $url, ['json' => $data]);
 
         return $response->getData();
     }
@@ -130,7 +131,8 @@ abstract class BaseRepository implements RepositoryInterface
     public function update(string $id, array $data): array
     {
         $url = $this->buildUrl("/{$id}");
-        $response = $this->makeHttpRequest('PUT', $url, $data);
+        // FIX: Wrap data in 'json' option for PUT request body
+        $response = $this->makeHttpRequest('PUT', $url, ['json' => $data]);
 
         return $response->getData();
     }

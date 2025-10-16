@@ -24,6 +24,7 @@ use Clubify\Checkout\Modules\Webhooks\WebhooksModule;
 use Clubify\Checkout\Modules\Tracking\TrackingModule;
 use Clubify\Checkout\Modules\UserManagement\UserManagementModule;
 use Clubify\Checkout\Modules\Offer\OfferModule;
+use Clubify\Checkout\Modules\Notifications\NotificationsModule;
 use Clubify\Checkout\Modules\UserManagement\Factories\UserServiceFactory;
 use Clubify\Checkout\Modules\Customers\Factories\CustomersServiceFactory;
 use Clubify\Checkout\Modules\Products\Factories\ProductsServiceFactory;
@@ -77,6 +78,7 @@ class ClubifyCheckoutSDK
     private ?SubscriptionsModule $subscriptions = null;
     private ?SuperAdminModule $superAdmin = null;
     private ?OfferModule $offer = null;
+    private ?NotificationsModule $notifications = null;
 
     /**
      * Cria nova instância do SDK
@@ -887,6 +889,19 @@ class ClubifyCheckoutSDK
     }
 
     /**
+     * Acesso ao módulo Notifications
+     */
+    public function notifications(): NotificationsModule
+    {
+        if (!$this->notifications) {
+            $this->notifications = new NotificationsModule($this);
+            $this->notifications->initialize($this->config, $this->getLogger());
+        }
+
+        return $this->notifications;
+    }
+
+    /**
      * Acesso ao módulo Super Admin
      */
     public function superAdmin(): SuperAdminModule
@@ -1155,6 +1170,7 @@ class ClubifyCheckoutSDK
                 'payments' => $this->payments !== null,
                 'customers' => $this->customers !== null,
                 'webhooks' => $this->webhooks !== null,
+                'notifications' => $this->notifications !== null,
                 'tracking' => $this->tracking !== null,
                 'user_management' => $this->userManagement !== null,
                 'subscriptions' => $this->subscriptions !== null,

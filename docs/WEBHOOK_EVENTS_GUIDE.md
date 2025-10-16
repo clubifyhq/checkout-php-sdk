@@ -2,6 +2,21 @@
 
 Este guia fornece informações completas sobre todos os eventos de webhook suportados pelo Clubify Checkout SDK, incluindo exemplos de payload, casos de uso e melhores práticas.
 
+## ⚠️ Important Update (v2.0.0)
+
+**Webhook Architecture Change:**
+
+As of v2.0.0, the way webhook configurations work has changed:
+
+1. **One Configuration per Organization** (v1.x) is now **Multiple Configurations per Tenant** (v2.0.0+)
+2. Each configuration must have a unique `name`
+3. Use `createOrUpdateWebhook()` to safely add events without conflicts
+4. `partnerId` is deprecated, use `tenantId` instead
+
+See [MIGRATION_v2.md](./MIGRATION_v2.md) for full migration guide.
+
+---
+
 ## Visão Geral
 
 O sistema de webhooks do Clubify Checkout permite que você receba notificações em tempo real sobre eventos importantes que ocorrem em sua aplicação. Cada evento é enviado como uma requisição HTTP POST para as URLs configuradas.

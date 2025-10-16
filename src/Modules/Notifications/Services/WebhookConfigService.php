@@ -141,52 +141,34 @@ class WebhookConfigService extends BaseService implements ServiceInterface
 
     /**
      * Cria uma nova configuração de webhook
+     * Endpoint: POST webhooks/configurations
      */
     public function create(array $configData): array
     {
         $this->validateInitialization();
 
         try {
-            // Cria DTO de configuração
-            $webhookConfig = WebhookConfigData::fromArray(array_merge(
-                $this->defaultConfig,
-                $configData
-            ));
-
             $this->logger->info('Criando configuração de webhook', [
-                'name' => $webhookConfig->name,
-                'url' => $webhookConfig->url,
-                'events' => $webhookConfig->events
+                'partnerId' => $configData['partnerId'] ?? 'unknown',
+                'name' => $configData['name'] ?? 'unnamed',
+                'endpointCount' => count($configData['endpoints'] ?? [])
             ]);
 
-            // Valida URL
-            $urlValidation = $this->validateUrl($webhookConfig->url);
-            if (!$urlValidation['valid']) {
-                throw new \InvalidArgumentException('URL inválida: ' . implode(', ', $urlValidation['errors']));
-            }
-
-            // Valida eventos
-            $this->validateEvents($webhookConfig->events);
-
-            // Envia para API
-            $response = $this->makeHttpRequest('POST', '/notifications/webhook/config', [
-                'json' => $webhookConfig->toArray()
+            // Envia para API (sem /api/v1 pois já está no base_url)
+            $response = $this->makeHttpRequest('POST', 'webhooks/configurations', [
+                'json' => $configData
             ]);
 
-            $result = $response->toArray();
+            $result = $response; // makeHttpRequest already returns array
 
             // Cache da configuração
-            $this->cacheConfig($result['id'], $result);
+            if (isset($result['_id'])) {
+                $this->cacheConfig($result['_id'], $result);
+            }
 
             $this->logger->info('Configuração de webhook criada', [
-                'config_id' => $result['id'],
-                'name' => $webhookConfig->name
-            ]);
-
-            // Dispara evento
-            $this->dispatchEvent('webhook_config.created', [
-                'config' => $webhookConfig->toSafeArray(),
-                'result' => $result
+                'config_id' => $result['_id'] ?? 'unknown',
+                'partnerId' => $configData['partnerId'] ?? 'unknown'
             ]);
 
             return $result;
@@ -198,6 +180,442 @@ class WebhookConfigService extends BaseService implements ServiceInterface
             ]);
 
             throw $e;
+        }
+    }
+
+    /**
+     * Obtém configuração de webhook por ID
+     * Endpoint: GET webhooks/configurations/:id
+     */
+    public function getById(string $id): ?array
+    {
+        $this->validateInitialization();
+
+        // Verifica cache primeiro
+        $cached = $this->getCachedConfig($id);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        try {
+            $response = $this->makeHttpRequest('GET', "webhooks/configurations/{$id}");
+            $data = $response; // makeHttpRequest already returns array
+
+            // Handle new structured response format from notification-service
+            if (isset($data['found']) && $data['found'] === false) {
+                $this->logger->info('Webhook configuration not found', [
+                    'id' => $id,
+                    'message' => $data['message'] ?? 'No webhook configuration found'
+                ]);
+                return null;
+            }
+
+            // Extract config from new response structure
+            $config = isset($data['config']) ? $data['config'] : $data;
+
+            // Cache o resultado
+            $this->cacheConfig($id, $config);
+
+            return $config;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao obter configuração de webhook por ID', [
+                'id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Atualiza configuração de webhook por ID
+     * Endpoint: PUT webhooks/configurations/:id
+     */
+    public function updateById(string $id, array $updateData): array
+    {
+        $this->validateInitialization();
+
+        try {
+            $this->logger->info('Atualizando configuração de webhook por ID', [
+                'id' => $id,
+                'hasEndpoints' => isset($updateData['endpoints'])
+            ]);
+
+            $response = $this->makeHttpRequest('PUT', "webhooks/configurations/{$id}", [
+                'json' => $updateData
+            ]);
+
+            $result = $response; // makeHttpRequest already returns array
+
+            // Atualiza cache
+            $this->cacheConfig($id, $result);
+
+            $this->logger->info('Configuração de webhook atualizada', [
+                'config_id' => $id
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao atualizar configuração de webhook', [
+                'id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Remove configuração de webhook por ID
+     * Endpoint: DELETE webhooks/configurations/:id
+     */
+    public function deleteById(string $id): bool
+    {
+        $this->validateInitialization();
+
+        try {
+            $this->makeHttpRequest('DELETE', "webhooks/configurations/{$id}");
+
+            // Remove do cache
+            $this->invalidateCachedConfig($id);
+
+            $this->logger->info('Configuração de webhook removida', [
+                'id' => $id
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao remover configuração de webhook', [
+                'id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Get webhook configuration by tenant ID (new primary method)
+     *
+     * @param string $tenantId Tenant ID
+     * @return array|null
+     */
+    public function getByTenantId(string $tenantId): ?array
+    {
+        $this->validateInitialization();
+
+        $cacheKey = "webhook_config_{$tenantId}";
+
+        // Check cache first
+        $cached = $this->getFromCache($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        try {
+            $response = $this->makeHttpRequest('GET', "webhooks/configurations/tenant/{$tenantId}");
+            $data = $response; // makeHttpRequest already returns array
+
+            // Handle new structured response format from notification-service
+            if (isset($data['found']) && $data['found'] === false) {
+                $this->logger->info('Webhook configuration not found for tenant', [
+                    'tenant_id' => $tenantId,
+                    'message' => $data['message'] ?? 'No webhook configuration found'
+                ]);
+                return null;
+            }
+
+            // Extract config from new response structure
+            $config = null;
+            if (isset($data['configs']) && is_array($data['configs']) && !empty($data['configs'])) {
+                // Multiple configs, return first one
+                $config = $data['configs'][0];
+            } elseif (isset($data['config'])) {
+                // Single config
+                $config = $data['config'];
+            } else {
+                // Fallback for old response format
+                $config = $data;
+            }
+
+            // Cache the result
+            if ($config !== null) {
+                $this->setCache($cacheKey, $config, 300); // 5 minutes TTL
+            }
+
+            $this->logger->info('Configuração de webhook obtida por tenantId', [
+                'tenant_id' => $tenantId
+            ]);
+
+            return $config;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao obter configuração de webhook por tenantId', [
+                'tenant_id' => $tenantId,
+                'error' => $e->getMessage()
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * @deprecated Use getByTenantId() instead. Will be removed in v3.0.0
+     */
+    public function getByPartnerId(string $partnerId): ?array
+    {
+        error_log("[DEPRECATED] WebhookConfigService::getByPartnerId() is deprecated. Use getByTenantId() instead.");
+        return $this->getByTenantId($partnerId);
+    }
+
+    /**
+     * Get webhook configuration for a specific event and tenant
+     *
+     * @param string $tenantId Tenant ID
+     * @param string $eventType Event type
+     * @param string $configName Configuration name (optional)
+     * @return array|null
+     */
+    public function getWebhookConfigForEvent(
+        string $tenantId,
+        string $eventType,
+        string $configName = 'Default Configuration'
+    ): ?array {
+        $this->validateInitialization();
+
+        try {
+            // Use new endpoint structure: GET /tenant/{tenantId}/configs/{configName}/events/{eventType}
+            $endpoint = "webhooks/configurations/tenant/{$tenantId}/configs/{$configName}/events/{$eventType}";
+            $response = $this->makeHttpRequest('GET', $endpoint);
+            $data = $response; // makeHttpRequest already returns array
+
+            // Handle new structured response format from notification-service
+            if (isset($data['found']) && $data['found'] === false) {
+                $this->logger->info('Webhook configuration not found for event', [
+                    'tenant_id' => $tenantId,
+                    'event_type' => $eventType,
+                    'config_name' => $configName,
+                    'message' => $data['message'] ?? 'No webhook configuration found'
+                ]);
+                return null;
+            }
+
+            // Extract config from new response structure
+            if (isset($data['endpoint'])) {
+                $this->logger->info('Configuração de webhook obtida para evento específico', [
+                    'tenant_id' => $tenantId,
+                    'event_type' => $eventType,
+                    'config_name' => $configName
+                ]);
+                return $data['endpoint'];
+            }
+
+            // Fallback for old response format (backward compatibility)
+            $this->logger->info('Configuração de webhook obtida para evento específico', [
+                'tenant_id' => $tenantId,
+                'event_type' => $eventType,
+                'config_name' => $configName
+            ]);
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao obter configuração de webhook para evento', [
+                'tenant_id' => $tenantId,
+                'event_type' => $eventType,
+                'config_name' => $configName,
+                'error' => $e->getMessage()
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * @deprecated Use getWebhookConfigForEvent() with tenantId instead
+     */
+    public function getWebhookConfig(string $partnerId, string $eventType): ?array
+    {
+        error_log("[DEPRECATED] WebhookConfigService::getWebhookConfig() is deprecated. Use getWebhookConfigForEvent() instead.");
+        return $this->getWebhookConfigForEvent($partnerId, $eventType);
+    }
+
+    /**
+     * Testa um webhook
+     * Endpoint: POST webhooks/configurations/tenant/:tenantId/test
+     */
+    public function testWebhook(string $partnerId, array $testData): array
+    {
+        $this->validateInitialization();
+
+        try {
+            $this->logger->info('Testando webhook para tenant', [
+                'tenantId' => $partnerId,
+                'eventType' => $testData['eventType'] ?? 'unknown'
+            ]);
+
+            $response = $this->makeHttpRequest('POST', "webhooks/configurations/tenant/{$partnerId}/test", [
+                'json' => $testData
+            ]);
+
+            $result = $response; // makeHttpRequest already returns array
+
+            $this->logger->info('Teste de webhook completado', [
+                'tenantId' => $partnerId,
+                'success' => $result['success'] ?? false,
+                'responseTime' => $result['responseTime'] ?? 0
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao testar webhook', [
+                'tenantId' => $partnerId,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Lista todas as configurações de webhook (Admin)
+     * Endpoint: GET webhooks/configurations
+     */
+    public function findAll(int $page = 1, int $limit = 50): array
+    {
+        $this->validateInitialization();
+
+        try {
+            $params = [
+                'page' => $page,
+                'limit' => $limit
+            ];
+
+            $response = $this->makeHttpRequest('GET', 'webhooks/configurations', [
+                'query' => $params
+            ]);
+
+            $data = $response; // makeHttpRequest already returns array
+
+            $this->logger->info('Configurações de webhook listadas', [
+                'total' => $data['total'] ?? 0,
+                'page' => $page,
+                'limit' => $limit
+            ]);
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao listar configurações de webhook', [
+                'page' => $page,
+                'limit' => $limit,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'configurations' => [],
+                'total' => 0,
+                'page' => $page,
+                'pages' => 0
+            ];
+        }
+    }
+
+    /**
+     * Obtém métricas de entrega de webhook
+     * Endpoint: GET webhooks/configurations/tenant/:tenantId/metrics
+     */
+    public function getWebhookMetrics(string $partnerId): array
+    {
+        $this->validateInitialization();
+
+        try {
+            $response = $this->makeHttpRequest('GET', "webhooks/configurations/tenant/{$partnerId}/metrics");
+            $data = $response; // makeHttpRequest already returns array
+
+            // Handle new structured response format from notification-service
+            if (isset($data['found']) && $data['found'] === false) {
+                $this->logger->info('Webhook configuration not found for metrics', [
+                    'tenantId' => $partnerId,
+                    'message' => $data['message'] ?? 'No webhook configuration found'
+                ]);
+                return [
+                    'totalDeliveries' => 0,
+                    'successfulDeliveries' => 0,
+                    'failedDeliveries' => 0,
+                    'successRate' => 0,
+                    'isHealthy' => false
+                ];
+            }
+
+            // Extract metrics from new response structure
+            $metrics = isset($data['config']) ? $data['config'] : $data;
+
+            $this->logger->info('Métricas de webhook obtidas', [
+                'tenantId' => $partnerId,
+                'totalDeliveries' => $metrics['totalDeliveries'] ?? 0,
+                'successRate' => $metrics['successRate'] ?? 0
+            ]);
+
+            return $metrics;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao obter métricas de webhook', [
+                'tenantId' => $partnerId,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'totalDeliveries' => 0,
+                'successfulDeliveries' => 0,
+                'failedDeliveries' => 0,
+                'successRate' => 0,
+                'isHealthy' => false
+            ];
+        }
+    }
+
+    /**
+     * Valida configuração de webhook
+     * Endpoint: POST webhooks/configurations/tenant/:tenantId/validate
+     */
+    public function validateConfiguration(string $partnerId, array $configData): array
+    {
+        $this->validateInitialization();
+
+        try {
+            $response = $this->makeHttpRequest('POST', "webhooks/configurations/tenant/{$partnerId}/validate", [
+                'json' => $configData
+            ]);
+
+            $data = $response; // makeHttpRequest already returns array
+
+            $this->logger->info('Configuração de webhook validada', [
+                'tenantId' => $partnerId,
+                'valid' => $data['valid'] ?? false,
+                'errorCount' => count($data['errors'] ?? [])
+            ]);
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao validar configuração de webhook', [
+                'tenantId' => $partnerId,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'valid' => false,
+                'errors' => [$e->getMessage()],
+                'warnings' => []
+            ];
         }
     }
 
@@ -216,7 +634,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
 
         try {
             $response = $this->makeHttpRequest('GET', "/notifications/webhook/config/{$configId}");
-            $data = $response->toArray();
+            $data = $response; // makeHttpRequest already returns array
 
             // Cache o resultado
             $this->cacheConfig($configId, $data);
@@ -275,7 +693,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
                 'json' => $configData
             ]);
 
-            $result = $response->toArray();
+            $result = $response; // makeHttpRequest already returns array
 
             // Atualiza cache
             $this->cacheConfig($configId, $result);
@@ -355,7 +773,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
                 'query' => $filters
             ]);
 
-            $data = $response->toArray();
+            $data = $response; // makeHttpRequest already returns array
 
             $this->logger->info('Configurações de webhook listadas', [
                 'total' => $data['total'] ?? count($data['data'] ?? []),
@@ -686,7 +1104,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
     private function cacheConfig(string $configId, array $data): void
     {
         $cacheKey = self::CACHE_PREFIX . $configId;
-        $this->cache->set($cacheKey, $data, self::STATS_CACHE_TTL);
+        $this->setCache($cacheKey, $data, self::STATS_CACHE_TTL);
     }
 
     /**
@@ -695,7 +1113,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
     private function getCachedConfig(string $configId): ?array
     {
         $cacheKey = self::CACHE_PREFIX . $configId;
-        return $this->cache->get($cacheKey);
+        return $this->getFromCache($cacheKey);
     }
 
     /**
@@ -704,7 +1122,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
     private function invalidateCachedConfig(string $configId): void
     {
         $cacheKey = self::CACHE_PREFIX . $configId;
-        $this->cache->delete($cacheKey);
+        $this->deleteFromCache($cacheKey);
     }
 
     /**
@@ -714,10 +1132,11 @@ class WebhookConfigService extends BaseService implements ServiceInterface
     protected function makeHttpRequest(string $method, string $uri, array $options = []): array
     {
         try {
-            $response = $this->httpClient->request($method, $uri, $options);
+            $httpClient = $this->getHttpClient();
+            $response = $httpClient->request($method, $uri, $options);
 
             if (!ResponseHelper::isSuccessful($response)) {
-                throw new HttpException(
+                throw new \RuntimeException(
                     "HTTP {$method} request failed to {$uri}",
                     $response->getStatusCode()
                 );
@@ -725,7 +1144,7 @@ class WebhookConfigService extends BaseService implements ServiceInterface
 
             $data = ResponseHelper::getData($response);
             if ($data === null) {
-                throw new HttpException("Failed to decode response data from {$uri}");
+                throw new \RuntimeException("Failed to decode response data from {$uri}");
             }
 
             return $data;

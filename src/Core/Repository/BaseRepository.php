@@ -7,7 +7,6 @@ namespace Clubify\Checkout\Core\Repository;
 use Clubify\Checkout\Contracts\RepositoryInterface;
 use Clubify\Checkout\Services\BaseService;
 use Clubify\Checkout\Exceptions\HttpException;
-use Clubify\Checkout\Core\Http\ResponseHelper;
 
 /**
  * Classe base para Repository Pattern
@@ -135,13 +134,16 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
                 'endpoint' => $this->getEndpoint(),
                 'data_keys' => array_keys($data)
             ]);
-            $response = $this->makeHttpRequest('POST', $this->getEndpoint(), $data);
+            // FIX: Wrap data in 'json' option for POST request body
+            $response = $this->makeHttpRequest('POST', $this->getEndpoint(), ['json' => $data]);
 
             if (!$this->isSuccessfulResponse($response)) {
-                throw new HttpException(
-                    "Failed to create {$this->getResourceName()}: " . $response->getError(),
-                    $response->getStatusCode()
-                );
+                $errorMessage = "Failed to create {$this->getResourceName()}";
+                $body = $response->getBody()->getContents();
+                if ($body) {
+                    $errorMessage .= ": " . $body;
+                }
+                throw new HttpException($errorMessage, $response->getStatusCode());
             }
 
             $createdData = $this->extractResponseData($response);
@@ -162,13 +164,16 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
     public function update(string $id, array $data): array
     {
         return $this->executeWithMetrics("update_{$this->getResourceName()}", function () use ($id, $data) {
-            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/{$id}", $data);
+            // FIX: Wrap data in 'json' option for PUT request body
+            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/{$id}", ['json' => $data]);
 
             if (!$this->isSuccessfulResponse($response)) {
-                throw new HttpException(
-                    "Failed to update {$this->getResourceName()}: " . $response->getError(),
-                    $response->getStatusCode()
-                );
+                $errorMessage = "Failed to update {$this->getResourceName()}";
+                $body = $response->getBody()->getContents();
+                if ($body) {
+                    $errorMessage .= ": " . $body;
+                }
+                throw new HttpException($errorMessage, $response->getStatusCode());
             }
 
             $updatedData = $this->extractResponseData($response);
@@ -335,24 +340,19 @@ abstract class BaseRepository extends BaseService implements RepositoryInterface
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
      * Garante uso consistente do ResponseHelper
      */
-    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    protected function makeHttpRequest(string $method, string $uri, array $options = []): \Psr\Http\Message\ResponseInterface
     {
         try {
             $response = $this->httpClient->request($method, $uri, $options);
 
-            if (!ResponseHelper::isSuccessful($response)) {
-                throw new HttpException(
-                    "HTTP {$method} request failed to {$uri}",
-                    $response->getStatusCode()
-                );
-            }
+            $this->logger->debug("HTTP request completed", [
+                'method' => $method,
+                'uri' => $uri,
+                'status_code' => $response->getStatusCode(),
+                'service' => static::class
+            ]);
 
-            $data = ResponseHelper::getData($response);
-            if ($data === null) {
-                throw new HttpException("Failed to decode response data from {$uri}");
-            }
-
-            return $data;
+            return $response;
 
         } catch (\Exception $e) {
             $this->logger->error("HTTP request failed", [

@@ -124,34 +124,32 @@ class NotificationLogService extends BaseService implements ServiceInterface
 
     /**
      * Obtém logs de notificações com filtros
+     * Endpoint: GET /api/v1/notifications/logs
      */
-    public function getLogs(array $filters = [], int $page = 1, int $limit = 20): array
+    public function getLogs(array $filters = [], int $limit = 10): array
     {
         $this->validateInitialization();
 
         try {
             $params = array_merge($filters, [
-                'page' => $page,
-                'limit' => $limit,
-                'sort' => $filters['sort'] ?? 'created_at:desc'
+                'limit' => $limit
             ]);
 
-            $response = $this->makeHttpRequest('GET', '/notifications/logs', [
+            $response = $this->makeHttpRequest('GET', '/api/v1/notifications/logs', [
                 'query' => $params
             ]);
 
             $data = $response->toArray();
 
             $this->logger->info('Logs de notificações obtidos', [
-                'total' => $data['total'] ?? 0,
-                'page' => $page,
+                'total' => count($data),
                 'limit' => $limit,
                 'filters' => $filters
             ]);
 
             // Processa logs para adicionar informações úteis
-            if (isset($data['data']) && is_array($data['data'])) {
-                $data['data'] = array_map([$this, 'enrichLogEntry'], $data['data']);
+            if (is_array($data)) {
+                $data = array_map([$this, 'enrichLogEntry'], $data);
             }
 
             return $data;
@@ -159,18 +157,68 @@ class NotificationLogService extends BaseService implements ServiceInterface
         } catch (\Exception $e) {
             $this->logger->error('Erro ao obter logs de notificações', [
                 'filters' => $filters,
-                'page' => $page,
                 'limit' => $limit,
                 'error' => $e->getMessage()
             ]);
 
-            return [
-                'data' => [],
-                'total' => 0,
-                'page' => $page,
-                'limit' => $limit,
+            return [];
+        }
+    }
+
+    /**
+     * Obtém log por ID de correlação
+     * Endpoint: GET /api/v1/notifications/logs/{correlationId}
+     */
+    public function getLogByCorrelation(string $correlationId): ?array
+    {
+        $this->validateInitialization();
+
+        try {
+            $response = $this->makeHttpRequest('GET', "/api/v1/notifications/logs/{$correlationId}");
+            $data = $response->toArray();
+
+            $this->logger->info('Log obtido por correlationId', [
+                'correlation_id' => $correlationId
+            ]);
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao obter log por correlationId', [
+                'correlation_id' => $correlationId,
                 'error' => $e->getMessage()
-            ];
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Obtém tentativas de webhook por ID de correlação
+     * Endpoint: GET /api/v1/notifications/webhook-attempts/{correlationId}
+     */
+    public function getWebhookAttempts(string $correlationId): ?array
+    {
+        $this->validateInitialization();
+
+        try {
+            $response = $this->makeHttpRequest('GET', "/api/v1/notifications/webhook-attempts/{$correlationId}");
+            $data = $response->toArray();
+
+            $this->logger->info('Tentativas de webhook obtidas', [
+                'correlation_id' => $correlationId,
+                'attempts_count' => count($data['attempts'] ?? [])
+            ]);
+
+            return $data;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao obter tentativas de webhook', [
+                'correlation_id' => $correlationId,
+                'error' => $e->getMessage()
+            ]);
+
+            return null;
         }
     }
 
@@ -300,7 +348,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
 
         // Verifica cache
         $cacheKey = self::CACHE_PREFIX . 'stats:' . md5(serialize($filters));
-        $cached = $this->cache->get($cacheKey);
+        $cached = $this->getFromCache($cacheKey);
         if ($cached !== null) {
             return $cached;
         }
@@ -316,7 +364,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
             $stats = $this->enhanceStatistics($stats);
 
             // Cache o resultado
-            $this->cache->set($cacheKey, $stats, self::STATS_CACHE_TTL);
+            $this->setCache($cacheKey, $stats, self::STATS_CACHE_TTL);
 
             $this->logger->info('Estatísticas de logs obtidas', [
                 'filters' => $filters,
@@ -720,7 +768,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
     private function cacheLog(string $logId, array $data): void
     {
         $cacheKey = self::CACHE_PREFIX . $logId;
-        $this->cache->set($cacheKey, $data, self::STATS_CACHE_TTL);
+        $this->setCache($cacheKey, $data, self::STATS_CACHE_TTL);
     }
 
     /**
@@ -729,7 +777,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
     private function getCachedLog(string $logId): ?array
     {
         $cacheKey = self::CACHE_PREFIX . $logId;
-        return $this->cache->get($cacheKey);
+        return $this->getFromCache($cacheKey);
     }
 
     /**
@@ -739,10 +787,11 @@ class NotificationLogService extends BaseService implements ServiceInterface
     protected function makeHttpRequest(string $method, string $uri, array $options = []): array
     {
         try {
-            $response = $this->httpClient->request($method, $uri, $options);
+            $httpClient = $this->getHttpClient();
+            $response = $httpClient->request($method, $uri, $options);
 
             if (!ResponseHelper::isSuccessful($response)) {
-                throw new HttpException(
+                throw new \RuntimeException(
                     "HTTP {$method} request failed to {$uri}",
                     $response->getStatusCode()
                 );
@@ -750,7 +799,7 @@ class NotificationLogService extends BaseService implements ServiceInterface
 
             $data = ResponseHelper::getData($response);
             if ($data === null) {
-                throw new HttpException("Failed to decode response data from {$uri}");
+                throw new \RuntimeException("Failed to decode response data from {$uri}");
             }
 
             return $data;

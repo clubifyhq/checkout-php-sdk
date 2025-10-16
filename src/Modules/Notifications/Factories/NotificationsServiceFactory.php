@@ -244,11 +244,17 @@ class NotificationsServiceFactory implements FactoryInterface
      */
     private function createNotificationService(array $config): NotificationService
     {
-        return new NotificationService(
+        $service = new NotificationService(
             $this->sdk,
             $this->config,
             $this->logger
         );
+
+        // Inject HTTP client and cache
+        $service->setHttpClient($this->httpClient);
+        $service->setCacheManager($this->cache);
+
+        return $service;
     }
 
     /**
@@ -259,11 +265,17 @@ class NotificationsServiceFactory implements FactoryInterface
      */
     private function createNotificationLogService(array $config): NotificationLogService
     {
-        return new NotificationLogService(
+        $service = new NotificationLogService(
             $this->sdk,
             $this->config,
             $this->logger
         );
+
+        // Inject HTTP client and cache
+        $service->setHttpClient($this->httpClient);
+        $service->setCacheManager($this->cache);
+
+        return $service;
     }
 
     /**
@@ -274,11 +286,17 @@ class NotificationsServiceFactory implements FactoryInterface
      */
     private function createNotificationStatsService(array $config): NotificationStatsService
     {
-        return new NotificationStatsService(
+        $service = new NotificationStatsService(
             $this->sdk,
             $this->config,
             $this->logger
         );
+
+        // Inject HTTP client and cache
+        $service->setHttpClient($this->httpClient);
+        $service->setCacheManager($this->cache);
+
+        return $service;
     }
 
     /**
@@ -289,11 +307,17 @@ class NotificationsServiceFactory implements FactoryInterface
      */
     private function createWebhookConfigService(array $config): WebhookConfigService
     {
-        return new WebhookConfigService(
+        $service = new WebhookConfigService(
             $this->sdk,
             $this->config,
             $this->logger
         );
+
+        // Inject HTTP client and cache
+        $service->setHttpClient($this->httpClient);
+        $service->setCacheManager($this->cache);
+
+        return $service;
     }
 
     /**

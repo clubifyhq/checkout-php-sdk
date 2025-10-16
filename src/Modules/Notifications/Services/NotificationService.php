@@ -426,7 +426,48 @@ class NotificationService extends BaseService implements ServiceInterface
     }
 
     /**
-     * Testa entrega de notificação
+     * Testa entrega de webhook
+     * Endpoint: POST /api/v1/notifications/test-webhook
+     */
+    public function testWebhook(string $url, array $payload): array
+    {
+        $this->validateInitialization();
+
+        try {
+            $testPayload = [
+                'url' => $url,
+                'payload' => $payload
+            ];
+
+            $response = $this->makeHttpRequest('POST', '/api/v1/notifications/test-webhook', [
+                'json' => $testPayload
+            ]);
+
+            $result = $response->toArray();
+
+            $this->logger->info('Teste de webhook executado', [
+                'url' => $url,
+                'status' => $result['status'] ?? 'unknown'
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro no teste de webhook', [
+                'url' => $url,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'status' => 'error',
+                'url' => $url,
+                'message' => 'Test webhook failed: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Testa entrega de notificação (LEGACY - backward compatibility)
      */
     public function testDelivery(array $testData): array
     {
@@ -629,7 +670,7 @@ class NotificationService extends BaseService implements ServiceInterface
     private function cacheNotification(string $notificationId, array $data): void
     {
         $cacheKey = self::CACHE_PREFIX . $notificationId;
-        $this->cache->set($cacheKey, $data, self::STATS_CACHE_TTL);
+        $this->setCache($cacheKey, $data, self::STATS_CACHE_TTL);
     }
 
     /**
@@ -638,7 +679,7 @@ class NotificationService extends BaseService implements ServiceInterface
     private function getCachedNotification(string $notificationId): ?array
     {
         $cacheKey = self::CACHE_PREFIX . $notificationId;
-        return $this->cache->get($cacheKey);
+        return $this->getFromCache($cacheKey);
     }
 
     /**
@@ -647,7 +688,7 @@ class NotificationService extends BaseService implements ServiceInterface
     private function invalidateCachedNotification(string $notificationId): void
     {
         $cacheKey = self::CACHE_PREFIX . $notificationId;
-        $this->cache->delete($cacheKey);
+        $this->deleteFromCache($cacheKey);
     }
 
     /**
@@ -695,10 +736,11 @@ class NotificationService extends BaseService implements ServiceInterface
     protected function makeHttpRequest(string $method, string $uri, array $options = []): array
     {
         try {
-            $response = $this->httpClient->request($method, $uri, $options);
+            $httpClient = $this->getHttpClient();
+            $response = $httpClient->request($method, $uri, $options);
 
             if (!ResponseHelper::isSuccessful($response)) {
-                throw new HttpException(
+                throw new \RuntimeException(
                     "HTTP {$method} request failed to {$uri}",
                     $response->getStatusCode()
                 );
@@ -706,7 +748,7 @@ class NotificationService extends BaseService implements ServiceInterface
 
             $data = ResponseHelper::getData($response);
             if ($data === null) {
-                throw new HttpException("Failed to decode response data from {$uri}");
+                throw new \RuntimeException("Failed to decode response data from {$uri}");
             }
 
             return $data;

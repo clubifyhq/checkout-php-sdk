@@ -128,6 +128,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
 
     /**
      * Obtém estatísticas gerais de notificações
+     * Endpoint: GET /api/v1/notifications/stats
      */
     public function getStatistics(array $filters = []): array
     {
@@ -135,7 +136,67 @@ class NotificationStatsService extends BaseService implements ServiceInterface
 
         // Verifica cache
         $cacheKey = self::CACHE_PREFIX . 'general:' . md5(serialize($filters));
-        $cached = $this->cache->get($cacheKey);
+        $cached = $this->getFromCache($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        try {
+            $response = $this->makeHttpRequest('GET', '/api/v1/notifications/stats', [
+                'query' => $filters
+            ]);
+
+            $statsData = $response->toArray();
+
+            // Cache o resultado
+            $this->setCache($cacheKey, $statsData, self::STATS_CACHE_TTL);
+
+            $this->logger->info('Estatísticas de notificações obtidas', [
+                'totalSent' => $statsData['totalSent'] ?? 0,
+                'successRate' => $statsData['successRate'] ?? '0%'
+            ]);
+
+            return $statsData;
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erro ao obter estatísticas de notificações', [
+                'filters' => $filters,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'totalSent' => 0,
+                'successful' => 0,
+                'failed' => 0,
+                'pending' => 0,
+                'successRate' => '0%',
+                'averageDeliveryTime' => '0ms',
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Obtém estatísticas de notificações (alias for getStatistics)
+     *
+     * @deprecated Use getStatistics() instead
+     */
+    public function getStats(array $filters = []): array
+    {
+        return $this->getStatistics($filters);
+    }
+
+    /**
+     * LEGACY METHOD - For backward compatibility
+     * Obtém estatísticas gerais de notificações (old implementation)
+     */
+    private function getStatisticsLegacy(array $filters = []): array
+    {
+        $this->validateInitialization();
+
+        // Verifica cache
+        $cacheKey = self::CACHE_PREFIX . 'general:' . md5(serialize($filters));
+        $cached = $this->getFromCache($cacheKey);
         if ($cached !== null) {
             return $cached;
         }
@@ -159,7 +220,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
             ]);
 
             // Cache o resultado
-            $this->cache->set($cacheKey, $enrichedStats, self::STATS_CACHE_TTL);
+            $this->setCache($cacheKey, $enrichedStats, self::STATS_CACHE_TTL);
 
             $this->logger->info('Estatísticas de notificações obtidas', [
                 'filters' => $filters,
@@ -204,7 +265,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
 
         // Verifica cache
         $cacheKey = self::CACHE_PREFIX . 'delivery:' . md5(serialize($dateRange));
-        $cached = $this->cache->get($cacheKey);
+        $cached = $this->getFromCache($cacheKey);
         if ($cached !== null) {
             return $cached;
         }
@@ -223,7 +284,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
             $deliveryStats['comparison'] = $this->calculatePeriodComparison($dateRange, $deliveryStats);
 
             // Cache o resultado
-            $this->cache->set($cacheKey, $deliveryStats, self::STATS_CACHE_TTL);
+            $this->setCache($cacheKey, $deliveryStats, self::STATS_CACHE_TTL);
 
             $this->logger->info('Estatísticas de entrega obtidas', [
                 'date_range' => $dateRange,
@@ -257,7 +318,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
 
         // Verifica cache
         $cacheKey = self::CACHE_PREFIX . 'webhook_performance';
-        $cached = $this->cache->get($cacheKey);
+        $cached = $this->getFromCache($cacheKey);
         if ($cached !== null) {
             return $cached;
         }
@@ -273,7 +334,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
             $performance['rankings'] = $this->rankWebhooks($performance['webhooks'] ?? []);
 
             // Cache o resultado
-            $this->cache->set($cacheKey, $performance, self::STATS_CACHE_TTL);
+            $this->setCache($cacheKey, $performance, self::STATS_CACHE_TTL);
 
             $this->logger->info('Performance de webhooks obtida', [
                 'webhook_count' => count($performance['webhooks'] ?? [])
@@ -304,7 +365,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
 
         // Verifica cache
         $cacheKey = self::CACHE_PREFIX . 'event_types';
-        $cached = $this->cache->get($cacheKey);
+        $cached = $this->getFromCache($cacheKey);
         if ($cached !== null) {
             return $cached;
         }
@@ -320,7 +381,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
             $eventStats['optimization_tips'] = $this->generateEventOptimizationTips($eventStats);
 
             // Cache o resultado
-            $this->cache->set($cacheKey, $eventStats, self::STATS_CACHE_TTL);
+            $this->setCache($cacheKey, $eventStats, self::STATS_CACHE_TTL);
 
             $this->logger->info('Estatísticas por tipo de evento obtidas', [
                 'event_type_count' => count($eventStats['events'] ?? [])
@@ -350,7 +411,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
 
         // Verifica cache
         $cacheKey = self::CACHE_PREFIX . 'retry_analysis';
-        $cached = $this->cache->get($cacheKey);
+        $cached = $this->getFromCache($cacheKey);
         if ($cached !== null) {
             return $cached;
         }
@@ -366,7 +427,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
             $retryData['config_recommendations'] = $this->generateRetryConfigRecommendations($retryData);
 
             // Cache o resultado
-            $this->cache->set($cacheKey, $retryData, self::STATS_CACHE_TTL);
+            $this->setCache($cacheKey, $retryData, self::STATS_CACHE_TTL);
 
             $this->logger->info('Análise de retries obtida', [
                 'total_retries' => $retryData['total_retries'] ?? 0,
@@ -397,7 +458,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
 
         // Verifica cache
         $cacheKey = self::CACHE_PREFIX . 'health_report';
-        $cached = $this->cache->get($cacheKey);
+        $cached = $this->getFromCache($cacheKey);
         if ($cached !== null) {
             return $cached;
         }
@@ -424,7 +485,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
             ];
 
             // Cache o resultado por mais tempo (relatório pesado)
-            $this->cache->set($cacheKey, $healthReport, self::HEAVY_STATS_CACHE_TTL);
+            $this->setCache($cacheKey, $healthReport, self::HEAVY_STATS_CACHE_TTL);
 
             $this->logger->info('Relatório de saúde gerado', [
                 'overall_health' => $healthReport['overall_health'],
@@ -456,7 +517,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
 
         // Verifica cache
         $cacheKey = self::CACHE_PREFIX . 'executive_dashboard';
-        $cached = $this->cache->get($cacheKey);
+        $cached = $this->getFromCache($cacheKey);
         if ($cached !== null) {
             return $cached;
         }
@@ -500,7 +561,7 @@ class NotificationStatsService extends BaseService implements ServiceInterface
             ];
 
             // Cache o resultado
-            $this->cache->set($cacheKey, $dashboard, self::STATS_CACHE_TTL);
+            $this->setCache($cacheKey, $dashboard, self::STATS_CACHE_TTL);
 
             $this->logger->info('Dashboard executivo gerado', [
                 'total_notifications_24h' => $dashboard['summary']['total_notifications_24h'],

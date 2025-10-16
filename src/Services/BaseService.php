@@ -211,6 +211,32 @@ abstract class BaseService implements ServiceInterface
     }
 
     /**
+     * Clear cache by pattern
+     *
+     * @param string $pattern Cache key pattern
+     * @return void
+     */
+    protected function clearCachePattern(string $pattern): void
+    {
+        try {
+            $this->logger->debug('Clearing cache pattern', ['pattern' => $pattern]);
+
+            // If cache manager supports deleteByPattern, use it
+            if (method_exists($this->cache, 'deleteByPattern')) {
+                $this->cache->deleteByPattern($pattern);
+            } else {
+                // Fallback: try to delete individual key
+                $this->cache->delete($pattern);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->error('Cache clear pattern error', [
+                'pattern' => $pattern,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Dispara um evento
      */
     protected function dispatch(string $eventName, array $data = []): void
@@ -219,6 +245,15 @@ abstract class BaseService implements ServiceInterface
             'service' => $this->getServiceName(),
             'timestamp' => time()
         ]));
+    }
+
+    /**
+     * Alias for dispatch method - dispatches an event
+     * This method exists for backward compatibility and consistency
+     */
+    protected function dispatchEvent(string $eventName, array $data = []): void
+    {
+        $this->dispatch($eventName, $data);
     }
 
     /**

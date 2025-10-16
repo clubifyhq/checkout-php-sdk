@@ -485,6 +485,298 @@ class WebhookConfigService extends BaseService implements ServiceInterface
     }
 
     /**
+     * Test webhook delivery from notification-service
+     *
+     * This method triggers a test webhook from the notification-service to your application.
+     * It uses the authenticated user's JWT token for authorization.
+     *
+     * Endpoint: POST /api/v1/notifications/test-webhook
+     *
+     * @param string $eventType Event type to test (e.g., 'order.paid', 'payment.approved')
+     * @param array $customData Custom event data payload
+     * @param string|null $webhookUrl Optional webhook URL override (defaults to configured URL)
+     * @return array Test result with success status, response time, and details
+     *
+     * @example
+     * ```php
+     * $result = $sdk->notifications()->testWebhookDelivery(
+     *     'order.paid',
+     *     ['orderId' => '123', 'amount' => 99.99],
+     *     'https://app.clubify.develop/api/webhooks/clubify-checkout'
+     * );
+     *
+     * // Result format:
+     * [
+     *     'success' => true,
+     *     'statusCode' => 200,
+     *     'responseTime' => 145,
+     *     'responseBody' => '{"status":"received"}',
+     *     'error' => null,
+     *     'testData' => [...],
+     *     'timestamp' => '2025-10-16T12:00:00Z'
+     * ]
+     * ```
+     */
+    public function testWebhookDelivery(
+        string $eventType,
+        array $customData = [],
+        ?string $webhookUrl = null
+    ): array {
+        $this->validateInitialization();
+
+        $startTime = microtime(true);
+
+        try {
+            $tenantId = $this->config->getTenantId();
+            $organizationId = $this->config->getOrganizationId();
+
+            if (empty($tenantId)) {
+                throw new \RuntimeException('Tenant ID is required for webhook testing');
+            }
+
+            // Get webhook URL from configuration if not provided
+            if ($webhookUrl === null) {
+                $webhookConfig = $this->getByTenantId($tenantId);
+
+                if ($webhookConfig === null || empty($webhookConfig['endpoints'])) {
+                    throw new \RuntimeException('No webhook configuration found for tenant. Please configure a webhook endpoint first.');
+                }
+
+                // Find endpoint for this event type
+                $endpoint = null;
+                foreach ($webhookConfig['endpoints'] as $ep) {
+                    if (isset($ep['eventType']) && $ep['eventType'] === $eventType) {
+                        $endpoint = $ep;
+                        break;
+                    }
+                }
+
+                if ($endpoint === null || empty($endpoint['url'])) {
+                    throw new \RuntimeException("No webhook URL configured for event type: {$eventType}");
+                }
+
+                $webhookUrl = $endpoint['url'];
+            }
+
+            // Build test payload
+            $testPayload = [
+                'event' => $eventType,
+                'id' => 'evt_test_' . uniqid(),
+                'timestamp' => time(),
+                'data' => array_merge([
+                    'test' => true,
+                    'tenant_id' => $tenantId,
+                    'organization_id' => $organizationId,
+                ], $customData)
+            ];
+
+            // Build request body for notification-service
+            $requestBody = [
+                'partnerId' => 'clubify-checkout',
+                'webhookUrl' => $webhookUrl,
+                'testData' => $testPayload
+            ];
+
+            $this->logger->info('Testing webhook delivery via notification-service', [
+                'tenant_id' => $tenantId,
+                'organization_id' => $organizationId,
+                'event_type' => $eventType,
+                'webhook_url' => $webhookUrl
+            ]);
+
+            // Call notification-service test endpoint
+            $response = $this->makeHttpRequest('POST', 'notifications/test-webhook', [
+                'json' => $requestBody
+            ]);
+
+            $responseTime = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
+
+            $result = [
+                'success' => true,
+                'statusCode' => $response['statusCode'] ?? 200,
+                'responseTime' => round($responseTime, 2),
+                'responseBody' => $response['responseBody'] ?? null,
+                'webhookUrl' => $webhookUrl,
+                'eventType' => $eventType,
+                'testData' => $testPayload,
+                'error' => null,
+                'timestamp' => date('c')
+            ];
+
+            $this->logger->info('Webhook delivery test completed successfully', [
+                'tenant_id' => $tenantId,
+                'event_type' => $eventType,
+                'response_time_ms' => $result['responseTime'],
+                'status_code' => $result['statusCode']
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $responseTime = (microtime(true) - $startTime) * 1000;
+
+            $this->logger->error('Webhook delivery test failed', [
+                'tenant_id' => $this->config->getTenantId(),
+                'event_type' => $eventType,
+                'webhook_url' => $webhookUrl,
+                'error' => $e->getMessage(),
+                'response_time_ms' => round($responseTime, 2)
+            ]);
+
+            return [
+                'success' => false,
+                'statusCode' => 0,
+                'responseTime' => round($responseTime, 2),
+                'responseBody' => null,
+                'webhookUrl' => $webhookUrl,
+                'eventType' => $eventType,
+                'error' => $e->getMessage(),
+                'timestamp' => date('c')
+            ];
+        }
+    }
+
+    /**
+     * Test webhook delivery using public API key authentication
+     *
+     * This method is similar to testWebhookDelivery() but uses API key authentication
+     * instead of JWT token. Useful for testing webhooks without user authentication.
+     *
+     * Endpoint: POST /api/v1/public/notifications/webhook/test
+     *
+     * @param string $apiKey Public API key
+     * @param string $eventType Event type to test
+     * @param array $customData Custom event data payload
+     * @param string|null $webhookUrl Optional webhook URL override
+     * @return array Test result with success status, response time, and details
+     */
+    public function testWebhookDeliveryWithApiKey(
+        string $apiKey,
+        string $eventType,
+        array $customData = [],
+        ?string $webhookUrl = null
+    ): array {
+        $this->validateInitialization();
+
+        $startTime = microtime(true);
+
+        try {
+            $tenantId = $this->config->getTenantId();
+            $organizationId = $this->config->getOrganizationId();
+
+            if (empty($organizationId)) {
+                throw new \RuntimeException('Organization ID is required for webhook testing with API key');
+            }
+
+            // Get webhook URL from configuration if not provided
+            if ($webhookUrl === null) {
+                $webhookConfig = $this->getByTenantId($tenantId);
+
+                if ($webhookConfig === null || empty($webhookConfig['endpoints'])) {
+                    throw new \RuntimeException('No webhook configuration found. Please configure a webhook endpoint first.');
+                }
+
+                // Find endpoint for this event type
+                $endpoint = null;
+                foreach ($webhookConfig['endpoints'] as $ep) {
+                    if (isset($ep['eventType']) && $ep['eventType'] === $eventType) {
+                        $endpoint = $ep;
+                        break;
+                    }
+                }
+
+                if ($endpoint === null || empty($endpoint['url'])) {
+                    throw new \RuntimeException("No webhook URL configured for event type: {$eventType}");
+                }
+
+                $webhookUrl = $endpoint['url'];
+            }
+
+            // Build test payload
+            $testPayload = [
+                'event' => $eventType,
+                'id' => 'evt_test_' . uniqid(),
+                'timestamp' => time(),
+                'data' => array_merge([
+                    'test' => true,
+                    'tenant_id' => $tenantId,
+                    'organization_id' => $organizationId,
+                ], $customData)
+            ];
+
+            // Build request body for notification-service
+            $requestBody = [
+                'partnerId' => 'clubify-checkout',
+                'webhookUrl' => $webhookUrl,
+                'testData' => $testPayload
+            ];
+
+            $this->logger->info('Testing webhook delivery via notification-service (API key)', [
+                'organization_id' => $organizationId,
+                'event_type' => $eventType,
+                'webhook_url' => $webhookUrl
+            ]);
+
+            // Call notification-service public test endpoint with API key
+            $httpClient = $this->getHttpClient();
+            $response = $httpClient->request('POST', 'public/notifications/webhook/test', [
+                'json' => $requestBody,
+                'headers' => [
+                    'x-api-key' => $apiKey,
+                    'x-organization-id' => $organizationId,
+                    'Content-Type' => 'application/json'
+                ]
+            ]);
+
+            $responseData = ResponseHelper::getData($response);
+            $responseTime = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
+
+            $result = [
+                'success' => true,
+                'statusCode' => $response->getStatusCode(),
+                'responseTime' => round($responseTime, 2),
+                'responseBody' => $responseData['responseBody'] ?? null,
+                'webhookUrl' => $webhookUrl,
+                'eventType' => $eventType,
+                'testData' => $testPayload,
+                'error' => null,
+                'timestamp' => date('c')
+            ];
+
+            $this->logger->info('Webhook delivery test (API key) completed successfully', [
+                'organization_id' => $organizationId,
+                'event_type' => $eventType,
+                'response_time_ms' => $result['responseTime'],
+                'status_code' => $result['statusCode']
+            ]);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            $responseTime = (microtime(true) - $startTime) * 1000;
+
+            $this->logger->error('Webhook delivery test (API key) failed', [
+                'organization_id' => $this->config->getOrganizationId(),
+                'event_type' => $eventType,
+                'webhook_url' => $webhookUrl,
+                'error' => $e->getMessage(),
+                'response_time_ms' => round($responseTime, 2)
+            ]);
+
+            return [
+                'success' => false,
+                'statusCode' => 0,
+                'responseTime' => round($responseTime, 2),
+                'responseBody' => null,
+                'webhookUrl' => $webhookUrl,
+                'eventType' => $eventType,
+                'error' => $e->getMessage(),
+                'timestamp' => date('c')
+            ];
+        }
+    }
+
+    /**
      * Lista todas as configurações de webhook (Admin)
      * Endpoint: GET webhooks/configurations
      */

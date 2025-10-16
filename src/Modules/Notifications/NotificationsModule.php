@@ -228,12 +228,6 @@ class NotificationsModule implements ModuleInterface
         return $this->getWebhookConfigService()->deleteById($id);
     }
 
-    public function getWebhookConfigByPartnerId(string $partnerId): ?array
-    {
-        $this->requireInitialized();
-        return $this->getWebhookConfigService()->getByPartnerId($partnerId);
-    }
-
     public function getWebhookConfigForEvent(string $partnerId, string $eventType): ?array
     {
         $this->requireInitialized();
@@ -244,6 +238,53 @@ class NotificationsModule implements ModuleInterface
     {
         $this->requireInitialized();
         return $this->getWebhookConfigService()->testWebhook($partnerId, $testData);
+    }
+
+    /**
+     * Test webhook delivery from notification-service
+     *
+     * Triggers a test webhook from the notification-service to your configured webhook URL.
+     * Uses JWT authentication (requires authenticated user).
+     *
+     * @param string $eventType Event type to test (e.g., 'order.paid', 'payment.approved')
+     * @param array $customData Custom event data payload
+     * @param string|null $webhookUrl Optional webhook URL override (defaults to configured URL)
+     * @return array Test result with success status, response time, and details
+     */
+    public function testWebhookDelivery(
+        string $eventType,
+        array $customData = [],
+        ?string $webhookUrl = null
+    ): array {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->testWebhookDelivery($eventType, $customData, $webhookUrl);
+    }
+
+    /**
+     * Test webhook delivery using public API key authentication
+     *
+     * Similar to testWebhookDelivery() but uses API key authentication instead of JWT.
+     * Useful for testing webhooks without user authentication.
+     *
+     * @param string $apiKey Public API key
+     * @param string $eventType Event type to test
+     * @param array $customData Custom event data payload
+     * @param string|null $webhookUrl Optional webhook URL override
+     * @return array Test result with success status, response time, and details
+     */
+    public function testWebhookDeliveryWithApiKey(
+        string $apiKey,
+        string $eventType,
+        array $customData = [],
+        ?string $webhookUrl = null
+    ): array {
+        $this->requireInitialized();
+        return $this->getWebhookConfigService()->testWebhookDeliveryWithApiKey(
+            $apiKey,
+            $eventType,
+            $customData,
+            $webhookUrl
+        );
     }
 
     public function listAllWebhookConfigs(int $page = 1, int $limit = 50): array

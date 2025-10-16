@@ -303,6 +303,15 @@ class WebhooksModule implements ModuleInterface
     }
 
     /**
+     * Validate webhook URL accessibility and configuration
+     */
+    public function validateUrl(string $url): array
+    {
+        $this->requireInitialized();
+        return $this->getWebhookService()->validateUrl($url);
+    }
+
+    /**
      * Retry de webhooks
      */
     public function retryWebhook(string $webhookId, string $deliveryId): ?string

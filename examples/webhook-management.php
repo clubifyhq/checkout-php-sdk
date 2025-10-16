@@ -108,7 +108,7 @@ try {
     } else {
         // No existing config, create a new one
         $webhookConfig = $webhooks->createWebhook([
-            'url' => 'https://webhook.site/253381d2-654a-4f9b-b44e-4ce347f1d087/webhooks/clubify',
+            'url' => 'https://webhook.site/253381d2-654a-4f9b-b44e-4ce347f1d087/webhooks/clubify/subscription',
             'events' => [
                 'subscription.created',
                 'subscription.updated',
@@ -156,7 +156,7 @@ try {
     // - Create a new config if none exists
     // - OR add the events to the existing configuration
     $result = $webhooks->createOrUpdateWebhook([
-        'url' => 'https://webhook.site/253381d2-654a-4f9b-b44e-4ce347f1d087/webhooks/clubify',
+        'url' => 'https://webhook.site/253381d2-654a-4f9b-b44e-4ce347f1d087/webhooks/clubify/customer',
         'events' => [
             'customer.created',
             'customer.updated',
@@ -245,6 +245,67 @@ try {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// URL VALIDATION: Validate webhook URL before creating endpoint
+// ────────────────────────────────────────────────────────────────────────────
+// IMPORTANT: Always validate URLs before creating endpoints to ensure they can
+// receive webhooks. This prevents configuration errors and failed deliveries.
+
+echo "URL Validation: Testing webhook endpoint accessibility...\n";
+
+$webhookUrl = 'https://webhook.site/253381d2-654a-4f9b-b44e-4ce347f1d087/webhooks/clubify/subscription';
+
+try {
+    $validation = $webhooks->validateUrl($webhookUrl);
+
+    echo "✓ URL Validation Results:\n";
+    echo "  - URL: {$validation['url']}\n";
+    echo "  - Accessible: " . ($validation['accessible'] ? 'Yes' : 'No') . "\n";
+    echo "  - Response Code: " . ($validation['response_code'] ?? 'N/A') . "\n";
+    echo "  - Response Time: " . ($validation['response_time'] ?? 'N/A') . "ms\n";
+    echo "  - SSL Valid: " . ($validation['ssl_valid'] ? 'Yes' : 'No') . "\n";
+    echo "  - Redirects: " . ($validation['redirect_count'] ?? 0) . "\n";
+
+    if (isset($validation['headers']) && !empty($validation['headers'])) {
+        echo "  - Server: " . ($validation['headers']['server'] ?? 'Unknown') . "\n";
+    }
+
+    if ($validation['accessible']) {
+        echo "  ✓ URL is valid and ready to receive webhooks!\n";
+    } else {
+        echo "  ⚠ URL validation failed: " . ($validation['error'] ?? 'Unknown error') . "\n";
+        echo "  ⚠ Creating endpoint anyway for demonstration purposes.\n";
+        echo "  ⚠ In production, you should NOT create endpoints with invalid URLs.\n";
+    }
+
+    if (!$validation['ssl_valid'] && strpos($webhookUrl, 'https://') === 0) {
+        echo "  ⚠ WARNING: SSL certificate is invalid!\n";
+        echo "  ⚠ This is not recommended for production webhooks.\n";
+    }
+
+    echo "\n";
+
+} catch (\Exception $e) {
+    echo "⚠ Error validating URL: {$e->getMessage()}\n";
+    echo "  Continuing with endpoint creation anyway...\n\n";
+}
+
+echo "📚 Validation Explained:\n";
+echo "  • accessible: URL responds to HTTP requests (200-499 status codes)\n";
+echo "  • response_code: HTTP status code returned by the endpoint\n";
+echo "  • response_time: How fast the endpoint responds (important for webhooks)\n";
+echo "  • ssl_valid: SSL certificate is valid (required for HTTPS URLs)\n";
+echo "  • redirect_count: Number of redirects followed (0 is best for webhooks)\n";
+echo "\n";
+
+echo "💡 When to Validate URLs:\n";
+echo "  ✓ Before creating new webhook endpoints\n";
+echo "  ✓ When updating webhook URLs\n";
+echo "  ✓ During webhook configuration audits\n";
+echo "  ✓ When troubleshooting failed deliveries\n";
+echo "  ✗ NOT needed for every webhook delivery (too slow)\n";
+echo "\n";
+
+// ────────────────────────────────────────────────────────────────────────────
 // APPROACH 1: Add endpoint with all properties (RECOMMENDED)
 // ────────────────────────────────────────────────────────────────────────────
 // This avoids the need for immediate updates after creation.
@@ -256,7 +317,7 @@ try {
         $config['credentials']['organization_id'],
         'Default Configuration', // Config name
         'product.updated',       // Event type
-        'https://webhook.site/253381d2-654a-4f9b-b44e-4ce347f1d087/webhooks/clubify', // URL
+        $webhookUrl,             // URL (already validated above)
         [
             'isActive' => false,    // Set to desired state from the start
             'timeout' => 15,        // Custom timeout
@@ -354,62 +415,169 @@ try {
 // PRODUCTION EXAMPLE: Comprehensive error handling and retry logic
 // ────────────────────────────────────────────────────────────────────────────
 
-echo "Production Example: Robust endpoint management with custom retry...\n";
+echo "Production Example: Robust endpoint management with validation...\n";
 
 /**
- * Helper function: Add endpoint with verification
+ * Helper function: Create validated endpoint with comprehensive checks
+ *
+ * This function demonstrates production-ready webhook endpoint creation:
+ * 1. Validates URL accessibility and SSL
+ * 2. Creates endpoint with proper configuration
+ * 3. Verifies endpoint was created successfully
+ * 4. Handles errors gracefully with retries
+ *
+ * @param object $webhooks Webhook service instance
+ * @param string $orgId Organization ID
+ * @param string $configName Configuration name
+ * @param string $eventType Event type (e.g., 'product.updated')
+ * @param string $url Webhook URL
+ * @param array $options Additional options (isActive, timeout, etc.)
+ * @return bool True if successful, false otherwise
  */
-function addEndpointWithVerification($webhooks, $orgId, $configName, $eventType, $url, $options = []) {
-    $maxAttempts = 3;
-    $delaySeconds = 5;
+function createValidatedEndpoint($webhooks, $orgId, $configName, $eventType, $url, $options = []) {
+    echo "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+    echo "Creating Validated Endpoint: {$eventType}\n";
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
 
-    // Attempt to add endpoint
+    // ─────────────────────────────────────────────────────────────
+    // STEP 1: Validate URL accessibility
+    // ─────────────────────────────────────────────────────────────
+    echo "Step 1: Validating URL...\n";
+
     try {
-        $webhooks->addEndpoint($orgId, $configName, $eventType, $url, $options);
-        echo "✓ Added endpoint for {$eventType}\n";
-    } catch (\Exception $e) {
-        if (strpos($e->getMessage(), 'duplicate') !== false ||
-            strpos($e->getMessage(), 'exists') !== false) {
-            echo "⚠ Endpoint already exists for {$eventType}\n";
-            return true; // Already exists, consider it success
+        $validation = $webhooks->validateUrl($url);
+
+        echo "  ✓ URL validation completed\n";
+        echo "    - Accessible: " . ($validation['accessible'] ? 'Yes' : 'No') . "\n";
+        echo "    - Response Code: " . ($validation['response_code'] ?? 'N/A') . "\n";
+        echo "    - Response Time: " . ($validation['response_time'] ?? 'N/A') . "ms\n";
+        echo "    - SSL Valid: " . ($validation['ssl_valid'] ? 'Yes' : 'No') . "\n";
+
+        // Check if URL is accessible
+        if (!$validation['accessible']) {
+            echo "  ✗ ERROR: URL is not accessible\n";
+            echo "    Error: " . ($validation['error'] ?? 'Unknown error') . "\n";
+            echo "    Please check the URL and try again.\n\n";
+            return false;
         }
-        throw $e; // Re-throw other errors
+
+        // Warn about SSL issues (but continue)
+        if (!$validation['ssl_valid'] && strpos($url, 'https://') === 0) {
+            echo "  ⚠ WARNING: SSL certificate is invalid\n";
+            echo "    This is not recommended for production webhooks.\n";
+            echo "    Continuing anyway...\n";
+        }
+
+        // Warn about slow response times
+        if (isset($validation['response_time']) && $validation['response_time'] > 5000) {
+            echo "  ⚠ WARNING: Endpoint response time is slow ({$validation['response_time']}ms)\n";
+            echo "    This may cause webhook delivery timeouts.\n";
+            echo "    Consider optimizing your endpoint.\n";
+        }
+
+        echo "\n";
+
+    } catch (\Exception $e) {
+        echo "  ✗ ERROR: URL validation failed\n";
+        echo "    Exception: {$e->getMessage()}\n";
+        echo "    Aborting endpoint creation.\n\n";
+        return false;
     }
 
-    // Verify endpoint was created (with retries)
-    for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
-        echo "  Verifying creation (attempt {$attempt}/{$maxAttempts})...\n";
-        sleep($delaySeconds);
+    // ─────────────────────────────────────────────────────────────
+    // STEP 2: Create endpoint
+    // ─────────────────────────────────────────────────────────────
+    echo "Step 2: Creating endpoint...\n";
 
+    try {
+        $webhooks->addEndpoint($orgId, $configName, $eventType, $url, $options);
+        echo "  ✓ Endpoint created successfully\n";
+        echo "    - Event Type: {$eventType}\n";
+        echo "    - URL: {$url}\n";
+        echo "    - Active: " . (($options['isActive'] ?? true) ? 'Yes' : 'No') . "\n";
+        echo "    - Timeout: " . ($options['timeout'] ?? 30) . "s\n";
+        echo "    - Max Retries: " . ($options['max_retries'] ?? 3) . "\n\n";
+
+    } catch (\Exception $e) {
+        // Check if endpoint already exists
+        if (strpos($e->getMessage(), 'duplicate') !== false ||
+            strpos($e->getMessage(), 'exists') !== false) {
+            echo "  ⚠ Endpoint already exists for {$eventType}\n";
+            echo "    Treating as success and continuing to verification.\n\n";
+        } else {
+            echo "  ✗ ERROR: Failed to create endpoint\n";
+            echo "    Exception: {$e->getMessage()}\n\n";
+            return false;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // STEP 3: Wait for API consistency
+    // ─────────────────────────────────────────────────────────────
+    echo "Step 3: Waiting for API consistency...\n";
+    echo "  ⏳ Waiting 6 seconds for replication...\n";
+    sleep(6);
+    echo "  ✓ Wait completed\n\n";
+
+    // ─────────────────────────────────────────────────────────────
+    // STEP 4: Verify endpoint exists
+    // ─────────────────────────────────────────────────────────────
+    echo "Step 4: Verifying endpoint...\n";
+
+    $maxAttempts = 3;
+    $delaySeconds = 3;
+
+    for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
         try {
             $configs = $webhooks->listWebhooks(['organization_id' => $orgId]);
+
             foreach ($configs as $config) {
                 if ($config['name'] === $configName) {
-                    foreach ($config['endpoints'] as $endpoint) {
+                    foreach (($config['endpoints'] ?? []) as $endpoint) {
                         if ($endpoint['eventType'] === $eventType) {
-                            echo "✓ Endpoint verified successfully!\n";
+                            echo "  ✓ Endpoint verified successfully!\n";
+                            echo "    - Config ID: {$config['_id']}\n";
+                            echo "    - Config Name: {$config['name']}\n";
+                            echo "    - Total Endpoints: " . count($config['endpoints']) . "\n";
+                            echo "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+                            echo "✓ Endpoint creation COMPLETED successfully!\n";
+                            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
                             return true;
                         }
                     }
                 }
             }
-        } catch (\Exception $e) {
-            echo "  Verification attempt {$attempt} failed: {$e->getMessage()}\n";
-        }
 
-        if ($attempt < $maxAttempts) {
-            $delaySeconds *= 2; // Exponential backoff
+            echo "  ⚠ Verification attempt {$attempt}/{$maxAttempts}: Endpoint not found yet\n";
+
+            if ($attempt < $maxAttempts) {
+                echo "    Retrying in {$delaySeconds} seconds...\n";
+                sleep($delaySeconds);
+                $delaySeconds *= 2; // Exponential backoff
+            }
+
+        } catch (\Exception $e) {
+            echo "  ⚠ Verification attempt {$attempt} failed: {$e->getMessage()}\n";
+
+            if ($attempt < $maxAttempts) {
+                echo "    Retrying...\n";
+                sleep($delaySeconds);
+            }
         }
     }
 
-    echo "⚠ Could not verify endpoint creation after {$maxAttempts} attempts.\n";
-    echo "  The endpoint may still be created, check manually.\n";
+    echo "  ⚠ WARNING: Could not verify endpoint after {$maxAttempts} attempts\n";
+    echo "    The endpoint may still exist. Check manually with listWebhooks().\n";
+    echo "    This can happen due to API replication lag.\n\n";
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+    echo "⚠ Endpoint creation UNCERTAIN (verification failed)\n";
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
     return false;
 }
 
 // Example usage of the helper function
 try {
-    $verified = addEndpointWithVerification(
+    $success = createValidatedEndpoint(
         $webhooks,
         $config['credentials']['organization_id'],
         'Default Configuration',
@@ -422,13 +590,18 @@ try {
         ]
     );
 
-    if ($verified) {
+    if ($success) {
         echo "✓ Production-ready endpoint management completed successfully!\n\n";
     } else {
-        echo "⚠ Endpoint created but verification uncertain. Check configuration.\n\n";
+        echo "⚠ Endpoint creation failed or verification uncertain.\n";
+        echo "  Check logs and configuration. The endpoint may still exist.\n\n";
     }
 } catch (\Exception $e) {
-    echo "✗ Error in production example: {$e->getMessage()}\n\n";
+    echo "✗ Error in production example: {$e->getMessage()}\n";
+    if (method_exists($e, 'getContext')) {
+        echo "  Context: " . json_encode($e->getContext(), JSON_PRETTY_PRINT) . "\n";
+    }
+    echo "\n";
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -436,13 +609,44 @@ try {
 // ────────────────────────────────────────────────────────────────────────────
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
 echo "KEY TAKEAWAYS for Production Use:\n";
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
-echo "1. CREATE endpoints with all properties from the start (avoid updates)\n";
-echo "2. WAIT 10+ seconds between operations on the same endpoint\n";
-echo "3. IMPLEMENT retry logic with exponential backoff\n";
-echo "4. VERIFY operations succeeded before proceeding\n";
-echo "5. HANDLE 404 errors gracefully (may indicate replication lag)\n";
-echo "6. USE createOrUpdateWebhook() for simpler, safer bulk operations\n";
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+
+echo "📋 ENDPOINT VALIDATION:\n";
+echo "  1. ✅ VALIDATE URLs before creating endpoints using validateUrl()\n";
+echo "     - Checks accessibility, SSL, and response times\n";
+echo "     - Prevents configuration errors and failed deliveries\n";
+echo "     - Validates SSL certificates for HTTPS endpoints\n";
+echo "  2. ⚠️  WARN users about slow endpoints (>5000ms response time)\n";
+echo "  3. ⚠️  WARN about invalid SSL certificates (but allow for testing)\n";
+echo "  4. ❌ BLOCK inaccessible URLs (HTTP errors, DNS failures)\n\n";
+
+echo "🔧 ENDPOINT CREATION:\n";
+echo "  1. ✅ CREATE endpoints with all properties from the start (avoid updates)\n";
+echo "     - Set isActive, timeout, max_retries during creation\n";
+echo "     - This avoids immediate update operations\n";
+echo "  2. ⏱️  WAIT 6-10+ seconds between operations on the same endpoint\n";
+echo "  3. 🔁 IMPLEMENT retry logic with exponential backoff\n";
+echo "  4. ✅ VERIFY operations succeeded before proceeding\n";
+echo "  5. ⚠️  HANDLE 404 errors gracefully (may indicate replication lag)\n";
+echo "  6. 🎯 USE createOrUpdateWebhook() for simpler, safer bulk operations\n\n";
+
+echo "🏭 PRODUCTION BEST PRACTICES:\n";
+echo "  1. 🔒 ALWAYS use HTTPS for production webhooks\n";
+echo "  2. 🔐 VALIDATE SSL certificates in production environments\n";
+echo "  3. ⏱️  MONITOR endpoint response times (should be <2000ms)\n";
+echo "  4. 📊 TRACK webhook delivery success rates\n";
+echo "  5. 🔄 IMPLEMENT automatic retry for failed deliveries\n";
+echo "  6. 📝 LOG all webhook operations for debugging\n";
+echo "  7. 🧪 TEST webhooks in staging before production deployment\n";
+echo "  8. 🚨 SET UP alerts for webhook delivery failures\n\n";
+
+echo "🛠️ HELPER FUNCTIONS:\n";
+echo "  • createValidatedEndpoint() - Complete validation workflow\n";
+echo "    - Validates URL accessibility and SSL\n";
+echo "    - Creates endpoint with proper configuration\n";
+echo "    - Verifies endpoint was created successfully\n";
+echo "    - Handles errors gracefully with retries\n\n";
+
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
 echo "\n";
 

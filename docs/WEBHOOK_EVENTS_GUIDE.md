@@ -23,6 +23,8 @@ O sistema de webhooks do Clubify Checkout permite que você receba notificaçõe
 
 ## Eventos Suportados
 
+> ⚠️ **IMPORTANTE**: Esta é a lista oficial e completa de eventos suportados pela API. Qualquer evento fora desta lista será rejeitado com erro HTTP 400.
+
 ### 📦 Eventos de Pedido (Order Events)
 
 #### `order.created` - Pedido Criado
@@ -142,6 +144,18 @@ Disparado quando um pagamento é estornado.
 #### `payment.cancelled` - Pagamento Cancelado
 Disparado quando um pagamento é cancelado.
 
+#### `payment.method.saved` - Método de Pagamento Salvo
+Disparado quando um método de pagamento é salvo para uso futuro.
+
+#### `payment.action_required` - Ação Requerida no Pagamento
+Disparado quando o pagamento requer uma ação adicional (ex: 3D Secure).
+
+#### `payment_method.changed` - Método de Pagamento Alterado
+⚠️ **Nota**: Use underscore (`payment_method.changed`), não ponto.
+
+#### `payment_method.setup_completed` - Configuração de Método de Pagamento Concluída
+Disparado quando a configuração de um método de pagamento é finalizada.
+
 ### 👥 Eventos de Cliente (Customer Events)
 
 #### `customer.created` - Cliente Criado
@@ -152,6 +166,27 @@ Disparado quando dados de um cliente são atualizados.
 
 #### `customer.deleted` - Cliente Removido
 Disparado quando um cliente é removido (GDPR compliance).
+
+#### `customer.merged` - Clientes Mesclados
+Disparado quando dois perfis de cliente são mesclados.
+
+#### `customer.segment.changed` - Segmento do Cliente Alterado
+Disparado quando o segmento de um cliente é alterado.
+
+#### `customer.consent.updated` - Consentimento do Cliente Atualizado
+Disparado quando as preferências de consentimento são atualizadas.
+
+#### `customer.metrics.updated` - Métricas do Cliente Atualizadas
+Disparado quando as métricas de um cliente são recalculadas.
+
+#### `customer.address.added` - Endereço Adicionado
+⚠️ **Nota**: Use `address.added`, não `address.created`.
+
+#### `customer.address.updated` - Endereço Atualizado
+Disparado quando um endereço é modificado.
+
+#### `customer.address.deleted` - Endereço Removido
+Disparado quando um endereço é deletado.
 
 ### 🛒 Eventos de Carrinho (Cart Events)
 
@@ -172,6 +207,12 @@ Disparado quando itens são adicionados/removidos do carrinho.
 #### `cart.recovered` - Carrinho Recuperado
 Disparado quando um carrinho abandonado é recuperado.
 
+#### `cart.cleanup` - Limpeza de Carrinho
+Disparado quando carrinhos antigos são removidos do sistema.
+
+#### `cart.converted` - Carrinho Convertido
+Disparado quando um carrinho é convertido em pedido.
+
 ### 📱 Eventos de Assinatura (Subscription Events)
 
 #### `subscription.created` - Assinatura Criada
@@ -183,8 +224,155 @@ Disparado quando uma assinatura é ativada.
 #### `subscription.cancelled` - Assinatura Cancelada
 Disparado quando uma assinatura é cancelada.
 
+#### `subscription.canceled` - Assinatura Cancelada (alternativa)
+Alias para `subscription.cancelled`.
+
+#### `subscription.updated` - Assinatura Atualizada
+Disparado quando dados da assinatura são modificados.
+
+#### `subscription.access_suspended` - Acesso Suspenso
+Disparado quando o acesso à assinatura é suspenso.
+
+#### `subscription.canceled_for_nonpayment` - Cancelada por Não Pagamento
+Disparado quando uma assinatura é cancelada devido a não pagamento.
+
+#### `subscription.access_revoked` - Acesso Revogado
+Disparado quando o acesso é completamente revogado.
+
+#### `subscription.trial_ending` - Trial Terminando
+⚠️ **Nota**: Use underscore (`trial_ending`), não ponto.
+Disparado quando o período de trial está próximo do fim.
+
+#### `subscription.trial_converted` - Trial Convertido
+⚠️ **Nota**: Use `trial_converted`, não `trial.ended`.
+Disparado quando um trial é convertido em assinatura paga.
+
 #### `subscription.payment_failed` - Falha no Pagamento da Assinatura
+⚠️ **Nota**: Use underscore (`payment_failed`), não ponto.
 **CRÍTICO** - Disparado quando o pagamento recorrente falha.
+
+#### `subscription.payment_recovered` - Pagamento Recuperado
+⚠️ **Nota**: Use underscore (`payment_recovered`), não ponto.
+Disparado quando um pagamento falhado é recuperado.
+
+### 🛍️ Eventos de Checkout (Checkout Events)
+
+#### `checkout.created` - Checkout Criado
+Disparado quando uma sessão de checkout é iniciada.
+
+#### `checkout.confirmed` - Checkout Confirmado
+Disparado quando o checkout é confirmado.
+
+#### `checkout.failed` - Checkout Falhou
+Disparado quando o processo de checkout falha.
+
+#### `checkout.expired` - Checkout Expirado
+Disparado quando uma sessão de checkout expira.
+
+#### `checkout.payment_method_updated` - Método de Pagamento Atualizado no Checkout
+⚠️ **Nota**: Use underscore (`payment_method_updated`).
+
+### 👤 Eventos de Usuário (User Events)
+
+#### `user.updated` - Usuário Atualizado
+Disparado quando dados do usuário são atualizados.
+
+#### `user.preferences.updated` - Preferências do Usuário Atualizadas
+Disparado quando preferências são modificadas.
+
+#### `user.data.deleted` - Dados do Usuário Deletados
+Disparado quando dados do usuário são removidos (GDPR).
+
+### 📦 Eventos de Produto (Product Events)
+
+#### `product.created` - Produto Criado
+Disparado quando um novo produto é adicionado.
+
+#### `product.updated` - Produto Atualizado
+Disparado quando informações do produto são modificadas.
+
+#### `product.deleted` - Produto Deletado
+Disparado quando um produto é removido.
+
+### 🎟️ Eventos de Cupom/Promoção (Coupon/Promotion Events)
+
+#### `coupon.validated` - Cupom Validado
+Disparado quando um cupom é verificado.
+
+#### `coupon.applied` - Cupom Aplicado
+Disparado quando um cupom é aplicado a um pedido.
+
+#### `promotions.detected` - Promoções Detectadas
+Disparado quando promoções aplicáveis são detectadas.
+
+#### `promotion.applied` - Promoção Aplicada
+Disparado quando uma promoção é aplicada.
+
+### 💰 Eventos de Dunning (Dunning Events)
+
+#### `dunning.email_required` - Email de Dunning Necessário
+Disparado quando um email de cobrança precisa ser enviado.
+
+#### `dunning.sms_required` - SMS de Dunning Necessário
+Disparado quando um SMS de cobrança precisa ser enviado.
+
+#### `dunning.payment_recovered` - Pagamento Recuperado via Dunning
+Disparado quando um pagamento é recuperado através do processo de dunning.
+
+### 🔒 Eventos de GDPR (GDPR Events)
+
+#### `gdpr.audit` - Auditoria GDPR
+Disparado para fins de auditoria GDPR.
+
+### 🚀 Eventos de One-Click Checkout (OneClickCheckout Events)
+
+#### `oneclickcheckout.initiated` - One-Click Checkout Iniciado
+Disparado quando um checkout com um clique é iniciado.
+
+#### `oneclickcheckout.processing` - One-Click Checkout em Processamento
+Disparado quando o checkout está sendo processado.
+
+#### `oneclickcheckout.completed` - One-Click Checkout Completo
+Disparado quando o checkout é finalizado com sucesso.
+
+#### `oneclickcheckout.failed` - One-Click Checkout Falhou
+Disparado quando o checkout falha.
+
+### 🤝 Eventos de Afiliados (Affiliate Events)
+
+#### `affiliate.registered` - Afiliado Registrado
+Disparado quando um novo afiliado se registra.
+
+#### `affiliate.approved` - Afiliado Aprovado
+Disparado quando um afiliado é aprovado.
+
+#### `affiliate.click` - Click de Afiliado
+Disparado quando um link de afiliado é clicado.
+
+#### `affiliate.conversion` - Conversão de Afiliado
+Disparado quando uma venda de afiliado é confirmada.
+
+### 💳 Eventos de Carteira Digital (Digital Wallet Events)
+
+#### `digital-wallet.payment.processed` - Pagamento de Carteira Digital Processado
+Disparado quando um pagamento via carteira digital é processado.
+
+#### `digital-wallet.payment.failed` - Pagamento de Carteira Digital Falhou
+Disparado quando um pagamento via carteira digital falha.
+
+### 🔑 Eventos de API Key (API Key Events)
+
+#### `api-key.generated` - API Key Gerada
+Disparado quando uma nova API key é gerada.
+
+#### `api-key.updated` - API Key Atualizada
+Disparado quando uma API key é atualizada.
+
+#### `api-key.revoked` - API Key Revogada
+Disparado quando uma API key é revogada.
+
+#### `api-key.rotated` - API Key Rotacionada
+Disparado quando uma API key é rotacionada.
 
 ### 🧪 Eventos de Teste (Test Events)
 
@@ -611,8 +799,220 @@ class WebhookController extends Controller
 
 ---
 
+## 📚 Referência Rápida de Eventos
+
+### Lista Completa de Eventos Válidos
+
+```php
+// 💳 Payment Events (9 eventos)
+'payment.authorized'
+'payment.paid'
+'payment.failed'
+'payment.refunded'
+'payment.cancelled'
+'payment.method.saved'
+'payment.action_required'
+'payment_method.changed'              // ⚠️ underscore
+'payment_method.setup_completed'      // ⚠️ underscore
+
+// 📦 Order Events (7 eventos)
+'order.created'
+'order.paid'
+'order.shipped'
+'order.delivered'
+'order.cancelled'
+'order.refunded'
+'order.completed'
+
+// 📱 Subscription Events (12 eventos)
+'subscription.created'
+'subscription.activated'
+'subscription.cancelled'
+'subscription.canceled'               // alternativa
+'subscription.updated'
+'subscription.access_suspended'
+'subscription.canceled_for_nonpayment'
+'subscription.access_revoked'
+'subscription.trial_ending'           // ⚠️ underscore
+'subscription.trial_converted'        // ⚠️ underscore
+'subscription.payment_failed'         // ⚠️ underscore
+'subscription.payment_recovered'      // ⚠️ underscore
+
+// 👥 Customer Events (10 eventos)
+'customer.created'
+'customer.updated'
+'customer.deleted'
+'customer.merged'
+'customer.segment.changed'
+'customer.consent.updated'
+'customer.metrics.updated'
+'customer.address.added'              // ⚠️ "added", não "created"
+'customer.address.updated'
+'customer.address.deleted'
+
+// 👤 User Events (3 eventos)
+'user.updated'
+'user.preferences.updated'
+'user.data.deleted'
+
+// 🛒 Cart Events (5 eventos)
+'cart.created'
+'cart.updated'
+'cart.abandoned'
+'cart.recovered'
+'cart.cleanup'
+'cart.converted'
+
+// 🛍️ Checkout Events (5 eventos)
+'checkout.created'
+'checkout.confirmed'
+'checkout.failed'
+'checkout.expired'
+'checkout.payment_method_updated'     // ⚠️ underscore
+
+// 📦 Product Events (3 eventos)
+'product.created'
+'product.updated'
+'product.deleted'
+
+// 🎟️ Coupon/Promotion Events (4 eventos)
+'coupon.validated'
+'coupon.applied'
+'promotions.detected'
+'promotion.applied'
+
+// 💰 Dunning Events (3 eventos)
+'dunning.email_required'
+'dunning.sms_required'
+'dunning.payment_recovered'
+
+// 🔒 GDPR Events (1 evento)
+'gdpr.audit'
+
+// 🚀 OneClickCheckout Events (4 eventos)
+'oneclickcheckout.initiated'
+'oneclickcheckout.processing'
+'oneclickcheckout.completed'
+'oneclickcheckout.failed'
+
+// 🤝 Affiliate Events (4 eventos)
+'affiliate.registered'
+'affiliate.approved'
+'affiliate.click'
+'affiliate.conversion'
+
+// 💳 Digital Wallet Events (2 eventos)
+'digital-wallet.payment.processed'
+'digital-wallet.payment.failed'
+
+// 🔑 API Key Events (4 eventos)
+'api-key.generated'
+'api-key.updated'
+'api-key.revoked'
+'api-key.rotated'
+
+// 🧪 Test Events (1 evento)
+'test'
+```
+
+**Total: 91 eventos suportados**
+
+### ❌ Eventos que NÃO EXISTEM (Não Use)
+
+Estes eventos são comumente procurados mas **não existem na API** e causarão erro HTTP 400:
+
+```php
+// ❌ EVENTOS INEXISTENTES
+'subscription.renewed'          // Não existe
+'subscription.expired'          // Não existe
+'subscription.trial.ended'      // Use: subscription.trial_converted
+'customer.address.created'      // Use: customer.address.added
+'coupon.removed'                // Não existe
+'coupon.expired'                // Não existe
+'invoice.created'               // Não existe (nenhum evento de invoice)
+'invoice.paid'                  // Não existe
+'invoice.voided'                // Não existe
+'invoice.payment.failed'        // Não existe
+```
+
+### ⚠️ Notas Importantes sobre Sintaxe
+
+#### Underscore vs Ponto
+
+Alguns eventos usam **underscore (_)** ao invés de **ponto (.)** - preste atenção:
+
+```php
+// ✅ CORRETO (underscore)
+'payment_method.changed'
+'payment_method.setup_completed'
+'subscription.trial_ending'
+'subscription.trial_converted'
+'subscription.payment_failed'
+'subscription.payment_recovered'
+'checkout.payment_method_updated'
+
+// ❌ ERRADO (ponto)
+'payment.method.changed'           // Erro!
+'subscription.trial.ending'        // Erro!
+'subscription.payment.failed'      // Erro!
+```
+
+#### Variações de Nomenclatura
+
+```php
+// customer.address
+'customer.address.added'    // ✅ Use este
+'customer.address.created'  // ❌ Não existe
+
+// subscription.trial
+'subscription.trial_converted'  // ✅ Use este
+'subscription.trial.ended'      // ❌ Não existe
+
+// subscription status
+'subscription.cancelled'  // ✅ UK spelling
+'subscription.canceled'   // ✅ US spelling (ambos funcionam)
+```
+
+### 💡 Eventos Recomendados para Produção
+
+Se você está começando, implemente estes eventos essenciais:
+
+```php
+$criticalEvents = [
+    // ⭐ CRÍTICOS (implementar primeiro)
+    'order.paid',
+    'payment.failed',
+    'subscription.payment_failed',
+
+    // 🔴 IMPORTANTES
+    'order.created',
+    'order.cancelled',
+    'order.refunded',
+    'payment.paid',
+    'subscription.created',
+    'subscription.cancelled',
+
+    // 🟡 ÚTEIS
+    'cart.abandoned',
+    'cart.recovered',
+    'customer.created',
+    'subscription.trial_ending',
+
+    // 🧪 TESTES
+    'test',
+];
+```
+
+---
+
 ## Conclusão
 
 Os webhooks são essenciais para uma integração robusta com o Clubify Checkout. Implemente especialmente os eventos `order.paid` e `payment.failed` para garantir uma experiência completa aos seus clientes.
+
+**Lembre-se:**
+- ✅ Use apenas eventos da lista oficial (91 eventos suportados)
+- ⚠️ Atenção à sintaxe: alguns usam underscore (_), não ponto (.)
+- ❌ Eventos fora da lista causarão erro HTTP 400
+- 📝 Consulte sempre esta documentação antes de adicionar novos eventos
 
 Para mais informações, consulte a [documentação completa da API](./api-reference.md) ou entre em contato com o suporte.

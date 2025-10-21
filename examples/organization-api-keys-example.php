@@ -14,26 +14,57 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Modules\Organization\Services\OrganizationApiKeyService;
 
+
+
+// Load .env file from parent directory if it exists
+$envFile = __DIR__ . '/../.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        // Skip comments
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+
+        // Parse KEY=VALUE
+        if (strpos($line, '=') !== false) {
+            list($key, $value) = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+
+            // Remove quotes if present
+            $value = trim($value, '"\'');
+
+            // Set environment variable
+            putenv("$key=$value");
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+        }
+    }
+    echo "✓ Loaded environment variables from .env\n\n";
+}
+
+
 echo "🔑 Organization API Keys - Exemplo Completo\n";
 echo "==========================================\n";
 
 // Configurar SDK
 $sdk = new ClubifyCheckoutSDK([
-    'api_key' => 'clb_org_test_813109fb9f2b4b74239df20fa1a5948a',
-    'environment' => 'test'
+    'api_key' => getenv('CLUBIFY_CHECKOUT_ORGANIZATION_API_KEY'),
+    'environment' => getenv('CLUBIFY_CHECKOUT_ENVIRONMENT')
 ]);
 
 // Autenticar como super admin
 $sdk->initializeAsSuperAdmin([
-    'email' => 'admin@example.com',
-    'password' => 'P@ssw0rd!',
-    'tenant_id' => '507f1f77bcf86cd799439011'
+    'email' => getenv('CLUBIFY_CHECKOUT_SUPER_ADMIN_EMAIL'),
+    'password' => getenv('CLUBIFY_CHECKOUT_SUPER_ADMIN_PASSWORD'),
+    'tenant_id' => getenv('CLUBIFY_CHECKOUT_SUPER_ADMIN_TENANT_ID')
 ]);
 
 echo "✅ Autenticado como Super Admin\n\n";
 
 // Simular organização existente
-$organizationId = '68d94e3a878451ed8bb9d873';
+$organizationId = getenv('CLUBIFY_CHECKOUT_ORGANIZATION_ID');
 
 // Obter serviço de API keys da organização através do módulo Organization
 $orgApiKeyService = $sdk->organization()->organizationApiKey();

@@ -13,10 +13,48 @@ use Clubify\Checkout\ClubifyCheckoutSDK;
 use Clubify\Checkout\Modules\Organization\Exceptions\OrganizationSetupException;
 use Clubify\Checkout\Exceptions\ConflictException;
 
+
+
+
+// Load .env file from parent directory if it exists
+$envFile = __DIR__ . '/../.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        // Skip comments
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+
+        // Parse KEY=VALUE
+        if (strpos($line, '=') !== false) {
+            list($key, $value) = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+
+            // Remove quotes if present
+            $value = trim($value, '"\'');
+
+            // Set environment variable
+            putenv("$key=$value");
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+        }
+    }
+    echo "✓ Loaded environment variables from .env\n\n";
+}
+
+// Configurações (em produção, use variáveis de ambiente)
+$organizationId = getenv('CLUBIFY_CHECKOUT_ORGANIZATION_ID');
+$organizationApiKey = getenv('CLUBIFY_CHECKOUT_ORGANIZATION_API_KEY');
+$tenantId = getenv('CLUBIFY_TENANT_ID'); // Tenant específico para as operações
+$environment = getenv('CLUBIFY_CHECKOUT_ENVIRONMENT');
+
+
 // Initialize SDK
 $sdk = new ClubifyCheckoutSDK([
-    'api_key' => 'your_api_key',
-    'environment' => 'sandbox'
+    'api_key' => $organizationApiKey,
+    'environment' => $environment
 ]);
 
 // Get organization module

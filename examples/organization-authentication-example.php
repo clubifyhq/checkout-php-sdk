@@ -12,18 +12,48 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+
+// Load .env file from parent directory if it exists
+$envFile = __DIR__ . '/../.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        // Skip comments
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+
+        // Parse KEY=VALUE
+        if (strpos($line, '=') !== false) {
+            list($key, $value) = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+
+            // Remove quotes if present
+            $value = trim($value, '"\'');
+
+            // Set environment variable
+            putenv("$key=$value");
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+        }
+    }
+    echo "✓ Loaded environment variables from .env\n\n";
+}
+
+
 use Clubify\Checkout\ClubifyCheckoutSDK;
 
 echo "🔐 Organization API Keys Authentication - Exemplo Completo\n";
 echo "========================================================\n";
 
 // Dados simulados (normalmente vêm do seu sistema)
-$organizationId = '68d94e3a878451ed8bb9d873';
-$organizationApiKey = 'clb_org_test_813109fb9f2b4b74239df20fa1a5948a';
-$crossTenantApiKey = 'clb_multi_test_266a8ae2f416222b2d79d9db3507fd89';
-$tenantApiKey = 'clb_tenant_live_123456789abcdef0123456789abcdef0123456789abcdef0123456789abc';
+$organizationId = getenv('CLUBIFY_CHECKOUT_ORGANIZATION_ID');
+$organizationApiKey = getenv('CLUBIFY_CHECKOUT_ORGANIZATION_API_KEY');
+$crossTenantApiKey = getenv('CLUBIFY_CHECKOUT_CROSS_TENANT_API_KEY');
+$tenantApiKey = getenv('CLUBIFY_CHECKOUT_TENANT_API_KEY');
 
-$tenantId = 'tenant_123456789abcdef';
+$tenantId = getenv('CLUBIFY_TENANT_ID');
 $anotherTenantId = 'tenant_987654321fedcba';
 
 // ===== EXEMPLO 1: Autenticação com Organization API Key (Acesso Total) =====

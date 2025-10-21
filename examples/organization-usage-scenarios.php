@@ -13,12 +13,50 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Clubify\Checkout\ClubifyCheckoutSDK;
 
+
+
+// Load .env file from parent directory if it exists
+$envFile = __DIR__ . '/../.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        // Skip comments
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+
+        // Parse KEY=VALUE
+        if (strpos($line, '=') !== false) {
+            list($key, $value) = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+
+            // Remove quotes if present
+            $value = trim($value, '"\'');
+
+            // Set environment variable
+            putenv("$key=$value");
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+        }
+    }
+    echo "✓ Loaded environment variables from .env\n\n";
+}
+
 echo "🏢 Organization API Keys - Cenários de Uso Práticos\n";
 echo "==================================================\n\n";
 
+
+// Configurações (em produção, use variáveis de ambiente)
+$organizationId = getenv('CLUBIFY_CHECKOUT_ORGANIZATION_ID');
+$organizationApiKey = getenv('CLUBIFY_CHECKOUT_ORGANIZATION_API_KEY');
+$tenantId = getenv('CLUBIFY_TENANT_ID'); // Tenant específico para as operações
+$environment = getenv('CLUBIFY_CHECKOUT_ENVIRONMENT');
+
+
 // Configurações base
 $baseConfig = [
-    'environment' => 'sandbox',
+    'environment' => $environment,
     'base_url' => 'https://checkout.svelve.com/api/v1',
     'timeout' => 30000
 ];
@@ -33,9 +71,9 @@ echo "Uso: Dashboard administrativo, relatórios gerais, backup de dados\n\n";
 try {
     // Configurar SDK com Organization API Key
     $organizationConfig = array_merge($baseConfig, [
-        'organization_id' => '68d94e3a878451ed8bb9d873',
-        'api_key' => 'clb_org_test_813109fb9f2b4b74239df20fa1a5948a',
-        'scope' => 'organization'
+        'organization_id' => $organizationId ,
+        'api_key' => $organizationApiKey,
+        'scope' => $environment
     ]);
 
     $orgSdk = new ClubifyCheckoutSDK($organizationConfig);
@@ -119,11 +157,7 @@ try {
 
     // Passo 1: Autenticar com acesso multi-tenant
     echo "🔐 Passo 1: Autenticação Multi-Tenant\n";
-    $authResult = $multiSdk->authenticateAsOrganization([
-        'organization_id' => $crossTenantConfig['organization_id'],
-        'api_key' => $crossTenantConfig['api_key'],
-        'scope' => 'CROSS_TENANT'
-    ]);
+    $authResult = $multiSdk->authenticateAsOrganization($crossTenantConfig['organization_id'], $crossTenantConfig['api_key']);
 
     if ($authResult['success']) {
         echo "✅ Autenticação multi-tenant bem-sucedida!\n";

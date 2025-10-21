@@ -69,9 +69,9 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
             'payload' => $filteredData
         ]);
 
-        // Usar makeHttpRequest que retorna array ao invés de parent::create que espera ResponseInterface
+        // Usar makeHttpRequestAndParse que retorna array ao invés de parent::create que espera ResponseInterface
         return $this->executeWithMetrics("create_{$this->getResourceName()}", function () use ($filteredData) {
-            $createdData = $this->makeHttpRequest('POST', $this->getEndpoint(), $filteredData);
+            $createdData = $this->makeHttpRequestAndParse('POST', $this->getEndpoint(), $filteredData);
 
             // Dispatch creation event
             $this->dispatch("{$this->getResourceName()}.created", [
@@ -92,7 +92,7 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
             $this->getCacheKey("tenant:slug:{$slug}"),
             function () use ($slug) {
                 try {
-                    $data = $this->makeHttpRequest('GET', "tenants/slug/{$slug}");
+                    $data = $this->makeHttpRequestAndParse('GET', "tenants/slug/{$slug}");
                     return $data['tenant'] ?? $data;
                 } catch (HttpException $e) {
                     // 404 significa que não encontrou - retornar null ao invés de lançar exceção
@@ -144,8 +144,8 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
     private function tryFindByExactDomain(string $domain): ?array
     {
         try {
-           
-            $data = $this->makeHttpRequest('GET', "tenants/domain/{$domain}");
+
+            $data = $this->makeHttpRequestAndParse('GET', "tenants/domain/{$domain}");
 
 
             // Verificar se a resposta indica sucesso
@@ -196,7 +196,7 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
         return $this->getCachedOrExecute(
             $this->getCacheKey("tenants:status:{$status}"),
             function () use ($status) {
-                $data = $this->makeHttpRequest('GET', "tenants?" . http_build_query(['status' => $status]));
+                $data = $this->makeHttpRequestAndParse('GET', "tenants?" . http_build_query(['status' => $status]));
                 return $data['tenants'] ?? $data['data'] ?? [];
             },
             600 // 10 minutes cache
@@ -211,7 +211,7 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
         return $this->getCachedOrExecute(
             $this->getCacheKey("tenants:plan:{$plan}"),
             function () use ($plan) {
-                $data = $this->makeHttpRequest('GET', "tenants?" . http_build_query(['plan' => $plan]));
+                $data = $this->makeHttpRequestAndParse('GET', "tenants?" . http_build_query(['plan' => $plan]));
                 return $data['tenants'] ?? $data['data'] ?? [];
             },
             600 // 10 minutes cache
@@ -224,7 +224,7 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
     public function updateSettings(string $tenantId, array $settings): array
     {
         return $this->executeWithMetrics('update_tenant_settings', function () use ($tenantId, $settings) {
-            $data = $this->makeHttpRequest('PATCH', "tenants/{$tenantId}/settings", ['settings' => $settings]);
+            $data = $this->makeHttpRequestAndParse('PATCH', "tenants/{$tenantId}/settings", ['settings' => $settings]);
 
             // Invalidar cache
             $this->cache->delete($this->getCacheKey("tenant:{$tenantId}"));
@@ -245,7 +245,7 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
     public function addDomain(string $tenantId, array $domainData): array
     {
         return $this->executeWithMetrics('add_tenant_domain', function () use ($tenantId, $domainData) {
-            $data = $this->makeHttpRequest('POST', "tenants/{$tenantId}/domains", $domainData);
+            $data = $this->makeHttpRequestAndParse('POST', "tenants/{$tenantId}/domains", $domainData);
 
             // Invalidar cache
             $this->cache->delete($this->getCacheKey("tenant:{$tenantId}"));
@@ -389,7 +389,7 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
             $this->getCacheKey("tenant_stats"),
             function () {
                 try {
-                    $data = $this->makeHttpRequest('GET', 'tenants/stats');
+                    $data = $this->makeHttpRequestAndParse('GET', 'tenants/stats');
                     return $data['stats'] ?? $data;
                 } catch (\Exception $e) {
                     $this->logger->warning('Failed to get tenant stats', [
@@ -417,7 +417,7 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
         return $this->getCachedOrExecute(
             $this->getCacheKey("tenants:expiring:{$daysThreshold}"),
             function () use ($daysThreshold) {
-                $data = $this->makeHttpRequest('GET', "tenants/expiring?" . http_build_query([
+                $data = $this->makeHttpRequestAndParse('GET', "tenants/expiring?" . http_build_query([
                     'days_threshold' => $daysThreshold
                 ]));
                 return $data['tenants'] ?? $data['data'] ?? [];
@@ -446,7 +446,7 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
                 'removed_fields' => array_diff(array_keys($organizationData), array_keys($filteredData))
             ]);
 
-            $createdData = $this->makeHttpRequest('POST', 'tenants', $filteredData);
+            $createdData = $this->makeHttpRequestAndParse('POST', 'tenants', $filteredData);
 
 
             // Extract tenant ID from nested data structure
@@ -492,10 +492,10 @@ class ApiTenantRepository extends BaseRepository implements TenantRepositoryInte
     }
 
     /**
-     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
-     * Garante uso consistente do ResponseHelper
+     * Método auxiliar que faz chamadas HTTP e retorna o array parseado
+     * Usa o makeHttpRequest da classe pai e extrai os dados da ResponseInterface
      */
-    protected function makeHttpRequest(string $method, string $uri, array $data = []): array
+    protected function makeHttpRequestAndParse(string $method, string $uri, array $data = []): array
     {
         try {
             $options = [];

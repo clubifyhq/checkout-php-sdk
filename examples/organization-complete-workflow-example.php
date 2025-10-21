@@ -32,15 +32,46 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+
+// Load .env file from parent directory if it exists
+$envFile = __DIR__ . '/../.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        // Skip comments
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+
+        // Parse KEY=VALUE
+        if (strpos($line, '=') !== false) {
+            list($key, $value) = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+
+            // Remove quotes if present
+            $value = trim($value, '"\'');
+
+            // Set environment variable
+            putenv("$key=$value");
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+        }
+    }
+    echo "✓ Loaded environment variables from .env\n\n";
+}
+
+
+
 use Clubify\Checkout\ClubifyCheckoutSDK;
 
 echo "🚀 Organization Complete Workflow - Exemplo Completo\n";
 echo "===================================================\n\n";
 
 // Configurações (em produção, use variáveis de ambiente)
-$organizationId = '68d94e3a878451ed8bb9d873';
-$organizationApiKey = 'clb_org_test_d78b95b90bfb3ba1b8606578dba3e1e7';
-$tenantId = '68dab606378f93bd3931cdc0'; // Tenant específico para as operações
+$organizationId = getenv('CLUBIFY_CHECKOUT_ORGANIZATION_ID');
+$organizationApiKey = getenv('CLUBIFY_CHECKOUT_ORGANIZATION_API_KEY');
+$tenantId = getenv('CLUBIFY_TENANT_ID'); // Tenant específico para as operações
 
 // ===== PASSO 1: Autenticação como Organização =====
 echo "🔐 PASSO 1: Autenticação como Organização\n";
@@ -48,7 +79,7 @@ echo "-------------------------------------------\n";
 
 try {
     $sdk = new ClubifyCheckoutSDK([
-        'environment' => 'sandbox'
+        'environment' => getenv('CLUBIFY_CHECKOUT_ENVIRONMENT')
     ]);
 
     // Autenticar usando Organization API Key especificando o tenant

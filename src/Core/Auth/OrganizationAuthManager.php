@@ -7,6 +7,7 @@ namespace Clubify\Checkout\Core\Auth;
 use Clubify\Checkout\Core\Config\Configuration;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Http\ResponseHelper;
+use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Exceptions\AuthenticationException;
 use Clubify\Checkout\Exceptions\HttpException;
 use Psr\Log\LoggerInterface;
@@ -22,6 +23,7 @@ class OrganizationAuthManager
     private Configuration $config;
     private Client $httpClient;
     private LoggerInterface $logger;
+    private ?CacheManagerInterface $cache = null;
 
     private ?string $accessToken = null;
     private ?string $refreshToken = null;
@@ -35,11 +37,13 @@ class OrganizationAuthManager
     public function __construct(
         Configuration $config,
         Client $httpClient,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        ?CacheManagerInterface $cache = null
     ) {
         $this->config = $config;
         $this->httpClient = $httpClient;
         $this->logger = $logger;
+        $this->cache = $cache;
     }
 
     /**
@@ -51,6 +55,37 @@ class OrganizationAuthManager
         ?string $tenantId = null
     ): array {
         try {
+            // ✅ IMPROVEMENT: Check cached token first
+            $cacheKey = $this->getOrgAuthTokenCacheKey($organizationId, $apiKey, $tenantId);
+            $cachedAuthData = $this->getCachedAuthToken($cacheKey);
+
+            if ($cachedAuthData) {
+                $this->logger->info('Using cached organization access token', [
+                    'organization_id' => $organizationId,
+                    'tenant_id' => $tenantId,
+                    'scope' => $cachedAuthData['scope'] ?? 'unknown',
+                    'expires_in' => $cachedAuthData['expires_in'] ?? 'unknown'
+                ]);
+
+                // Restore from cache
+                $this->accessToken = $cachedAuthData['access_token'];
+                $this->refreshToken = $cachedAuthData['refresh_token'] ?? null;
+                $this->tokenExpires = time() + ($cachedAuthData['expires_in'] ?? 3600);
+                $this->organizationId = $cachedAuthData['organization_id'];
+                $this->tenantId = $cachedAuthData['tenant_id'] ?? null;
+                $this->scope = $cachedAuthData['scope'];
+                $this->permissions = $cachedAuthData['permissions'] ?? [];
+                $this->accessibleTenants = $cachedAuthData['accessible_tenants'] ?? [];
+
+                // Update SDK configuration
+                $this->config->set('access_token', $this->accessToken);
+                $this->config->set('organization_id', $this->organizationId);
+                $this->config->set('tenant_id', $this->tenantId);
+                $this->config->set('api_key_scope', $this->scope);
+
+                return $cachedAuthData;
+            }
+
             $this->logger->info('Starting organization API key authentication', [
                 'organization_id' => $organizationId,
                 'tenant_id' => $tenantId,
@@ -103,7 +138,7 @@ class OrganizationAuthManager
                 'token_expires_in' => $response['expires_in']
             ]);
 
-            return [
+            $result = [
                 'success' => true,
                 'access_token' => $this->accessToken,
                 'refresh_token' => $this->refreshToken,
@@ -116,6 +151,11 @@ class OrganizationAuthManager
                 'accessible_tenants' => $this->accessibleTenants,
                 'key_info' => $response['key_info'] ?? null
             ];
+
+            // ✅ IMPROVEMENT: Cache authentication data
+            $this->cacheAuthToken($organizationId, $apiKey, $tenantId, $result, $response['expires_in'] ?? 3600);
+
+            return $result;
 
         } catch (\Exception $e) {
             $this->logger->error('Organization API key authentication failed', [
@@ -387,5 +427,100 @@ class OrganizationAuthManager
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * ✅ IMPROVEMENT: Generate cache key for organization auth token
+     */
+    private function getOrgAuthTokenCacheKey(string $organizationId, string $apiKey, ?string $tenantId): string
+    {
+        // Use hash to avoid storing sensitive API key in cache key
+        $keyHash = hash('sha256', $organizationId . ':' . $apiKey . ':' . ($tenantId ?? 'all'));
+        return 'org_auth_token:' . $keyHash;
+    }
+
+    /**
+     * ✅ IMPROVEMENT: Get cached auth token
+     */
+    private function getCachedAuthToken(string $cacheKey): ?array
+    {
+        if (!$this->cache) {
+            return null;
+        }
+
+        try {
+            $cached = $this->cache->get($cacheKey);
+            if (!$cached) {
+                return null;
+            }
+
+            // Validate cached data structure
+            if (!isset($cached['access_token'], $cached['expires_in'])) {
+                $this->logger->warning('Invalid cached organization auth data structure', [
+                    'cache_key' => $cacheKey
+                ]);
+                $this->cache->delete($cacheKey);
+                return null;
+            }
+
+            return $cached;
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to retrieve cached organization auth token', [
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * ✅ IMPROVEMENT: Cache auth token with TTL
+     */
+    private function cacheAuthToken(
+        string $organizationId,
+        string $apiKey,
+        ?string $tenantId,
+        array $authData,
+        int $expiresIn
+    ): void {
+        if (!$this->cache) {
+            return;
+        }
+
+        try {
+            $cacheKey = $this->getOrgAuthTokenCacheKey($organizationId, $apiKey, $tenantId);
+
+            // Use 5 minute buffer to avoid using token that's about to expire
+            $cacheTtl = max(0, $expiresIn - 300);
+
+            $this->cache->set($cacheKey, $authData, $cacheTtl);
+
+            $this->logger->debug('Organization auth token cached', [
+                'organization_id' => $organizationId,
+                'tenant_id' => $tenantId,
+                'cache_ttl' => $cacheTtl,
+                'expires_in' => $expiresIn
+            ]);
+        } catch (\Exception $e) {
+            // Log error but don't fail authentication if caching fails
+            $this->logger->warning('Failed to cache organization auth token', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * ✅ IMPROVEMENT: Set cache manager
+     */
+    public function setCacheManager(?CacheManagerInterface $cache): void
+    {
+        $this->cache = $cache;
+    }
+
+    /**
+     * ✅ IMPROVEMENT: Get cache manager
+     */
+    public function getCacheManager(): ?CacheManagerInterface
+    {
+        return $this->cache;
     }
 }

@@ -126,6 +126,11 @@ class ClubifyCheckoutSDK
             // Autenticação automática (Lazy Loading)
             $authResult = $this->getAuthManager()->authenticate();
 
+            // ✅ IMPROVEMENT: Extract scope and permissions from user info
+            $userInfo = $this->getAuthManager()->getUserInfo();
+            $scope = $userInfo['scope'] ?? 'unknown';
+            $permissions = $userInfo['permissions'] ?? [];
+
             // Validação de conectividade (Lazy Loading) - pode ser pulada para testes
             $connectivityCheck = true;
             if (!$skipHealthCheck) {
@@ -143,6 +148,8 @@ class ClubifyCheckoutSDK
                 'authenticated' => $this->isAuthenticated(),
                 'tenant_id' => $this->config->getTenantId(),
                 'environment' => $this->config->getEnvironment(),
+                'scope' => $scope,  // ✅ IMPROVEMENT: Return scope
+                'permissions' => $permissions,  // ✅ IMPROVEMENT: Return permissions
                 'auth_result' => $authResult,
                 'connectivity' => $connectivityCheck,
                 'health_check_skipped' => $skipHealthCheck,
@@ -303,10 +310,12 @@ class ClubifyCheckoutSDK
         string $apiKey,
         ?string $tenantId = null
     ): array {
+        // ✅ IMPROVEMENT: Inject cache manager for token caching
         $orgAuthManager = new \Clubify\Checkout\Core\Auth\OrganizationAuthManager(
             $this->config,
             $this->getHttpClient(),
-            $this->getLogger()
+            $this->getLogger(),
+            $this->getCache()  // ✅ Inject cache manager
         );
 
         $result = $orgAuthManager->authenticateWithOrganizationApiKey($organizationId, $apiKey, $tenantId);
@@ -359,10 +368,12 @@ class ClubifyCheckoutSDK
      */
     public function isOrganizationAuthenticated(): bool
     {
+        // ✅ IMPROVEMENT: Inject cache manager for token caching
         $orgAuthManager = new \Clubify\Checkout\Core\Auth\OrganizationAuthManager(
             $this->config,
             $this->getHttpClient(),
-            $this->getLogger()
+            $this->getLogger(),
+            $this->getCache()  // ✅ Inject cache manager
         );
 
         return $orgAuthManager->isAuthenticated();
@@ -373,10 +384,12 @@ class ClubifyCheckoutSDK
      */
     public function getOrganizationContext(): array
     {
+        // ✅ IMPROVEMENT: Inject cache manager for token caching
         $orgAuthManager = new \Clubify\Checkout\Core\Auth\OrganizationAuthManager(
             $this->config,
             $this->getHttpClient(),
-            $this->getLogger()
+            $this->getLogger(),
+            $this->getCache()  // ✅ Inject cache manager
         );
 
         return $orgAuthManager->getOrganizationContext();
@@ -1063,6 +1076,7 @@ class ClubifyCheckoutSDK
      *
      * CORREÇÃO: Agora garante que AuthManager seja criado junto com Client
      * para evitar race condition onde requests HTTP não incluem Authorization header
+     * ✅ IMPROVEMENT: Injects CacheManager for token caching
      */
     public function getHttpClient(): Client
     {
@@ -1074,7 +1088,16 @@ class ClubifyCheckoutSDK
             // e injetar no Client imediatamente. Isso garante que qualquer
             // request HTTP subsequente terá acesso ao AuthManager.
             if ($this->authManager === null) {
-                $this->authManager = new AuthManager($this->httpClient, $this->config);
+                // ✅ IMPROVEMENT: Inject cache manager for token caching
+                $this->authManager = new AuthManager(
+                    $this->httpClient,
+                    $this->config,
+                    null,  // tokenStorage
+                    null,  // jwtHandler
+                    null,  // credentialManager
+                    $this->getLogger(),
+                    $this->getCache()  // ✅ Inject cache manager
+                );
                 $this->httpClient->setAuthManager($this->authManager);
             }
         }
@@ -1086,6 +1109,7 @@ class ClubifyCheckoutSDK
      *
      * CORREÇÃO: Agora garante que HttpClient exista primeiro e que
      * AuthManager seja injetado imediatamente após criação
+     * ✅ IMPROVEMENT: Now injects CacheManager for token caching
      */
     private function getAuthManager(): AuthManager
     {
@@ -1096,7 +1120,16 @@ class ClubifyCheckoutSDK
 
             // Se por algum motivo AuthManager ainda não foi criado, criar agora
             if ($this->authManager === null) {
-                $this->authManager = new AuthManager($client, $this->config);
+                // ✅ IMPROVEMENT: Inject cache manager for token caching
+                $this->authManager = new AuthManager(
+                    $client,
+                    $this->config,
+                    null,  // tokenStorage
+                    null,  // jwtHandler
+                    null,  // credentialManager
+                    $this->getLogger(),
+                    $this->getCache()  // ✅ Inject cache manager
+                );
                 $client->setAuthManager($this->authManager);
             }
         }

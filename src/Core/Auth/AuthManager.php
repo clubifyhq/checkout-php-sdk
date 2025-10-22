@@ -7,6 +7,7 @@ namespace Clubify\Checkout\Core\Auth;
 use Clubify\Checkout\Core\Config\ConfigurationInterface;
 use Clubify\Checkout\Core\Http\Client;
 use Clubify\Checkout\Core\Security\SecurityValidator;
+use Clubify\Checkout\Core\Cache\CacheManagerInterface;
 use Clubify\Checkout\Exceptions\AuthenticationException;
 use Clubify\Checkout\Exceptions\HttpException;
 use Clubify\Checkout\Core\Http\ResponseHelper;
@@ -25,6 +26,7 @@ class AuthManager implements AuthManagerInterface
     private TokenStorageInterface $tokenStorage;
     private JWTHandler $jwtHandler;
     private LoggerInterface $logger;
+    private ?CacheManagerInterface $cache = null;
     private ?array $userInfo = null;
     private ?CredentialManager $credentialManager = null;
     private string $currentRole = 'tenant_admin';
@@ -35,7 +37,8 @@ class AuthManager implements AuthManagerInterface
         ?TokenStorageInterface $tokenStorage = null,
         ?JWTHandler $jwtHandler = null,
         ?CredentialManager $credentialManager = null,
-        ?LoggerInterface $logger = null
+        ?LoggerInterface $logger = null,
+        ?CacheManagerInterface $cache = null
     ) {
         $this->httpClient = $httpClient;
         $this->config = $config;
@@ -43,6 +46,7 @@ class AuthManager implements AuthManagerInterface
         $this->jwtHandler = $jwtHandler ?? new JWTHandler();
         $this->credentialManager = $credentialManager;
         $this->logger = $logger ?? new NullLogger();
+        $this->cache = $cache;
     }
 
     public function authenticate(?string $tenantId = null, ?string $apiKey = null): bool
@@ -65,7 +69,33 @@ class AuthManager implements AuthManagerInterface
         }
 
         try {
-            // Configuração validada - removido debug logging por segurança
+            // ✅ IMPROVEMENT: Check cached token first
+            $cacheKey = $this->getAuthTokenCacheKey($tenantId, $apiKey);
+            $cachedAuthData = $this->getCachedAuthToken($cacheKey);
+
+            if ($cachedAuthData) {
+                $this->logger->info('Using cached access token', [
+                    'tenant_id' => $tenantId,
+                    'expires_in' => $cachedAuthData['expires_in'] ?? 'unknown'
+                ]);
+
+                // Restore token from cache
+                $this->tokenStorage->storeAccessToken(
+                    $cachedAuthData['access_token'],
+                    $cachedAuthData['expires_in'] ?? 3600
+                );
+
+                if (isset($cachedAuthData['refresh_token'])) {
+                    $this->tokenStorage->storeRefreshToken($cachedAuthData['refresh_token']);
+                }
+
+                // Restore user info from cache
+                if (isset($cachedAuthData['user_info'])) {
+                    $this->userInfo = $cachedAuthData['user_info'];
+                }
+
+                return true;
+            }
 
             // Tentar autenticar via API key e obter access token
             $tokenResult = $this->authenticateWithApiKey($apiKey, $tenantId);
@@ -458,6 +488,11 @@ class AuthManager implements AuthManagerInterface
     private function authenticateWithApiKey(string $apiKey, string $tenantId): bool
     {
         try {
+            $this->logger->info('Starting API key authentication', [
+                'tenant_id' => $tenantId,
+                'key_prefix' => substr($apiKey, 0, 16) . '...'
+            ]);
+
             // Simplified authentication flow - single endpoint strategy
             $endpoint = $this->getAuthEndpointForContext($tenantId);
 
@@ -471,38 +506,67 @@ class AuthManager implements AuthManagerInterface
             ]);
 
             // Se chegou aqui, a requisição foi bem-sucedida (makeHttpRequest lança exceção em caso de erro)
-            if (true) {
+            if (isset($data['access_token']) || isset($data['accessToken'])) {
+                $accessToken = $data['access_token'] ?? $data['accessToken'];
+                $refreshToken = $data['refresh_token'] ?? $data['refreshToken'] ?? null;
+                $expiresIn = $data['expires_in'] ?? $data['expiresIn'] ?? 3600;
 
-                if (isset($data['access_token']) || isset($data['accessToken'])) {
-                    $accessToken = $data['access_token'] ?? $data['accessToken'];
-                    $refreshToken = $data['refresh_token'] ?? $data['refreshToken'] ?? null;
-                    $expiresIn = $data['expires_in'] ?? $data['expiresIn'] ?? 3600;
+                // ✅ IMPROVEMENT: Extract scope and permissions from response
+                $scope = $data['scope'] ?? 'tenant';
+                $permissions = $data['permissions'] ?? [];
+                $organizationId = $data['organization_id'] ?? null;
 
-                    // Armazenar tokens
-                    $this->tokenStorage->storeAccessToken($accessToken, $expiresIn);
-                    if ($refreshToken) {
-                        $this->tokenStorage->storeRefreshToken($refreshToken);
-                    }
-
-                    // Armazenar informações do usuário (sem dados sensíveis)
-                    $this->userInfo = [
-                        'tenant_id' => $tenantId,
-                        'environment' => $this->config->getEnvironment(),
-                        'authenticated_at' => date('Y-m-d H:i:s'),
-                        'auth_type' => 'api_key_token',
-                        'requires_user_login' => false
-                    ];
-
-                    // Authentication successful
-                    return true;
+                // Armazenar tokens
+                $this->tokenStorage->storeAccessToken($accessToken, $expiresIn);
+                if ($refreshToken) {
+                    $this->tokenStorage->storeRefreshToken($refreshToken);
                 }
+
+                // Armazenar informações do usuário (sem dados sensíveis)
+                $this->userInfo = [
+                    'tenant_id' => $tenantId,
+                    'organization_id' => $organizationId,
+                    'environment' => $this->config->getEnvironment(),
+                    'authenticated_at' => date('Y-m-d H:i:s'),
+                    'auth_type' => 'api_key_token',
+                    'requires_user_login' => false,
+                    'scope' => $scope,
+                    'permissions' => $permissions
+                ];
+
+                // ✅ IMPROVEMENT: Cache authentication data
+                $this->cacheAuthToken($apiKey, $tenantId, [
+                    'access_token' => $accessToken,
+                    'refresh_token' => $refreshToken,
+                    'expires_in' => $expiresIn,
+                    'scope' => $scope,
+                    'permissions' => $permissions,
+                    'organization_id' => $organizationId,
+                    'user_info' => $this->userInfo
+                ], $expiresIn);
+
+                $this->logger->info('API key authentication successful', [
+                    'tenant_id' => $tenantId,
+                    'scope' => $scope,
+                    'permissions_count' => count($permissions),
+                    'expires_in' => $expiresIn
+                ]);
+
+                return true;
             }
 
             // Authentication failed - invalid response
+            $this->logger->warning('API key authentication failed - invalid response', [
+                'tenant_id' => $tenantId
+            ]);
             return false;
 
         } catch (\Exception $e) {
             // Authentication failed with exception
+            $this->logger->error('API key authentication exception', [
+                'tenant_id' => $tenantId,
+                'error' => $e->getMessage()
+            ]);
             return false;
         }
     }
@@ -1338,6 +1402,95 @@ class AuthManager implements AuthManagerInterface
         $this->clearTokenCache();
         $this->clearUserInfo();
         $this->currentRole = 'tenant_admin'; // Reset para papel padrão
+    }
+
+    /**
+     * ✅ IMPROVEMENT: Set cache manager
+     */
+    public function setCacheManager(?CacheManagerInterface $cache): void
+    {
+        $this->cache = $cache;
+    }
+
+    /**
+     * ✅ IMPROVEMENT: Get cache manager
+     */
+    public function getCacheManager(): ?CacheManagerInterface
+    {
+        return $this->cache;
+    }
+
+    /**
+     * ✅ IMPROVEMENT: Generate cache key for auth token
+     */
+    private function getAuthTokenCacheKey(string $tenantId, string $apiKey): string
+    {
+        // Use hash to avoid storing sensitive API key in cache key
+        $keyHash = hash('sha256', $tenantId . ':' . $apiKey);
+        return 'auth_token:' . $keyHash;
+    }
+
+    /**
+     * ✅ IMPROVEMENT: Get cached auth token
+     */
+    private function getCachedAuthToken(string $cacheKey): ?array
+    {
+        if (!$this->cache) {
+            return null;
+        }
+
+        try {
+            $cached = $this->cache->get($cacheKey);
+            if (!$cached) {
+                return null;
+            }
+
+            // Validate cached data structure
+            if (!isset($cached['access_token'], $cached['expires_in'])) {
+                $this->logger->warning('Invalid cached auth data structure', [
+                    'cache_key' => $cacheKey
+                ]);
+                $this->cache->delete($cacheKey);
+                return null;
+            }
+
+            return $cached;
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to retrieve cached auth token', [
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * ✅ IMPROVEMENT: Cache auth token with TTL
+     */
+    private function cacheAuthToken(string $apiKey, string $tenantId, array $authData, int $expiresIn): void
+    {
+        if (!$this->cache) {
+            return;
+        }
+
+        try {
+            $cacheKey = $this->getAuthTokenCacheKey($tenantId, $apiKey);
+
+            // Use 5 minute buffer to avoid using token that's about to expire
+            $cacheTtl = max(0, $expiresIn - 300);
+
+            $this->cache->set($cacheKey, $authData, $cacheTtl);
+
+            $this->logger->debug('Auth token cached', [
+                'tenant_id' => $tenantId,
+                'cache_ttl' => $cacheTtl,
+                'expires_in' => $expiresIn
+            ]);
+        } catch (\Exception $e) {
+            // Log error but don't fail authentication if caching fails
+            $this->logger->warning('Failed to cache auth token', [
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
 }

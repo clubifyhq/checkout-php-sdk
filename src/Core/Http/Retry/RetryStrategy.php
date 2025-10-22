@@ -47,6 +47,14 @@ class RetryStrategy
             return false;
         }
 
+        // ✅ IMPROVEMENT: Não fazer retry para 429 (Rate Limit)
+        // Rate limit deve ser tratado de forma diferente - aguardando o reset
+        if ($response && $response->getStatusCode() === 429) {
+            // Não fazer retry automático para 429
+            // A aplicação deve implementar lógica específica para rate limit
+            return false;
+        }
+
         // Se há resposta, verificar status code
         if ($response) {
             return in_array($response->getStatusCode(), $this->retryableStatusCodes);

@@ -496,13 +496,19 @@ class AuthManager implements AuthManagerInterface
             // Simplified authentication flow - single endpoint strategy
             $endpoint = $this->getAuthEndpointForContext($tenantId);
 
+            // ✅ IMPROVEMENT: Incluir headers obrigatórios na requisição de autenticação
+            $headers = [
+                'X-Tenant-Id' => $tenantId
+            ];
+
             // makeHttpRequest já retorna os dados decodificados e verifica o status
             $data = $this->makeHttpRequest('POST', $endpoint, [
                 'json' => [
                     'api_key' => $apiKey,
                     'tenant_id' => $tenantId,
                     'grant_type' => 'api_key'
-                ]
+                ],
+                'headers' => $headers  // ✅ Enviar headers obrigatórios
             ]);
 
             // Se chegou aqui, a requisição foi bem-sucedida (makeHttpRequest lança exceção em caso de erro)

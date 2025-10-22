@@ -211,15 +211,23 @@ class Client
             $options['headers'] ?? []
         );
 
-        // CORREÇÃO: Log dos headers obrigatórios para debug
-        $tenantId = $this->config->getTenantId();
-        $organizationId = $this->config->getOrganizationId();
+        // ✅ IMPROVEMENT: Validação de headers obrigatórios com contexto
+        // X-Tenant-Id é opcional em autenticação de organização (organização > tenant na hierarquia)
+        // X-Organization-Id é opcional na maioria dos casos (exceto autenticação de organização)
 
-        if (!$tenantId || !$organizationId) {
-            $this->logger->warning('Headers obrigatórios ausentes na requisição', [
+        // Verificar se é autenticação de organização
+        $isOrgAuth = str_contains($uri, 'auth/api-key/organization/token');
+        $isAuth = str_contains($uri, 'auth/');
+
+        $tenantId = $this->config->getTenantId();
+
+        // Para outras requisições após autenticação (não-auth e não org-auth):
+        // - X-Tenant-Id é recomendado (mas pode ser opcional dependendo do scope)
+        // - X-Organization-Id é opcional
+        if (!$isAuth && !$isOrgAuth && !$tenantId) {
+            $this->logger->debug('X-Tenant-Id header not set for non-auth request', [
                 'uri' => $uri,
-                'tenant_id' => $tenantId ?? 'NOT SET',
-                'organization_id' => $organizationId ?? 'NOT SET',
+                'note' => 'This may be expected for organization-level operations',
                 'headers' => array_keys($headers)
             ]);
         }
@@ -286,9 +294,17 @@ class Client
                     'response_body' => $responseBody ? substr($responseBody, 0, 500) : null
                 ];
 
+                // ✅ IMPROVEMENT: Log específico para 429 (Rate Limit)
+                if ($statusCode === 429) {
+                    $retryAfter = $e->getResponse()?->getHeader('Retry-After')[0] ?? 'not provided';
+                    $this->logger->warning('Rate Limit (429) - Too Many Requests', array_merge($errorDetails, [
+                        'retry_after' => $retryAfter,
+                        'message' => 'API rate limit exceeded. No automatic retry will be attempted. Please implement exponential backoff with longer delays (60s, 120s, 300s) or respect the Retry-After header.'
+                    ]));
+                }
                 // 404 não é erro crítico em muitos casos (verificação de existência)
                 // Log apenas como debug para não poluir logs com "erros" esperados
-                if ($statusCode === 404) {
+                elseif ($statusCode === 404) {
                     $this->logger->debug('Resource not found (404)', $errorDetails);
                 } else {
                     $this->logger->error('HTTP Request Error', $errorDetails);

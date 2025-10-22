@@ -104,9 +104,26 @@ class OrganizationAuthManager
                 $requestData['tenant_id'] = $tenantId;
             }
 
+            // ✅ IMPROVEMENT: Incluir headers obrigatórios na requisição de autenticação
+            // X-Organization-Id é obrigatório (organização está sempre presente)
+            // X-Tenant-Id é OPCIONAL (organização está acima de tenant na hierarquia)
+            $headers = [
+                'X-Organization-Id' => $organizationId
+            ];
+
+            // ✅ CORRECTION: X-Tenant-Id é opcional - só enviar quando especificado
+            // Casos de uso:
+            // - ORGANIZATION scope: sem tenant_id (acesso a toda organização)
+            // - CROSS_TENANT scope: com tenant_id (acesso a tenant específico)
+            // - TENANT scope: com tenant_id (acesso limitado ao tenant)
+            if ($tenantId) {
+                $headers['X-Tenant-Id'] = $tenantId;
+            }
+
             // Fazer requisição de autenticação
             $response = $this->makeHttpRequest('POST', 'auth/api-key/organization/token', [
-                'json' => $requestData
+                'json' => $requestData,
+                'headers' => $headers  // Headers com X-Tenant-Id opcional
             ]);
 
             if (!$response || !isset($response['access_token'])) {

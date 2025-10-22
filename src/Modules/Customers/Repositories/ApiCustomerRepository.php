@@ -93,7 +93,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
             $this->getCacheKey("customer:email:{$fieldValue}"),
             function () use ($fieldValue) {
                 try {
-                    $data = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/email/{$fieldValue}");
+                    $data = $this->makeHttpRequestAndExtractData('GET', "{$this->getEndpoint()}/email/{$fieldValue}");
                     return $data['customer'] ?? $data;
                 } catch (HttpException $e) {
                     // If 404, customer not found - return null
@@ -123,7 +123,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     {
         return $this->executeWithMetrics('update_customer_status', function () use ($customerId, $status) {
             try {
-                $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/status", [
+                $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$customerId}/status", [
                     'status' => $status
                 ]);
 
@@ -157,7 +157,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                return $this->makeHttpRequest('GET', $endpoint);
+                return $this->makeHttpRequestAndExtractData('GET', $endpoint);
             },
             600 // 10 minutes cache for stats
         );
@@ -169,7 +169,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function bulkCreate(array $customersData): array
     {
         return $this->executeWithMetrics('bulk_create_customers', function () use ($customersData) {
-            $result = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
+            $result = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/bulk", [
                 'customers' => $customersData
             ]);
 
@@ -190,7 +190,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_customers', function () use ($updates) {
-            $result = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
+            $result = $this->makeHttpRequestAndExtractData('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
 
@@ -225,7 +225,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                     'limit' => $limit,
                     'offset' => $offset
                 ]);
-                return $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
+                return $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/search", $payload);
             },
             180 // 3 minutes cache for search results
         );
@@ -238,7 +238,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     {
         return $this->executeWithMetrics('archive_customer', function () use ($customerId) {
             try {
-                $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/archive");
+                $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$customerId}/archive");
 
                 // Invalidate cache
                 $this->invalidateCache($customerId);
@@ -263,7 +263,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     {
         return $this->executeWithMetrics('restore_customer', function () use ($customerId) {
             try {
-                $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$customerId}/restore");
+                $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$customerId}/restore");
 
                 // Invalidate cache
                 $this->invalidateCache($customerId);
@@ -297,7 +297,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                 }
 
                 try {
-                    return $this->makeHttpRequest('GET', $endpoint);
+                    return $this->makeHttpRequestAndExtractData('GET', $endpoint);
                 } catch (HttpException $e) {
                     if ($e->getCode() === 404) {
                         throw new CustomerNotFoundException("No history found for customer ID: {$customerId}");
@@ -328,7 +328,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                return $this->makeHttpRequest('GET', $endpoint);
+                return $this->makeHttpRequestAndExtractData('GET', $endpoint);
             },
             300 // 5 minutes cache for relationships
         );
@@ -341,7 +341,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     {
         return $this->executeWithMetrics('add_relationship', function () use ($customerId, $relatedId, $relationType, $metadata) {
             try {
-                $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$customerId}/{$relationType}", [
+                $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/{$customerId}/{$relationType}", [
                     'related_id' => $relatedId,
                     'metadata' => $metadata
                 ]);
@@ -363,7 +363,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($customerId, $relatedId, $relationType) {
             try {
-                $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$customerId}/{$relationType}/{$relatedId}");
+                $this->makeHttpRequestAndExtractData('DELETE', "{$this->getEndpoint()}/{$customerId}/{$relationType}/{$relatedId}");
 
                 // Invalidate relationship cache
                 $this->cache?->delete($this->getCacheKey("customer:related:{$customerId}:{$relationType}:*"));
@@ -431,7 +431,7 @@ class ApiCustomerRepository extends BaseRepository implements CustomerRepository
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
      * Garante uso consistente do ResponseHelper
      */
-    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    protected function makeHttpRequestAndExtractData(string $method, string $uri, array $options = []): array
     {
         try {
             $response = $this->httpClient->request($method, $uri, $options);

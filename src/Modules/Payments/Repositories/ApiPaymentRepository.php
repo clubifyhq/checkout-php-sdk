@@ -91,7 +91,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
         return $this->getCachedOrExecute(
             $this->getCacheKey("payment:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequestAndExtractData('GET', "{$this->getEndpoint()}/search", [
                     'email' => $fieldValue
                 ]);
 
@@ -127,7 +127,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
     public function updateStatus(string $paymentId, string $status): bool
     {
         return $this->executeWithMetrics('update_payment_status', function () use ($paymentId, $status) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$paymentId}/status", [
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$paymentId}/status", [
                 'status' => $status
             ]);
 
@@ -162,7 +162,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                $response = $this->makeHttpRequest('GET', $endpoint);
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -183,7 +183,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
     public function bulkCreate(array $paymentsData): array
     {
         return $this->executeWithMetrics('bulk_create_payments', function () use ($paymentsData) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/bulk", [
                 'payments' => $paymentsData
             ]);
 
@@ -213,7 +213,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_payments', function () use ($updates) {
-            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequestAndExtractData('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
 
@@ -258,7 +258,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                     'limit' => $limit,
                     'offset' => $offset
                 ];
-                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
+                $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/search", $payload);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -279,7 +279,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
     public function archive(string $paymentId): bool
     {
         return $this->executeWithMetrics('archive_payment', function () use ($paymentId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$paymentId}/archive");
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$paymentId}/archive");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -304,7 +304,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
     public function restore(string $paymentId): bool
     {
         return $this->executeWithMetrics('restore_payment', function () use ($paymentId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$paymentId}/restore");
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$paymentId}/restore");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -338,7 +338,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint);
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
@@ -375,7 +375,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint);
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -396,7 +396,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
     public function addRelationship(string $paymentId, string $relatedId, string $relationType, array $metadata = []): bool
     {
         return $this->executeWithMetrics('add_relationship', function () use ($paymentId, $relatedId, $relationType, $metadata) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$paymentId}/{$relationType}", [
+            $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/{$paymentId}/{$relationType}", [
                 'related_id' => $relatedId,
                 'metadata' => $metadata
             ]);
@@ -418,7 +418,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
     public function removeRelationship(string $paymentId, string $relatedId, string $relationType): bool
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($paymentId, $relatedId, $relationType) {
-            $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$paymentId}/{$relationType}/{$relatedId}");
+            $response = $this->makeHttpRequestAndExtractData('DELETE', "{$this->getEndpoint()}/{$paymentId}/{$relationType}/{$relatedId}");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
@@ -487,7 +487,7 @@ class ApiPaymentRepository extends BaseRepository implements PaymentRepositoryIn
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
      * Garante uso consistente do ResponseHelper
      */
-    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    protected function makeHttpRequestAndExtractData(string $method, string $uri, array $options = []): array
     {
         try {
             $response = $this->httpClient->request($method, $uri, $options);

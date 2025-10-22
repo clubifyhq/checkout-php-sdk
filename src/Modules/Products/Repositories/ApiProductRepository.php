@@ -91,7 +91,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
         return $this->getCachedOrExecute(
             $this->getCacheKey("product:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequestAndExtractData('GET', "{$this->getEndpoint()}/search", [
                     'email' => $fieldValue
                 ]);
 
@@ -127,7 +127,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
     public function updateStatus(string $productId, string $status): bool
     {
         return $this->executeWithMetrics('update_product_status', function () use ($productId, $status) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$productId}/status", [
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$productId}/status", [
                 'status' => $status
             ]);
 
@@ -162,7 +162,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                $response = $this->makeHttpRequest('GET', $endpoint);
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -183,7 +183,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
     public function bulkCreate(array $productsData): array
     {
         return $this->executeWithMetrics('bulk_create_products', function () use ($productsData) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/bulk", [
                 'products' => $productsData
             ]);
 
@@ -213,7 +213,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_products', function () use ($updates) {
-            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequestAndExtractData('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
 
@@ -261,7 +261,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
             $cacheKey,
             function () use ($criteria, $options) {
                 $payload = array_merge(['criteria' => $criteria], $options);
-                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
+                $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/search", $payload);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -282,7 +282,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
     public function archive(string $productId): bool
     {
         return $this->executeWithMetrics('archive_product', function () use ($productId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$productId}/archive");
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$productId}/archive");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -307,7 +307,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
     public function restore(string $productId): bool
     {
         return $this->executeWithMetrics('restore_product', function () use ($productId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$productId}/restore");
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$productId}/restore");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -341,7 +341,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint);
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     if ($response->getStatusCode() === 404) {
@@ -378,7 +378,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint);
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -399,7 +399,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
     public function addRelationship(string $productId, string $relatedId, string $relationType, array $metadata = []): bool
     {
         return $this->executeWithMetrics('add_relationship', function () use ($productId, $relatedId, $relationType, $metadata) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$productId}/{$relationType}", [
+            $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/{$productId}/{$relationType}", [
                 'related_id' => $relatedId,
                 'metadata' => $metadata
             ]);
@@ -421,7 +421,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
     public function removeRelationship(string $productId, string $relatedId, string $relationType): bool
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($productId, $relatedId, $relationType) {
-            $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$productId}/{$relationType}/{$relatedId}");
+            $response = $this->makeHttpRequestAndExtractData('DELETE', "{$this->getEndpoint()}/{$productId}/{$relationType}/{$relatedId}");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
@@ -490,7 +490,7 @@ class ApiProductRepository extends BaseRepository implements ProductRepositoryIn
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
      * Garante uso consistente do ResponseHelper
      */
-    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    protected function makeHttpRequestAndExtractData(string $method, string $uri, array $options = []): array
     {
         try {
             $response = $this->httpClient->request($method, $uri, $options);

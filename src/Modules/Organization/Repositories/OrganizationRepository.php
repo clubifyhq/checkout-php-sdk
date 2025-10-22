@@ -37,7 +37,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl('/slug/' . urlencode($slug));
-            $response = $this->makeHttpRequest('GET', $url);
+            $response = $this->makeHttpRequestAndExtractData('GET', $url);
 
             if ($response->getStatusCode() === 404) {
                 return null;
@@ -59,7 +59,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl('/domain/' . urlencode($domain));
-            $response = $this->makeHttpRequest('GET', $url);
+            $response = $this->makeHttpRequestAndExtractData('GET', $url);
 
             if ($response->getStatusCode() === 404) {
                 return null;
@@ -80,7 +80,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     public function findByStatus(string $status): array
     {
         $url = $this->buildUrl('', ['status' => $status]);
-        $response = $this->makeHttpRequest('GET', $url);
+        $response = $this->makeHttpRequestAndExtractData('GET', $url);
 
         return ResponseHelper::getData($response) ?? [];
     }
@@ -96,7 +96,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
         ];
 
         $url = $this->buildUrl('/date-range', $params);
-        $response = $this->makeHttpRequest('GET', $url);
+        $response = $this->makeHttpRequestAndExtractData('GET', $url);
 
         return ResponseHelper::getData($response) ?? [];
     }
@@ -108,7 +108,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl('/slug/' . urlencode($slug) . '/availability');
-            $response = $this->makeHttpRequest('GET', $url);
+            $response = $this->makeHttpRequestAndExtractData('GET', $url);
 
             $data = ResponseHelper::getData($response);
             return $data['available'] ?? false;
@@ -127,7 +127,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl('/domain/' . urlencode($domain) . '/availability');
-            $response = $this->makeHttpRequest('GET', $url);
+            $response = $this->makeHttpRequestAndExtractData('GET', $url);
 
             $data = ResponseHelper::getData($response);
             return $data['available'] ?? false;
@@ -146,7 +146,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl("/{$id}/activate");
-            $response = $this->makeHttpRequest('POST', $url, []);
+            $response = $this->makeHttpRequestAndExtractData('POST', $url, []);
 
             return $response->getStatusCode() === 200;
         } catch (HttpException $e) {
@@ -165,7 +165,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl("/{$id}/deactivate");
-            $response = $this->makeHttpRequest('POST', $url, []);
+            $response = $this->makeHttpRequestAndExtractData('POST', $url, []);
 
             return $response->getStatusCode() === 200;
         } catch (HttpException $e) {
@@ -184,7 +184,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl("/{$id}/suspend");
-            $response = $this->makeHttpRequest('POST', $url, []);
+            $response = $this->makeHttpRequestAndExtractData('POST', $url, []);
 
             return $response->getStatusCode() === 200;
         } catch (HttpException $e) {
@@ -203,7 +203,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
     {
         try {
             $url = $this->buildUrl("/{$id}/stats");
-            $response = $this->makeHttpRequest('GET', $url);
+            $response = $this->makeHttpRequestAndExtractData('GET', $url);
 
             return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
@@ -235,7 +235,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
 
         try {
             $url = $this->buildUrl('/search');
-            $response = $this->makeHttpRequest('POST', $url, $params);
+            $response = $this->makeHttpRequestAndExtractData('POST', $url, $params);
 
             return ResponseHelper::getData($response) ?? [
                 'data' => [],
@@ -312,7 +312,7 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
      * Garante uso consistente do ResponseHelper e adiciona headers organizacionais
      */
-    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    protected function makeHttpRequestAndExtractData(string $method, string $uri, array $options = []): array
     {
         try {
             // Adicionar headers organizacionais se disponíveis

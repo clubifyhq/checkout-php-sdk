@@ -70,7 +70,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
         return $this->getCachedOrExecute(
             $this->getCacheKey("card:customer:{$customerId}"),
             function () use ($customerId) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequestAndExtractData('GET', "{$this->getEndpoint()}/search", [
                     'customer_id' => $customerId
                 ]);
 
@@ -99,7 +99,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
         return $this->getCachedOrExecute(
             $this->getCacheKey("card:token:{$token}"),
             function () use ($token) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequestAndExtractData('GET', "{$this->getEndpoint()}/search", [
                     'token' => $token
                 ]);
 
@@ -126,7 +126,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
     public function tokenizeCard(array $cardData, string $customerId): array
     {
         return $this->executeWithMetrics('tokenize_card', function () use ($cardData, $customerId) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/tokenize", [
+            $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/tokenize", [
                 'card_data' => $cardData,
                 'customer_id' => $customerId
             ]);
@@ -157,7 +157,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
     public function detokenizeCard(string $token): array
     {
         return $this->executeWithMetrics('detokenize_card', function () use ($token) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/detokenize", [
+            $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/detokenize", [
                 'token' => $token
             ]);
 
@@ -178,7 +178,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
     public function validateCard(array $cardData): array
     {
         return $this->executeWithMetrics('validate_card', function () use ($cardData) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/validate", [
+            $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/validate", [
                 'card_data' => $cardData
             ]);
 
@@ -199,7 +199,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
     public function updateStatus(string $cardId, string $status): bool
     {
         return $this->executeWithMetrics('update_card_status', function () use ($cardId, $status) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$cardId}/status", [
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$cardId}/status", [
                 'status' => $status
             ]);
 
@@ -227,7 +227,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
     public function archive(string $cardId): bool
     {
         return $this->executeWithMetrics('archive_card', function () use ($cardId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$cardId}/archive");
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$cardId}/archive");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -252,7 +252,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
     public function expireCard(string $cardId): bool
     {
         return $this->executeWithMetrics('expire_card', function () use ($cardId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$cardId}/expire");
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$cardId}/expire");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -302,7 +302,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                $response = $this->makeHttpRequest('GET', $endpoint);
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -353,7 +353,7 @@ class ApiCardRepository extends BaseRepository implements CardRepositoryInterfac
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
      * Garante uso consistente do ResponseHelper
      */
-    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    protected function makeHttpRequestAndExtractData(string $method, string $uri, array $options = []): array
     {
         try {
             $response = $this->httpClient->request($method, $uri, $options);

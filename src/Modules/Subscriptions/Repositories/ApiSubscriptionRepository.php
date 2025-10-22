@@ -91,7 +91,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
         return $this->getCachedOrExecute(
             $this->getCacheKey("subscription:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $result = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
+                $result = $this->makeHttpRequestAndExtractData('GET', "{$this->getEndpoint()}/search", [
                     'email' => $fieldValue
                 ]);
 
@@ -116,7 +116,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function updateStatus(string $subscriptionId, string $status): bool
     {
         return $this->executeWithMetrics('update_subscription_status', function () use ($subscriptionId, $status) {
-            $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/status", [
+            $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/status", [
                 'status' => $status
             ]);
 
@@ -147,7 +147,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                return $this->makeHttpRequest('GET', $endpoint);
+                return $this->makeHttpRequestAndExtractData('GET', $endpoint);
             },
             600 // 10 minutes cache for stats
         );
@@ -159,7 +159,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function bulkCreate(array $subscriptionsData): array
     {
         return $this->executeWithMetrics('bulk_create_subscriptions', function () use ($subscriptionsData) {
-            $result = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
+            $result = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/bulk", [
                 'subscriptions' => $subscriptionsData
             ]);
 
@@ -180,7 +180,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_subscriptions', function () use ($updates) {
-            $result = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
+            $result = $this->makeHttpRequestAndExtractData('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
 
@@ -220,7 +220,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
             $cacheKey,
             function () use ($criteria, $options) {
                 $payload = array_merge(['criteria' => $criteria], $options);
-                return $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
+                return $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/search", $payload);
             },
             180 // 3 minutes cache for search results
         );
@@ -232,7 +232,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function archive(string $subscriptionId): bool
     {
         return $this->executeWithMetrics('archive_subscription', function () use ($subscriptionId) {
-            $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/archive");
+            $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/archive");
 
             // Invalidate cache
             $this->invalidateCache($subscriptionId);
@@ -253,7 +253,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function restore(string $subscriptionId): bool
     {
         return $this->executeWithMetrics('restore_subscription', function () use ($subscriptionId) {
-            $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/restore");
+            $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$subscriptionId}/restore");
 
             // Invalidate cache
             $this->invalidateCache($subscriptionId);
@@ -283,7 +283,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                return $this->makeHttpRequest('GET', $endpoint);
+                return $this->makeHttpRequestAndExtractData('GET', $endpoint);
             },
             900 // 15 minutes cache for history
         );
@@ -308,7 +308,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                return $this->makeHttpRequest('GET', $endpoint);
+                return $this->makeHttpRequestAndExtractData('GET', $endpoint);
             },
             300 // 5 minutes cache for relationships
         );
@@ -320,7 +320,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function addRelationship(string $subscriptionId, string $relatedId, string $relationType, array $metadata = []): bool
     {
         return $this->executeWithMetrics('add_relationship', function () use ($subscriptionId, $relatedId, $relationType, $metadata) {
-            $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$subscriptionId}/{$relationType}", [
+            $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/{$subscriptionId}/{$relationType}", [
                 'related_id' => $relatedId,
                 'metadata' => $metadata
             ]);
@@ -338,7 +338,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function removeRelationship(string $subscriptionId, string $relatedId, string $relationType): bool
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($subscriptionId, $relatedId, $relationType) {
-            $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$subscriptionId}/{$relationType}/{$relatedId}");
+            $this->makeHttpRequestAndExtractData('DELETE', "{$this->getEndpoint()}/{$subscriptionId}/{$relationType}/{$relatedId}");
 
             // Invalidate relationship cache
             $this->cache?->delete($this->getCacheKey("subscription:related:{$subscriptionId}:{$relationType}:*"));
@@ -400,22 +400,18 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     }
 
     /**
-     * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
+     * ✅ FIX: Renomeado de makeHttpRequest() para não sobrescrever método da classe pai
+     * Método centralizado para fazer chamadas HTTP e extrair dados automaticamente
      * Garante uso consistente do ResponseHelper
      */
-    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    protected function makeHttpRequestAndExtractData(string $method, string $uri, array $options = []): array
     {
         try {
-            $response = $this->httpClient->request($method, $uri, $options);
+            // Usar o método makeHttpRequest() do BaseRepository que retorna ResponseInterface
+            $response = parent::makeHttpRequest($method, $uri, $options);
 
-            if (!ResponseHelper::isSuccessful($response)) {
-                throw new HttpException(
-                    "HTTP {$method} request failed to {$uri}",
-                    $response->getStatusCode()
-                );
-            }
-
-            $data = ResponseHelper::getData($response);
+            // Extrair dados da resposta
+            $data = $this->extractResponseData($response);
             if ($data === null) {
                 throw new HttpException("Failed to decode response data from {$uri}");
             }
@@ -463,7 +459,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function createPlan(array $data): array
     {
         return $this->executeWithMetrics('create_subscription_plan', function () use ($data) {
-            $result = $this->makeHttpRequest('POST', 'subscription-plans', [
+            $result = $this->makeHttpRequestAndExtractData('POST', 'subscription-plans', [
                 'json' => $data
             ]);
 
@@ -492,7 +488,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
         return $this->getCachedOrExecute(
             $cacheKey,
             function () use ($id) {
-                return $this->makeHttpRequest('GET', "subscription-plans/{$id}");
+                return $this->makeHttpRequestAndExtractData('GET', "subscription-plans/{$id}");
             },
             600 // 10 minutes cache
         );
@@ -509,7 +505,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function updatePlan(string $id, array $data): array
     {
         return $this->executeWithMetrics('update_subscription_plan', function () use ($id, $data) {
-            $result = $this->makeHttpRequest('PUT', "subscription-plans/{$id}", [
+            $result = $this->makeHttpRequestAndExtractData('PUT', "subscription-plans/{$id}", [
                 'json' => $data
             ]);
 
@@ -537,7 +533,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function deletePlan(string $id): array
     {
         return $this->executeWithMetrics('delete_subscription_plan', function () use ($id) {
-            $result = $this->makeHttpRequest('DELETE', "subscription-plans/{$id}");
+            $result = $this->makeHttpRequestAndExtractData('DELETE', "subscription-plans/{$id}");
 
             // Invalidate cache
             $this->cache?->delete($this->getCacheKey("subscription_plan:{$id}"));
@@ -573,7 +569,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
                 }
 
                 // makeHttpRequest já retorna array e valida a resposta
-                return $this->makeHttpRequest('GET', $endpoint);
+                return $this->makeHttpRequestAndExtractData('GET', $endpoint);
             },
             300 // 5 minutes cache
         );
@@ -589,7 +585,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function activatePlan(string $id): array
     {
         return $this->executeWithMetrics('activate_subscription_plan', function () use ($id) {
-            $result = $this->makeHttpRequest('PATCH', "subscription-plans/{$id}", [
+            $result = $this->makeHttpRequestAndExtractData('PATCH', "subscription-plans/{$id}", [
                 'json' => ['isActive' => true]
             ]);
 
@@ -617,7 +613,7 @@ class ApiSubscriptionRepository extends BaseRepository implements SubscriptionRe
     public function deactivatePlan(string $id): array
     {
         return $this->executeWithMetrics('deactivate_subscription_plan', function () use ($id) {
-            $result = $this->makeHttpRequest('PATCH', "subscription-plans/{$id}", [
+            $result = $this->makeHttpRequestAndExtractData('PATCH', "subscription-plans/{$id}", [
                 'json' => ['isActive' => false]
             ]);
 

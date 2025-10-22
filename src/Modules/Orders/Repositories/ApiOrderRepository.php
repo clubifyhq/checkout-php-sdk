@@ -91,7 +91,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
         return $this->getCachedOrExecute(
             $this->getCacheKey("order:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequestAndExtractData('GET', "{$this->getEndpoint()}/search", [
                     'email' => $fieldValue
                 ]);
 
@@ -127,7 +127,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
     public function updateStatus(string $orderId, string $status): bool
     {
         return $this->executeWithMetrics('update_order_status', function () use ($orderId, $status) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$orderId}/status", [
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$orderId}/status", [
                 'status' => $status
             ]);
 
@@ -162,7 +162,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint); if (!$response) {
                     throw new HttpException(
                         "Failed to get order stats: " . "HTTP request failed",
                         $response->getStatusCode()
@@ -181,7 +181,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
     public function bulkCreate(array $ordersData): array
     {
         return $this->executeWithMetrics('bulk_create_orders', function () use ($ordersData) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/bulk", [
                 'orders' => $ordersData
             ]);
 
@@ -211,7 +211,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_orders', function () use ($updates) {
-            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequestAndExtractData('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
 
@@ -259,7 +259,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
             $cacheKey,
             function () use ($criteria, $options) {
                 $payload = array_merge(['criteria' => $criteria], $options);
-                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
+                $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/search", $payload);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -280,7 +280,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
     public function archive(string $orderId): bool
     {
         return $this->executeWithMetrics('archive_order', function () use ($orderId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$orderId}/archive");
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$orderId}/archive");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -305,7 +305,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
     public function restore(string $orderId): bool
     {
         return $this->executeWithMetrics('restore_order', function () use ($orderId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$orderId}/restore");
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$orderId}/restore");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -339,7 +339,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint); if (!$response) {
                     if ($response->getStatusCode() === 404) {
                         throw new OrderNotFoundException("No history found for order ID: {$orderId}");
                     }
@@ -374,7 +374,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint); if (!$response) {
                     throw new HttpException(
                         "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
@@ -393,7 +393,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
     public function addRelationship(string $orderId, string $relatedId, string $relationType, array $metadata = []): bool
     {
         return $this->executeWithMetrics('add_relationship', function () use ($orderId, $relatedId, $relationType, $metadata) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$orderId}/{$relationType}", [
+            $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/{$orderId}/{$relationType}", [
                 'related_id' => $relatedId,
                 'metadata' => $metadata
             ]);
@@ -415,7 +415,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
     public function removeRelationship(string $orderId, string $relatedId, string $relationType): bool
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($orderId, $relatedId, $relationType) {
-            $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$orderId}/{$relationType}/{$relatedId}");
+            $response = $this->makeHttpRequestAndExtractData('DELETE', "{$this->getEndpoint()}/{$orderId}/{$relationType}/{$relatedId}");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
@@ -484,7 +484,7 @@ class ApiOrderRepository extends BaseRepository implements OrderRepositoryInterf
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
      * Garante uso consistente do ResponseHelper
      */
-    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    protected function makeHttpRequestAndExtractData(string $method, string $uri, array $options = []): array
     {
         try {
             $response = $this->httpClient->request($method, $uri, $options);

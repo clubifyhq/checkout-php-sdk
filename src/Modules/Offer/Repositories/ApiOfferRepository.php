@@ -52,7 +52,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
 
             $this->logger->info('Creating offer', ['data_keys' => array_keys($data)]);
 
-            $response = $this->makeHttpRequest('POST', '/offers', $data);
+            $response = $this->makeHttpRequestAndExtractData('POST', '/offers', $data);
             $offer = ResponseHelper::getData($response);
 
             $this->logger->info('Offer created successfully', [
@@ -81,7 +81,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 throw new \InvalidArgumentException('Invalid offer ID format');
             }
 
-            $response = $this->makeHttpRequest('GET', "/offers/{$id}");
+            $response = $this->makeHttpRequestAndExtractData('GET', "/offers/{$id}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -104,7 +104,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 throw new \InvalidArgumentException('Invalid slug format');
             }
 
-            $response = $this->makeHttpRequest('GET', "/offers/slug/{$slug}");
+            $response = $this->makeHttpRequestAndExtractData('GET', "/offers/slug/{$slug}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -132,7 +132,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 'data_keys' => array_keys($data)
             ]);
 
-            $response = $this->makeHttpRequest('PUT', "/offers/{$id}", $data);
+            $response = $this->makeHttpRequestAndExtractData('PUT', "/offers/{$id}", $data);
             $offer = ResponseHelper::getData($response);
 
             $this->logger->info('Offer updated successfully', [
@@ -158,7 +158,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
         try {
             $this->logger->info('Deleting offer', ['offer_id' => $id]);
 
-            $response = $this->makeHttpRequest('DELETE', "/offers/{$id}");
+            $response = $this->makeHttpRequestAndExtractData('DELETE', "/offers/{$id}");
             $success = $response->getStatusCode() === 204;
 
             if ($success) {
@@ -188,7 +188,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 'limit' => $limit
             ]);
 
-            $response = $this->makeHttpRequest('GET', '/offers', [
+            $response = $this->makeHttpRequestAndExtractData('GET', '/offers', [
                 'query' => $queryParams
             ]);
 
@@ -208,7 +208,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
     public function count(array $filters = []): int
     {
         try {
-            $response = $this->makeHttpRequest('GET', '/offers/count', [
+            $response = $this->makeHttpRequestAndExtractData('GET', '/offers/count', [
                 'query' => $filters
             ]);
             $data = ResponseHelper::getData($response);
@@ -228,7 +228,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
     public function findByOrganization(string $organizationId): array
     {
         try {
-            $response = $this->makeHttpRequest('GET', '/offers', [
+            $response = $this->makeHttpRequestAndExtractData('GET', '/offers', [
                 'query' => ['organization_id' => $organizationId]
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -247,7 +247,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
     public function findActive(): array
     {
         try {
-            $response = $this->makeHttpRequest('GET', '/offers', [
+            $response = $this->makeHttpRequestAndExtractData('GET', '/offers', [
                 'query' => ['status' => 'active']
             ]);
             return ResponseHelper::getData($response) ?? [];
@@ -270,7 +270,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 'theme_config' => $themeConfig
             ]);
 
-            $response = $this->makeHttpRequest('PUT', "/offers/{$id}/config/theme", [
+            $response = $this->makeHttpRequestAndExtractData('PUT', "/offers/{$id}/config/theme", [
                 'theme' => $themeConfig
             ]);
 
@@ -302,7 +302,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 'layout_config' => $layoutConfig
             ]);
 
-            $response = $this->makeHttpRequest('PUT', "/offers/{$id}/config/layout", [
+            $response = $this->makeHttpRequestAndExtractData('PUT', "/offers/{$id}/config/layout", [
                 'layout' => $layoutConfig
             ]);
 
@@ -329,7 +329,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
     public function getUpsells(string $offerId): array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/offers/{$offerId}/upsells");
+            $response = $this->makeHttpRequestAndExtractData('GET', "/offers/{$offerId}/upsells");
             return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get offer upsells', [
@@ -351,7 +351,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 'upsell_data' => $upsellData
             ]);
 
-            $response = $this->makeHttpRequest('POST', "/offers/{$offerId}/upsells", $upsellData);
+            $response = $this->makeHttpRequestAndExtractData('POST', "/offers/{$offerId}/upsells", $upsellData);
             $upsell = ResponseHelper::getData($response);
 
             $this->logger->info('Upsell added to offer successfully', [
@@ -381,7 +381,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 'upsell_id' => $upsellId
             ]);
 
-            $response = $this->makeHttpRequest('DELETE', "/offers/{$offerId}/upsells/{$upsellId}");
+            $response = $this->makeHttpRequestAndExtractData('DELETE', "/offers/{$offerId}/upsells/{$upsellId}");
             $success = $response->getStatusCode() === 204;
 
             if ($success) {
@@ -408,7 +408,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
     public function getSubscriptionPlans(string $offerId): array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/offers/{$offerId}/subscription/plans");
+            $response = $this->makeHttpRequestAndExtractData('GET', "/offers/{$offerId}/subscription/plans");
             return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get offer subscription plans', [
@@ -430,7 +430,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
                 'plan_data' => $planData
             ]);
 
-            $response = $this->makeHttpRequest('POST', "/offers/{$offerId}/subscription/plans", $planData);
+            $response = $this->makeHttpRequestAndExtractData('POST', "/offers/{$offerId}/subscription/plans", $planData);
             $plan = ResponseHelper::getData($response);
 
             $this->logger->info('Subscription plan added to offer successfully', [
@@ -455,7 +455,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
     public function getStats(string $id): array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/offers/{$id}/stats");
+            $response = $this->makeHttpRequestAndExtractData('GET', "/offers/{$id}/stats");
             return ResponseHelper::getData($response) ?? [];
         } catch (HttpException $e) {
             $this->logger->error('Failed to get offer stats', [
@@ -472,7 +472,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
     public function getPublicData(string $slug): ?array
     {
         try {
-            $response = $this->makeHttpRequest('GET', "/offers/public/{$slug}");
+            $response = $this->makeHttpRequestAndExtractData('GET', "/offers/public/{$slug}");
             return ResponseHelper::getData($response);
         } catch (HttpException $e) {
             if ($e->getStatusCode() === 404) {
@@ -492,7 +492,7 @@ class ApiOfferRepository implements OfferRepositoryInterface
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
      * Garante uso consistente do ResponseHelper
      */
-    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    protected function makeHttpRequestAndExtractData(string $method, string $uri, array $options = []): array
     {
         try {
             $response = $this->httpClient->request($method, $uri, $options);

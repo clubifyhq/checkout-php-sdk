@@ -91,7 +91,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
         return $this->getCachedOrExecute(
             $this->getCacheKey("track:email:{$fieldValue}"),
             function () use ($fieldValue) {
-                $response = $this->makeHttpRequest('GET', "{$this->getEndpoint()}/search", [
+                $response = $this->makeHttpRequestAndExtractData('GET', "{$this->getEndpoint()}/search", [
                     'email' => $fieldValue
                 ]);
 
@@ -127,7 +127,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function updateStatus(string $trackId, string $status): bool
     {
         return $this->executeWithMetrics('update_track_status', function () use ($trackId, $status) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$trackId}/status", [
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$trackId}/status", [
                 'status' => $status
             ]);
 
@@ -162,7 +162,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                 $queryParams = array_merge($filters, ['stats' => 'true']);
                 $endpoint = "{$this->getEndpoint()}/stats?" . http_build_query($queryParams);
 
-                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint); if (!$response) {
                     throw new HttpException(
                         "Failed to get track stats: " . "HTTP request failed",
                         $response->getStatusCode()
@@ -181,7 +181,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function bulkCreate(array $tracksData): array
     {
         return $this->executeWithMetrics('bulk_create_tracks', function () use ($tracksData) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/bulk", [
                 'tracks' => $tracksData
             ]);
 
@@ -211,7 +211,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function bulkUpdate(array $updates): array
     {
         return $this->executeWithMetrics('bulk_update_tracks', function () use ($updates) {
-            $response = $this->makeHttpRequest('PUT', "{$this->getEndpoint()}/bulk", [
+            $response = $this->makeHttpRequestAndExtractData('PUT', "{$this->getEndpoint()}/bulk", [
                 'updates' => $updates
             ]);
 
@@ -259,7 +259,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
             $cacheKey,
             function () use ($criteria, $options) {
                 $payload = array_merge(['criteria' => $criteria], $options);
-                $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/search", $payload);
+                $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/search", $payload);
 
                 if (!ResponseHelper::isSuccessful($response)) {
                     throw new HttpException(
@@ -280,7 +280,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function archive(string $trackId): bool
     {
         return $this->executeWithMetrics('archive_track', function () use ($trackId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$trackId}/archive");
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$trackId}/archive");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -305,7 +305,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function restore(string $trackId): bool
     {
         return $this->executeWithMetrics('restore_track', function () use ($trackId) {
-            $response = $this->makeHttpRequest('PATCH', "{$this->getEndpoint()}/{$trackId}/restore");
+            $response = $this->makeHttpRequestAndExtractData('PATCH', "{$this->getEndpoint()}/{$trackId}/restore");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate cache
@@ -339,7 +339,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint); if (!$response) {
                     if ($response->getStatusCode() === 404) {
                         throw new TrackNotFoundException("No history found for track ID: {$trackId}");
                     }
@@ -374,7 +374,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
                     $endpoint .= '?' . http_build_query($options);
                 }
 
-                $response = $this->makeHttpRequest('GET', $endpoint); if (!$response) {
+                $response = $this->makeHttpRequestAndExtractData('GET', $endpoint); if (!$response) {
                     throw new HttpException(
                         "Failed to get related {$relationType}: " . "HTTP request failed",
                         $response->getStatusCode()
@@ -393,7 +393,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function addRelationship(string $trackId, string $relatedId, string $relationType, array $metadata = []): bool
     {
         return $this->executeWithMetrics('add_relationship', function () use ($trackId, $relatedId, $relationType, $metadata) {
-            $response = $this->makeHttpRequest('POST', "{$this->getEndpoint()}/{$trackId}/{$relationType}", [
+            $response = $this->makeHttpRequestAndExtractData('POST', "{$this->getEndpoint()}/{$trackId}/{$relationType}", [
                 'related_id' => $relatedId,
                 'metadata' => $metadata
             ]);
@@ -415,7 +415,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
     public function removeRelationship(string $trackId, string $relatedId, string $relationType): bool
     {
         return $this->executeWithMetrics('remove_relationship', function () use ($trackId, $relatedId, $relationType) {
-            $response = $this->makeHttpRequest('DELETE', "{$this->getEndpoint()}/{$trackId}/{$relationType}/{$relatedId}");
+            $response = $this->makeHttpRequestAndExtractData('DELETE', "{$this->getEndpoint()}/{$trackId}/{$relationType}/{$relatedId}");
 
             if (ResponseHelper::isSuccessful($response)) {
                 // Invalidate relationship cache
@@ -484,7 +484,7 @@ class ApiTrackRepository extends BaseRepository implements TrackRepositoryInterf
      * Método centralizado para fazer chamadas HTTP através do Core\Http\Client
      * Garante uso consistente do ResponseHelper
      */
-    protected function makeHttpRequest(string $method, string $uri, array $options = []): array
+    protected function makeHttpRequestAndExtractData(string $method, string $uri, array $options = []): array
     {
         try {
             $response = $this->httpClient->request($method, $uri, $options);

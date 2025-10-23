@@ -360,12 +360,12 @@ class GatewayConfigService extends BaseService implements ServiceInterface
         if ($this->config) {
             $tenantId = $this->config->getTenantId();
             if ($tenantId) {
-                $headers['X-Tenant-ID'] = $tenantId;
+                $headers['X-Tenant-Id'] = $tenantId;
             }
 
             $organizationId = $this->config->getOrganizationId();
             if ($organizationId) {
-                $headers['X-Organization-ID'] = $organizationId;
+                $headers['X-Organization-Id'] = $organizationId;
             }
         }
 

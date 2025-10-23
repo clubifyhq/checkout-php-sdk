@@ -8,6 +8,7 @@ use Clubify\Checkout\Core\BaseService;
 use Clubify\Checkout\Core\Http\Client as HttpClient;
 use Clubify\Checkout\Core\Http\ResponseHelper;
 use Clubify\Checkout\Core\Cache\CacheManagerInterface;
+use Clubify\Checkout\Core\Config\ConfigurationInterface;
 use Clubify\Checkout\Contracts\ServiceInterface;
 use Clubify\Checkout\Modules\Payments\Exceptions\GatewayException;
 use Psr\Log\LoggerInterface;
@@ -29,22 +30,21 @@ class GatewayConfigService extends BaseService implements ServiceInterface
 {
     private HttpClient $httpClient;
     private string $baseUrl;
-    private string $tenantId;
-    private string $organizationId;
+    private ?ConfigurationInterface $config;
 
     public function __construct(
         LoggerInterface $logger,
         CacheManagerInterface $cache,
         HttpClient $httpClient,
         string $baseUrl,
-        string $tenantId,
-        string $organizationId
+        string $tenantId,  // Deprecated: kept for backward compatibility
+        string $organizationId,  // Deprecated: kept for backward compatibility
+        ?ConfigurationInterface $config = null
     ) {
         parent::__construct($logger, $cache);
         $this->httpClient = $httpClient;
         $this->baseUrl = rtrim($baseUrl, '/');
-        $this->tenantId = $tenantId;
-        $this->organizationId = $organizationId;
+        $this->config = $config;
     }
 
     /**
@@ -345,14 +345,31 @@ class GatewayConfigService extends BaseService implements ServiceInterface
 
     /**
      * Obtém headers HTTP para as requisições
+     *
+     * FIXED: Now dynamically retrieves tenant_id and organization_id from Config
+     * to ensure they reflect any changes made via setTenantContext()
      */
     private function getHeaders(): array
     {
-        return [
-            'X-Tenant-ID' => $this->tenantId,
-            'X-Organization-ID' => $this->organizationId,
+        $headers = [
             'Content-Type' => 'application/json',
         ];
+
+        // Dynamically retrieve tenant_id and organization_id from Config
+        // This ensures values are always up-to-date even after setTenantContext()
+        if ($this->config) {
+            $tenantId = $this->config->getTenantId();
+            if ($tenantId) {
+                $headers['X-Tenant-ID'] = $tenantId;
+            }
+
+            $organizationId = $this->config->getOrganizationId();
+            if ($organizationId) {
+                $headers['X-Organization-ID'] = $organizationId;
+            }
+        }
+
+        return $headers;
     }
 
     /**
@@ -410,8 +427,8 @@ class GatewayConfigService extends BaseService implements ServiceInterface
         return [
             'service' => $this->getName(),
             'version' => $this->getVersion(),
-            'tenant_id' => $this->tenantId,
-            'organization_id' => $this->organizationId,
+            'tenant_id' => $this->config ? $this->config->getTenantId() : null,
+            'organization_id' => $this->config ? $this->config->getOrganizationId() : null,
             'base_url' => $this->baseUrl,
             'timestamp' => time(),
         ];
@@ -421,8 +438,8 @@ class GatewayConfigService extends BaseService implements ServiceInterface
     {
         return [
             'base_url' => $this->baseUrl,
-            'tenant_id' => $this->tenantId,
-            'organization_id' => $this->organizationId,
+            'tenant_id' => $this->config ? $this->config->getTenantId() : null,
+            'organization_id' => $this->config ? $this->config->getOrganizationId() : null,
         ];
     }
 

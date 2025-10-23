@@ -356,13 +356,15 @@ class PaymentsServiceFactory implements FactoryInterface
         $tenantId = $this->config->getTenantId() ?? '';
         $organizationId = $this->config->getOrganizationId() ?? '';
 
+        // FIXED: Pass Configuration object to allow dynamic tenant context updates
         return new GatewayConfigService(
             $this->logger,
             $this->cache,
             $this->httpClient,
             $baseUrl,
-            $tenantId,
-            $organizationId
+            $tenantId,  // Deprecated but kept for backward compatibility
+            $organizationId,  // Deprecated but kept for backward compatibility
+            $this->config  // Configuration for dynamic tenant/org resolution
         );
     }
 

@@ -351,9 +351,10 @@ class PaymentsServiceFactory implements FactoryInterface
         // Suppress unused parameter warning - needed for interface compatibility
         unset($config);
 
-        $baseUrl = $this->config->get('base_url', '');
-        $tenantId = $this->config->get('tenant_id', '');
-        $organizationId = $this->config->get('organization_id', '');
+        // Use getBaseUrl() method which handles environment-based URL resolution
+        $baseUrl = $this->config->getBaseUrl();
+        $tenantId = $this->config->getTenantId() ?? '';
+        $organizationId = $this->config->getOrganizationId() ?? '';
 
         return new GatewayConfigService(
             $this->logger,

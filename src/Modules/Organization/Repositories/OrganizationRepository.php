@@ -321,13 +321,13 @@ class OrganizationRepository extends BaseRepository implements OrganizationRepos
             }
 
             // Header organizationId para multi-tenancy
-            $organizationId = $this->config->get('organization_id');
+            $organizationId = $this->config->getOrganizationId();
             if ($organizationId) {
                 $options['headers']['X-Organization-Id'] = $organizationId;
             }
 
             // Headers de autenticação e tenant
-            $tenantId = $this->config->get('tenant_id');
+            $tenantId = $this->config->getTenantId();
             if ($tenantId) {
                 $options['headers']['X-Tenant-Id'] = $tenantId;
             }

@@ -193,7 +193,7 @@ class ApiWebhookRepository extends BaseRepository implements WebhookRepositoryIn
                 $this->logger->info('Fetching webhook configurations by organization', [
                     'organization_id' => $organizationId,
                     'endpoint' => $endpoint,
-                    'full_url' => $this->config->get('base_url') . '/' . $endpoint
+                    'full_url' => $this->config->getBaseUrl() . '/' . $endpoint
                 ]);
 
                 $response = $this->makeHttpRequest('GET', $endpoint);

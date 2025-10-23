@@ -150,13 +150,7 @@ class GatewayConfigService extends BaseService implements ServiceInterface
     public function getGatewayConfig(?string $provider = null): array
     {
         try {
-            $tenantId = $this->config ? $this->config->getTenantId() : 'unknown';
-            $cacheKey = "gateway_config:{$tenantId}:" . ($provider ?? 'all');
-            $cached = $this->getFromCache($cacheKey);
-            //if ($cached) {
-            //    return $cached;
-            //}
-
+            
             $url = "{$this->baseUrl}/payments/gateway/config";
             if ($provider) {
                 $url .= "/{$provider}";
@@ -176,21 +170,9 @@ class GatewayConfigService extends BaseService implements ServiceInterface
                 throw new GatewayException('Falha ao decodificar resposta do servidor');
             }
 
-            // Cache por 5 minutos
-            $this->setCache($cacheKey, $data, 300);
-
-            $this->logger->info('Configuração do gateway obtida', [
-                'tenant_id' => $this->tenantId,
-                'provider' => $provider ?? 'all',
-            ]);
-
             return $data;
         } catch (\Throwable $e) {
-            $this->logger->error('Falha ao obter configuração do gateway', [
-                'tenant_id' => $this->tenantId,
-                'provider' => $provider,
-                'error' => $e->getMessage(),
-            ]);
+            
 
             throw new GatewayException(
                 "Falha ao obter configuração do gateway: {$e->getMessage()}",

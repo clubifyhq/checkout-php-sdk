@@ -150,16 +150,17 @@ class GatewayConfigService extends BaseService implements ServiceInterface
     public function getGatewayConfig(?string $provider = null): array
     {
         try {
-            $cacheKey = "gateway_config:{$this->tenantId}:" . ($provider ?? 'all');
-            $cached = $this->getFromCache($cacheKey);
-            if ($cached) {
-                return $cached;
-            }
+            //$cacheKey = "gateway_config:{$this->tenantId}:" . ($provider ?? 'all');
+            //$cached = $this->getFromCache($cacheKey);
+            //if ($cached) {
+            //    return $cached;
+            //}
 
             $url = "{$this->baseUrl}/gateway/config";
             if ($provider) {
                 $url .= "/{$provider}";
             }
+
 
             $response = $this->httpClient->get(
                 $url,

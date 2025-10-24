@@ -755,8 +755,8 @@ class OfferService extends BaseService implements ServiceInterface
             // Dispatch evento
             $this->dispatch('offer.url_generated', [
                 'offer_id' => $offerId,
-                'checkout_url' => $response['checkoutUrl'] ?? null
-                //'short_url' => $response['shortUrl'] ?? null
+                'checkout_url' => $response['checkoutUrl'] ?? null,
+                'short_url' => $response['shortUrl'] ?? null
             ]);
 
             return $response;
